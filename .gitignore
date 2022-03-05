@@ -1,0 +1,6 @@
+/.idea
+/.vscode
+/.vs
+/__pycache__
+/cogs/__pycache__
+/praw.ini
