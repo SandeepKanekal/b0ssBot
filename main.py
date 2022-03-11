@@ -44,13 +44,13 @@ async def unloadcog(ctx, cog):
 @bot.command(hidden=True)
 @commands.is_owner()
 async def reloadcog(ctx, cog):
-    if cog not in cogs:
-        await ctx.send(f'cogs.{cog} not found')
-        return
     if cog == 'all':
         for cog in bot.cogs:
             bot.reload_extension(f'cogs.{cog}')
         await ctx.send('All cogs have been reloaded')
+        return
+    if cog not in cogs:
+        await ctx.send(f'cogs.{cog} not found')
         return
     try:
         bot.reload_extension(f'cogs.{cog}')

@@ -3,8 +3,6 @@ import discord
 import datetime
 from discord.ext import commands
 
-today = datetime.date.today()
-
 
 class Info(commands.Cog):
     def __init__(self, bot):
@@ -16,7 +14,8 @@ class Info(commands.Cog):
         if member is not None:
             embed = discord.Embed(colour=member.colour)
             embed.set_author(name=str(member), icon_url=str(member.avatar))
-            embed.add_field(name='Display Name', value=member.mention, inline=False)
+            embed.add_field(name='Display Name', value=member.mention, inline=True)
+            embed.add_field(name='Top Role', value=member.top_role, inline=False)
             embed.set_thumbnail(url=str(member.avatar))
             embed.add_field(name='Joined', value=member.joined_at.strftime("%b %d, %Y, %T"), inline=True)
             embed.add_field(name='Registered', value=member.created_at.strftime("%b %d, %Y, %T"), inline=True)
@@ -25,14 +24,15 @@ class Info(commands.Cog):
                 embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
             else:
                 embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
-            embed.set_footer(text=f'ID: {member.id} • Requested by {ctx.author} on {today.strftime("%B %d, %Y")}',
-                             icon_url=ctx.author.avatar)
+            embed.set_footer(text=f'ID: {member.id} • Requested by {ctx.author}', icon_url=ctx.author.avatar)
+            embed.timestamp = datetime.datetime.now()
             await ctx.send(embed=embed)
         else:
             member = ctx.author
             embed = discord.Embed(colour=member.colour)
             embed.set_author(name=str(member), icon_url=member.avatar)
-            embed.add_field(name='Display Name', value=member.mention, inline=False)
+            embed.add_field(name='Display Name', value=member.mention, inline=True)
+            embed.add_field(name='Top Role', value=member.top_role, inline=False)
             embed.set_thumbnail(url=member.avatar)
             embed.add_field(name='Joined', value=member.joined_at.strftime("%b %d, %Y, %T"), inline=True)
             embed.add_field(name='Registered', value=member.created_at.strftime("%b %d, %Y, %T"), inline=True)
@@ -41,8 +41,8 @@ class Info(commands.Cog):
                 embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
             else:
                 embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
-            embed.set_footer(text=f'ID: {member.id} • Requested by {ctx.author} • {today.strftime("%B %d, %Y")}',
-                             icon_url=ctx.author.avatar)
+            embed.set_footer(text=f'ID: {member.id} • Requested by {ctx.author}', icon_url=ctx.author.avatar)
+            embed.timestamp = datetime.datetime.now()
             await ctx.send(embed=embed)
 
     # Serverinfo command
@@ -57,7 +57,7 @@ class Info(commands.Cog):
         voice_channel_count = 0
         for _ in ctx.guild.voice_channels:
             voice_channel_count += 1
-        
+
         emojis = ctx.guild.emojis
         emoji_string = f'Total: **{len(emojis)}**\n'
         animated_emojis = filter(lambda emoji: emoji.animated, emojis)
@@ -87,7 +87,7 @@ class Info(commands.Cog):
     @commands.command(name='botinfo', description='Shows the bot\'s information')
     async def botinfo(self, ctx):
         guilds = len([s for s in self.bot.guilds])
-        embed = discord.Embed(title='Bot Information', colour=self.bot.user.colour)
+        embed = discord.Embed(colour=self.bot.user.colour)
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='Bot Username', value=str(self.bot.user.name), inline=True)
         embed.add_field(name='Bot Owner', value='Dose#7204', inline=True)
@@ -103,8 +103,8 @@ class Info(commands.Cog):
                         value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887'
                               '&permissions=8&scope=applications.commands%20bot)',
                         inline=True)
-        embed.set_footer(text=f'Requested by {ctx.author} • {today.strftime("%B %d, %Y")}',
-                         icon_url=str(ctx.author.avatar))
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
+        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
 
