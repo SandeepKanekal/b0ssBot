@@ -8,9 +8,19 @@ from discord.ext import commands
 intents = discord.Intents.all()
 discord.Intents.members = True
 discord.Intents.webhooks = True
-bot = commands.Bot(command_prefix='-', case_insensitive=True, intents=intents)
+bot = commands.Bot(command_prefix=';', case_insensitive=True, intents=intents)
 bot.remove_command('help')
 cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util']
+
+
+# A function to send embeds when there are false calls or errors
+async def send_error_embed(ctx, **kwargs):
+    # Get keyword arguments for the embed
+    title: str = kwargs.get('title')
+    description: str = kwargs.get('description')
+    # Response embed
+    embed = discord.Embed(title=title, description=description, colour=discord.Colour.red())
+    await ctx.send(embed=embed)
 
 
 # Loadcog command
@@ -27,6 +37,12 @@ async def loadcog(ctx, cog):
         await ctx.send(f'cogs.{cog} is loaded already')
 
 
+# Only the owner can access these commands, if accessed otherwise, a response will be sent
+@loadcog.error
+async def loadcog_error(ctx, error):
+    await send_error_embed(ctx, description=f'Error: {error}')
+
+
 # Unloadcog command
 @bot.command(hidden=True)
 @commands.is_owner()
@@ -39,6 +55,12 @@ async def unloadcog(ctx, cog):
         await ctx.send(f'cogs.{cog} has been unloaded')
     except discord.ExtensionNotLoaded:
         await ctx.send(f"cogs.{cog} not loaded")
+
+
+# Only the owner can access these commands, if accessed otherwise, a response will be sent
+@unloadcog.error
+async def unloadcog_error(ctx, error):
+    await send_error_embed(ctx, description=f'Error: {error}')
 
 
 @bot.command(hidden=True)
@@ -59,10 +81,16 @@ async def reloadcog(ctx, cog):
         await ctx.send(e)
 
 
+# Only the owner can access these commands, if accessed otherwise, a response will be sent
+@reloadcog.error
+async def reloadcog_error(ctx, error):
+    await send_error_embed(ctx, description=f'Error: {error}')
+
+
 # Loads the cog
 for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
-keep_alive.keep_alive()  # Keep alive
+# keep_alive.keep_alive()  # Keep alive
 bot.run(os.getenv('TOKEN'))  # Starts the bot

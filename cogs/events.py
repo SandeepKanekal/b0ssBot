@@ -6,11 +6,8 @@ from discord.utils import get
 from afks import afks
 
 
-def remove(afk):
-    if '[AFK]' in afk.split():
-        return " ".join(afk.split()[1:])
-    else:
-        return afk
+def remove(nick_name):
+    return " ".join(nick_name.split()[1:]) if '[AFK]' in nick_name.split() else nick_name
 
 
 class Events(commands.Cog):
@@ -25,7 +22,7 @@ class Events(commands.Cog):
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message):  # sourcery no-metrics
         afk_index = 0
         if message.author.bot:
             return

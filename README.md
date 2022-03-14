@@ -9,6 +9,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + asyncpraw (praw.ini file required)
 + PyNaCl
 + lyrics-extractor
++ wikipedia
 
 # Invite
 Please contact Dose#7204 through discord for the invite link.

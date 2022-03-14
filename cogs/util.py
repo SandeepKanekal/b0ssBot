@@ -5,6 +5,13 @@ from discord.ext import commands
 from afks import afks
 
 
+# A function to send embeds when there are false calls or errors
+async def send_error_embed(ctx, description):
+    # Response embed
+    embed = discord.Embed(description=description, colour=discord.Colour.red())
+    await ctx.send(embed=embed)
+
+
 class Util(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -33,37 +40,45 @@ class Util(commands.Cog):
         await ctx.send(embed=embed)
 
     # Ping command
-    @commands.command(name="ping", description='Shows the bot latency')
+    @commands.command(name="ping", description='Replies with the latency of the bot')
     async def ping(self, ctx):
         latency = round(self.bot.latency * 1000)
-        embed = discord.Embed(colour=discord.Colour.random())
-        embed.add_field(name='Pong!!', value=f'Bot latency is {latency}ms')
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.avatar)
-        embed.timestamp = datetime.datetime.now()
+        embed = discord.Embed(description=f'**Pong!!** Bot latency is {str(latency)}ms', colour=discord.Colour.yellow())
         await ctx.reply(embed=embed)
 
     # Clear command
     @commands.command(aliases=['purge'], description='Purges the amount of messages specified by the user')
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx, limit=0):
+        if not limit:
+            await send_error_embed(description='Provide a limit')
+            return
+        if limit > 100:
+            await ctx.send('Limit must be lesser than 100')
+            return
         await ctx.message.delete()
         await ctx.channel.purge(limit=limit)
+
+    # Permission errors in the clear command is handled here
+    @clear.error
+    async def clear_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Poll command
     @commands.command(name='poll', description='Make a poll!')
     async def poll(self, ctx, channel: discord.TextChannel = None, *, question):
-        embed = discord.Embed(colour=discord.Colour.random())
-        embed.add_field(name='Poll', value=f'**{question}**', inline=False)
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Poll made by {ctx.author}')
+        embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.yellow())
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar)
         embed.timestamp = datetime.datetime.now()
-        embed.set_thumbnail(url=ctx.guild.icon)
 
         msg = await channel.send(embed=embed)
         # Adding reactions
         await msg.add_reaction('👍')
         await msg.add_reaction('👎')
+
+    @poll.error
+    async def poll_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Refer command
     @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter')
@@ -107,6 +122,10 @@ class Util(commands.Cog):
                     await ctx.send(embed=embed)
             except discord.NotFound:
                 await ctx.send('Message could not be found')
+
+    @refer.error
+    async def refer_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
 
 def setup(bot):

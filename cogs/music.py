@@ -10,6 +10,13 @@ from discord.ext import commands
 from youtube_dl import YoutubeDL
 
 
+# A function to send embeds when there are false calls or errors
+async def send_error_embed(ctx, description):
+    # Response embed
+    embed = discord.Embed(description=description, colour=discord.Colour.red())
+    await ctx.send(embed=embed)
+
+
 class Music(commands.Cog):
 
     def __init__(self, bot):
@@ -23,16 +30,16 @@ class Music(commands.Cog):
         self.now_playing_url = {}  # Stores the data in index position of self.music_queue[0][0]['url'] of the guild(currently
         # playing track's url)
         self.url = None  # Used in the play command response
-        self.ydl_options = {'format': 'bestaudio', 'noplaylist': 'True'}
-        self.ffmpeg_options = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-                               'options': '-vn'}
+        self._ydl_options = {'format': 'bestaudio', 'noplaylist': 'True'}
+        self._ffmpeg_options = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                                'options': '-vn'}
 
     # Searches YouTube for the item.
     # Possible errors:
     # IndexError - Occurs when there is no proper video
     # youtube_dl.utils.DownloadError - Occurs in case the video cannot be accessed without an account, such as age restrictions
     def search_yt(self, item):
-        with YoutubeDL(self.ydl_options) as ydl:
+        with YoutubeDL(self._ydl_options) as ydl:
             try:
                 info = ydl.extract_info("ytsearch:%s" % item, download=False)['entries'][0]
                 self.url = info['webpage_url']
@@ -48,25 +55,8 @@ class Music(commands.Cog):
     def play_next(self, ctx):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         voice_channel = ctx.author.voice.channel
-        if len(self.music_queue) > 0:  # The function must not be executed if there is nothing to play
-
-            # get the url to be played by the player
-            index = 0
-            for index, item in enumerate(self.music_queue):
-                # This loop is to ensure the correct url is played for the guild and avoid crossing of the urls being played
-                if item[1] == voice_channel:
-                    break
-            m_url = self.music_queue[index][0]['source']
-            self.now_playing[ctx.guild.id] = self.music_queue[index][0]['title']
-            self.now_playing_url[ctx.guild.id] = self.music_queue[index][0]['url']
-            self.queue[ctx.guild.id].pop(0)
-            self.urls[ctx.guild.id].pop(0)
-            # Popping is done to ensure the finished songs are not left in the queue
-
-            vc.play(discord.FFmpegPCMAudio(m_url, **self.ffmpeg_options), after=lambda e: self.play_next(ctx))
-            # remove the first element as you are currently playing it
-            self.music_queue.pop(index)
-
+        if self.music_queue:  # The function must not be executed if there is nothing to play
+            self._play_next(voice_channel, ctx, vc)
         else:
             # If there is nothing in the queue the variables must be made to contain no value
             try:
@@ -77,6 +67,24 @@ class Music(commands.Cog):
                 pass
             self.now_playing[ctx.guild.id] = None
             self.now_playing_url[ctx.guild.id] = None
+
+    def _play_next(self, voice_channel, ctx, vc):
+        # get the url to be played by the player
+        index = 0
+        for index, item in enumerate(self.music_queue):
+            # This loop is to ensure the correct url is played for the guild and avoid crossing of the urls being played
+            if item[1] == voice_channel:
+                break
+        m_url = self.music_queue[index][0]['source']
+        self.now_playing[ctx.guild.id] = self.music_queue[index][0]['title']
+        self.now_playing_url[ctx.guild.id] = self.music_queue[index][0]['url']
+        self.queue[ctx.guild.id].pop(0)
+        self.urls[ctx.guild.id].pop(0)
+        # Popping is done to ensure the finished songs are not left in the queue
+
+        vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
+        # remove the first element as you are currently playing it
+        self.music_queue.pop(index)
 
     # The play_music function is used to play music when the player is not connected or nothing is being played
     async def play_music(self, ctx):
@@ -102,21 +110,21 @@ class Music(commands.Cog):
             await vc.move_to(self.music_queue[index][1])
         print(self.music_queue)
 
-        vc.play(discord.FFmpegPCMAudio(m_url, **self.ffmpeg_options), after=lambda e: self.play_next(ctx))
+        vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
         # try to pop as you are playing it
         self.music_queue.pop(index)
 
     # The play or add command is just used for searching the internet, as well as appending the necessary information to the queue variables
     @commands.command(aliases=['p', 'add'], description='Plays the searched song from YouTube or adds it to the queue')
-    async def play(self, ctx, *, query):
-        voice_client = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+    async def play(self, ctx, *, query=None):
+        if query is None:
+            await send_error_embed(ctx, description='No query provided')
+            return
 
-        try:
-            voice_channel = ctx.author.voice.channel
-        except AttributeError:
-            embed = discord.Embed(description='Connect to a voice channel first!', colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+        voice_client = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        voice_channel = ctx.author.voice.channel
+        if voice_channel is None:
+            await send_error_embed(ctx, description='Connect to a voice channel')
             return
 
         try:
@@ -124,66 +132,60 @@ class Music(commands.Cog):
         except discord.ClientException:
             await voice_client.move_to(voice_channel)
 
-        if voice_channel is not None:
-            song = self.search_yt(query)
+        song = self.search_yt(query)
 
-            if isinstance(song, bool):  # Happens in case the video format is not playable
-                embed = discord.Embed(
-                    title="Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.",
-                    colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+        if isinstance(song, bool):  # Happens in case the video format is not playable
+            await send_error_embed(ctx,
+                                   description="Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.")
+            return
+
+        if isinstance(song,
+                      youtube_dl.utils.DownloadError):  # Happens if the download request fails. This happens when the video cannot be accessed, for example, age restrictions
+            await send_error_embed(ctx, description=f"Could not download the song. Error: {song}")
+            return
+
+        else:
+
+            try:
+                video = pafy.new(self.url)
+            except ValueError:  # The video does not exist if ValueError is raised
+                await send_error_embed(ctx,
+                                       description='Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.')
                 return
 
-            if isinstance(song,
-                          youtube_dl.utils.DownloadError):  # Happens if the download request fails. This happens when the video cannot be accessed, for example, age restrictions
-                embed = discord.Embed(
-                    title=f"Could not download the song. Error: {song}",
-                    colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
-                return
-
+            self.music_queue.append([song, voice_channel])
+            if ctx.guild.id not in self.queue.keys():
+                self.queue.update({ctx.guild.id: [self.title]})
+                self.urls.update({ctx.guild.id: [self.url]})
             else:
+                self.queue[ctx.guild.id].append(self.title)
+                self.urls[ctx.guild.id].append(self.url)
 
-                try:
-                    video = pafy.new(self.url)
-                except ValueError:  # The video does not exist if ValueError is raised
-                    embed = discord.Embed(
-                        title="Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.",
-                        colour=discord.Colour.random())
-                    embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                    await ctx.send(embed=embed)
-                    return
+            if not ctx.voice_client.is_playing():
+                # Plays the music
+                await self.play_music(ctx)
 
-                self.music_queue.append([song, voice_channel])
-                if ctx.guild.id not in self.queue.keys():
-                    self.queue.update({ctx.guild.id: [self.title]})
-                    self.urls.update({ctx.guild.id: [self.url]})
-                else:
-                    self.queue[ctx.guild.id].append(self.title)
-                    self.urls[ctx.guild.id].append(self.url)
+            # Response embed
+            embed = discord.Embed(colour=discord.Colour.dark_blue())
 
-                if not ctx.voice_client.is_playing():
-                    # Plays the music
-                    await self.play_music(ctx)
+            if video.author == video.username:
+                embed.add_field(name='Song added to queue',
+                                value=f'[{self.title}]({self.url}) BY [{video.author}](https://youtube.com/c/{video.author})')
+            else:
+                embed.add_field(name='Song added to queue',
+                                value=f'[{self.title}]({self.url}) BY [{video.author}](https://youtube.com/channel/{video.username})')
 
-                # Response embed
-                embed = discord.Embed(colour=discord.Colour.dark_blue())
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_thumbnail(url=video.bigthumbhd)
+            embed.set_footer(text=f'Duration: {video.duration}, 🎥: {video.viewcount}, 👍: {video.likes}')
+            await ctx.send(
+                'In case the music is not playing, please use the play command again since the access to the music player could be denied.')
+            await ctx.send(embed=embed)
 
-                if video.author == video.username:
-                    embed.add_field(name='Song added to queue',
-                                    value=f'[{self.title}]({self.url}) BY [{video.author}](https://youtube.com/c/{video.author})')
-                else:
-                    embed.add_field(name='Song added to queue',
-                                    value=f'[{self.title}]({self.url}) BY [{video.author}](https://youtube.com/channel/{video.username})')
-
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.set_thumbnail(url=video.bigthumbhd)
-                embed.set_footer(text=f'Duration: {video.duration}, 🎥: {video.viewcount}, 👍: {video.likes}')
-                await ctx.send(
-                    'In case the music is not playing, please use the play command again since the access to the music player could be denied.')
-                await ctx.send(embed=embed)
+    # Sometimes, videos are not available, a response is required to inform the user
+    @play.error
+    async def play_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     @commands.command(aliases=['q'], description='Shows the music queue')
     async def queue(self, ctx):  # self.music_queue is not used since it is multidimensional
@@ -191,11 +193,7 @@ class Music(commands.Cog):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
         if vc is None:  # Player is not connected
-            embed = discord.Embed(
-                description='The player is not connected to a voice channel, use the play command to do so',
-                colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='The Player is not connected to the voice channel')
             return
 
         if vc.is_playing():
@@ -208,16 +206,12 @@ class Music(commands.Cog):
                 embed.add_field(name=f'Track Number {index}:', value=f'[{item}]({self.urls[ctx.guild.id][index]})',
                                 inline=False)
 
-            embed.set_footer(text=f'Use the play command if you want to add more audio tracks to the queue\nRequested by {ctx.author}',
-                             icon_url=ctx.author.avatar)
+            embed.set_footer(text='Use the play command to add more tracks to the queue')
             embed.timestamp = datetime.datetime.now()
             await ctx.send(embed=embed)
 
         else:
-            embed = discord.Embed(description='No audio is being played', colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_footer(text='Use the play command if you want to add more audio tracks to the queue')
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='No audio is being played')
 
     # Self-explanatory
     @commands.command(name='pause', description='Pauses the current track')
@@ -226,21 +220,13 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
             if vc.is_playing():
                 # Response embed
-                embed = discord.Embed(description='Paused', colour=discord.Colour.random())
-                embed.add_field(name='Paused Track:',
-                                value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})')
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+                embed = discord.Embed(description='Paused', colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 vc.pause()
             else:
-                embed = discord.Embed(description='Already paused', colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='Already paused')
         else:
-            embed = discord.Embed(description='You are not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='You are not connected to the voice channel')
 
     # Self-explanatory
     @commands.command(aliases=['unpause'], description='Resumes the paused track')
@@ -249,21 +235,13 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
             if vc.is_paused():
                 # Response embed
-                embed = discord.Embed(description='Resumed', colour=discord.Colour.random())
-                embed.add_field(name='Resumed Track:',
-                                value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})')
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+                embed = discord.Embed(description='Resumed', colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 vc.resume()
             else:
-                embed = discord.Embed(description='Nothing has been paused', colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='No track has been paused')
         else:
-            embed = discord.Embed(description='You are not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='You are not connected to the voice channel')
 
     # Skips the current track
     @commands.command(name="skip", description="Skips the current track")
@@ -273,32 +251,20 @@ class Music(commands.Cog):
 
             # Basic responses to false calls
             if vc is None:
-                embed = discord.Embed(description='The player is not connected to a voice channel',
-                                      colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
                 return
 
             if not vc.is_playing():
-                embed = discord.Embed(description='No audio is being played', colour=discord.Colour.random())
-                embed.set_footer(text='Use the play command if you want to add more audio tracks to the queue')
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='No audio is being played')
                 return
 
             if vc is not None:
                 vc.stop()  # Stopping the player
                 # Response embed
-                embed = discord.Embed(description='Skipped', colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.add_field(name='Skipped Track:',
-                                value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})')
+                embed = discord.Embed(description='Skipped', colour=discord.Colour.green())
                 await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(description='You are not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='You are not connected to the voice channel')
 
     # Stop command
     @commands.command(name='stop', description='Stops the current track and clears the queue')
@@ -309,17 +275,11 @@ class Music(commands.Cog):
 
             # Basic response to false calls
             if vc is None:
-                embed = discord.Embed(description='The player is not connected to a voice channel',
-                                      colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
                 return
 
             if not vc.is_playing():
-                embed = discord.Embed(description='No audio is being played', colour=discord.Colour.random())
-                embed.set_footer(text='Use the play command if you want to add more audio tracks to the queue')
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='No audio is being played')
 
             else:
                 for index, item in enumerate(self.music_queue):
@@ -327,8 +287,7 @@ class Music(commands.Cog):
                     if item[1] == voice_channel:
                         self.music_queue.pop(index)
 
-                embed = discord.Embed(description='Stopped', colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+                embed = discord.Embed(description='Stopped', colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 vc.stop()  # Stopping the player
                 # Clearing the queue variables
@@ -338,10 +297,7 @@ class Music(commands.Cog):
                 self.now_playing_url[ctx.guild.id] = None
 
         else:
-            embed = discord.Embed(description='You are not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='You are not connected to the voice channel')
 
     # Disconnect command
     @commands.command(aliases=['dc', 'leave'], description="Disconnecting bot from VC")
@@ -350,10 +306,7 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
             voice_channel = ctx.author.voice.channel
             if vc is None:
-                embed = discord.Embed(description='The player is not connected to a voice channel',
-                                      colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
 
             else:
                 for index, item in enumerate(self.music_queue):
@@ -361,8 +314,7 @@ class Music(commands.Cog):
                     if item[1] == voice_channel:
                         self.music_queue.pop(index)
 
-                embed = discord.Embed(description='Disconnected', colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+                embed = discord.Embed(description='Disconnected', colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 await vc.disconnect()  # Disconnecting the player
                 # Clearing the queue variables
@@ -371,10 +323,7 @@ class Music(commands.Cog):
                 self.now_playing[ctx.guild.id] = None
                 self.now_playing_url[ctx.guild.id] = None
         else:
-            embed = discord.Embed(description='You are not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='You are not connected to the voice channel')
 
     # Nowplaying command
     @commands.command(aliases=['np', 'now'], description='Shows the current track being played')
@@ -384,17 +333,11 @@ class Music(commands.Cog):
 
         # Basic responses to false calls
         if vc is None:
-            embed = discord.Embed(description='The player is not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='The Player is not connected to the voice channel')
             return
 
         if not vc.is_playing():
-            embed = discord.Embed(description='No audio is being played', colour=discord.Colour.random())
-            embed.set_footer(text='Use the play command if you want to add more audio tracks to the queue')
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='No audio is being played')
             return
 
         else:
@@ -421,17 +364,12 @@ class Music(commands.Cog):
 
             # Basic responses to false calls
             if vc is None:
-                embed = discord.Embed(description='The player is not connected to the voice channel',
-                                      colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
                 return
 
             if track_number < 1 or track_number > len(self.music_queue):
-                embed = discord.Embed(description=f'Enter a number between 1 and {len(self.music_queue)}',
-                                      colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx,
+                                       description=f'Enter a number between 1 and {len(self.music_queue[ctx.guild.id])}')
                 return
 
             # Response embed
@@ -450,10 +388,7 @@ class Music(commands.Cog):
             self.urls[ctx.guild.id].pop(track_number)
 
         else:
-            embed = discord.Embed(description='You are not connected to the voice channel',
-                                  colour=discord.Colour.random())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            await ctx.send(embed=embed)
+            await send_error_embed(ctx, description='You are not connected to the voice channel')
 
     @commands.command(aliases=['ly'], description='Gets the lyrics of the current track')
     async def lyrics(self, ctx, *, query=None):
@@ -463,17 +398,10 @@ class Music(commands.Cog):
         if query is None:
             # Basic responses to false calls
             if vc is None:
-                embed = discord.Embed(description='The player is not connected to the voice channel',
-                                      colour=discord.Colour.random())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
-                return
+                await send_error_embed(ctx, description='The player is not connected to a voice channel')
 
             if not vc.is_playing():
-                embed = discord.Embed(description='No audio is being played', colour=discord.Colour.random())
-                embed.set_footer(text='Use the play command if you want to add more audio tracks to the queue')
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx, description='No audio is being played')
                 return
 
             try:
@@ -493,19 +421,13 @@ class Music(commands.Cog):
 
             # Lyrics not found exception
             except lyrics_extractor.lyrics.LyricScraperException:
-                embed = discord.Embed(
-                    description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found',
-                    colour=discord.Colour.red())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx,
+                                       description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found')
 
             # Some songs' lyrics are too long to be sent, in that case, this response is sent
             except discord.HTTPException:
-                embed = discord.Embed(
-                    description=f'The lyrics for {self.now_playing[ctx.guild.id]} is too long to be sent',
-                    colour=discord.Colour.red())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx,
+                                       description=f'The lyrics for {self.now_playing[ctx.guild.id]} is too long to be sent')
 
         # If there is a query, the user is asking the lyrics for a specific song
         else:
@@ -524,18 +446,13 @@ class Music(commands.Cog):
 
             # Lyrics not found exception
             except lyrics_extractor.lyrics.LyricScraperException:
-                embed = discord.Embed(
-                    description=f'Lyrics for the song {query} could not be found',
-                    colour=discord.Colour.red())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx,
+                                       description=f'Lyrics for the song {query} could not be found')
 
             # Some songs' lyrics are too long to be sent, in that case, this response is sent
             except discord.HTTPException:
-                embed = discord.Embed(description=f'The lyrics for {query} is too long to be sent',
-                                      colour=discord.Colour.red())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                await ctx.send(embed=embed)
+                await send_error_embed(ctx,
+                                       description=f'The lyrics for {query} is too long to be sent')
 
 
 # Setup
