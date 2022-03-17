@@ -134,6 +134,7 @@ class Misc(commands.Cog):
                 embed.add_field(name='Video Author:',
                                 value=f'[{vid.author}](https://youtube.com/channel/{vid.username})')
             embed.set_image(url=vid.bigthumbhd)
+            embed.set_footer(text=f'Duration: {vid.duration}, 🎥: {vid.viewcount}, 👍: {vid.likes}')
             watch_video.url = f'https://www.youtube.com/watch?v={video_ids[0]}'
             view.remove_item(watch_video)
             view.add_item(watch_video)

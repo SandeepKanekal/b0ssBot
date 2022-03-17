@@ -15,7 +15,7 @@ async def get_post(subreddit):
     submissions = subreddit.hot()
     async for submission in submissions:
         sub.append(submission)
-    return sub
+    return list(filter(lambda s: not s.over_18, sub))
 
 
 # A function to send embeds when there are false calls or errors
@@ -75,8 +75,6 @@ class Fun(commands.Cog):
         subreddit = random.choice(['memes', 'dankmemes', 'meme'])
         submissions = await get_post(subreddit)
         submissions.pop(0)  # Pops the pinned post
-        submissions = filter(lambda sub: not sub.over_18, submissions)  # Filtering to remove NSFW posts
-        submissions = list(submissions)  # Type casting
 
         next_meme = Button(label='Next Meme', style=discord.ButtonStyle.green)  # The button for going to the next meme
         end_interaction = Button(label='End Interaction',
@@ -138,7 +136,7 @@ class Fun(commands.Cog):
     # Dankvideo command
     @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos')
     async def dankvideo(self, ctx):
-        submission = await get_post('dankvideos')
+        submission = await get_post(random.choice(['dankvideos', 'cursed_videomemes']))
         submission = random.choice(submission)
         await ctx.send(f'https://reddit.com{submission.permalink}')
 
@@ -173,44 +171,22 @@ class Fun(commands.Cog):
             embed_next = discord.Embed(colour=discord.Colour.orange())
             embed_next.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
 
-            if not submissions[0].over_18:
-                # NSFW posts are not allowed
-                embed_next.title = submissions[0].title
-                embed_next.description = submissions[0].selftext
-                embed_next.url = f'https://reddit.com{submissions[0].permalink}'
-                embed_next.set_footer(
-                    text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-                embed_next.timestamp = datetime.datetime.now()
+            embed_next.title = submissions[0].title
+            embed_next.description = submissions[0].selftext
+            embed_next.url = f'https://reddit.com{submissions[0].permalink}'
+            embed_next.set_footer(
+                text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
+            embed_next.timestamp = datetime.datetime.now()
 
-                # Checking if the attachment is a video
-                if submissions[0].url.startswith('https://v.redd.it/') \
-                        and submissions[0].url.startswith('http://www.youtube.com/') \
-                        and submissions[0].url.startswith('https://youtu.be/'):
-                    embed_next.description = 'Attachment contains video'
+            # Checking if the submission is text-only
+            if not submissions[0].is_self:
+                embed_next.set_image(url=submissions[0].url)
 
-                # Checking if the submission is text-only
-                if not submissions[0].is_self:
-                    embed_next.set_image(url=submissions[0].url)
-
-                try:
-                    await interaction.response.edit_message(embed=embed_next, view=view)
-                except discord.HTTPException:
-                    embed_next.description = 'The post content was too long to be sent'
-                    await ctx.send(embed=embed_next)
-
-            else:
-                # NSFW posts are not shown
-                embed_next = discord.Embed(description='This post has been marked as NSFW',
-                                           colour=discord.Colour.orange())
-                embed_next.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed_next.set_footer(
-                    text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-                embed_next.timestamp = datetime.datetime.now()
-                view.remove_item(view_post)
-                view_post.url = f'https://reddit.com{submissions[0].permalink}'
-                view.add_item(view_post)
+            try:
                 await interaction.response.edit_message(embed=embed_next, view=view)
-                view.remove_item(view_post)
+            except discord.HTTPException:
+                embed_next.description = 'The post content was too long to be sent'
+                await ctx.send(embed=embed_next)
 
         async def end_interaction_trigger(interaction):
             # Callback to end_interaction triggers this function
@@ -237,41 +213,22 @@ class Fun(commands.Cog):
             next_post.callback = next_post_trigger
             end_interaction.callback = end_interaction_trigger
 
-            if not submissions[0].over_18:
-                # NSFW posts are not allowed
-                embed.title = submissions[0].title
-                embed.description = submissions[0].selftext
-                embed.url = submissions[0].url
-                embed.set_footer(
-                    text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-                embed.timestamp = datetime.datetime.now()
+            embed.title = submissions[0].title
+            embed.description = submissions[0].selftext
+            embed.url = submissions[0].url
+            embed.set_footer(
+                text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
+            embed.timestamp = datetime.datetime.now()
 
-                # Checking if the attachment is a video
-                if submissions[0].url.startswith('https://v.redd.it/') \
-                        and submissions[0].url.startswith('http://www.youtube.com/') \
-                        and submissions[0].url.startswith('https://youtu.be/'):
-                    embed.description = 'Attachment contains video'
-                    video_button = Button(label='Open Video', url=submissions[0].url)
-                    view.add_item(video_button)
+            # Checking if the submission is text-only
+            if not submissions[0].is_self:
+                embed.set_image(url=submissions[0].url)
 
-                # Checking if the submission is text-only
-                if not submissions[0].is_self:
-                    embed.set_image(url=submissions[0].url)
-
-                try:
-                    await ctx.send(embed=embed, view=view)
-                except discord.HTTPException:
-                    embed = discord.Embed(description='The post content was too long to be sent',
-                                          colour=discord.Colour.orange())
-                    await ctx.send(embed=embed, view=view)
-
-            else:
-                # NSFW posts are not shown
-                embed = discord.Embed(description='This post has been marked as NSFW', colour=discord.Colour.orange())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.set_footer(
-                    text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-                embed.timestamp = datetime.datetime.now()
+            try:
+                await ctx.send(embed=embed, view=view)
+            except discord.HTTPException:
+                embed = discord.Embed(description='The post content was too long to be sent',
+                                      colour=discord.Colour.orange())
                 await ctx.send(embed=embed, view=view)
 
         except AttributeError:

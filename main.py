@@ -8,7 +8,7 @@ from discord.ext import commands
 intents = discord.Intents.all()
 discord.Intents.members = True
 discord.Intents.webhooks = True
-bot = commands.Bot(command_prefix=';', case_insensitive=True, intents=intents)
+bot = commands.Bot(command_prefix='-', case_insensitive=True, intents=intents)
 bot.remove_command('help')
 cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util']
 
@@ -92,5 +92,5 @@ for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
-# keep_alive.keep_alive()  # Keep alive
+keep_alive.keep_alive()  # Keep alive
 bot.run(os.getenv('TOKEN'))  # Starts the bot

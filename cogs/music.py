@@ -380,9 +380,9 @@ class Music(commands.Cog):
             await ctx.send(embed=embed)
 
             remove_title = self.queue[ctx.guild.id][track_number]
-            for index, item in enumerate(self.music_queue):
-                if item[0] == remove_title and item[1] == voice_channel:
-                    self.music_queue.pop(index)
+            for i in range(len(self.music_queue)):
+                if self.music_queue[0][1] == voice_channel and self.music_queue[0][0]['title'] == remove_title:
+                    self.music_queue.pop(i)
 
             self.queue[ctx.guild.id].pop(track_number)
             self.urls[ctx.guild.id].pop(track_number)

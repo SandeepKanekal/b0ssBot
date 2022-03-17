@@ -4,7 +4,7 @@ from discord.ext import commands
 
 
 # A function to make simple embeds without thumbnails, footers and authors
-async def send_embed(ctx, description, colour: discord.Colour):
+async def send_embed(ctx, description, colour: discord.Colour = discord.Colour.red()):
     # Response embed
     embed = discord.Embed(description=description, colour=colour)
     await ctx.send(embed=embed)
@@ -18,6 +18,9 @@ class Moderation(commands.Cog):
     @commands.command(name='ban', description='Bans the mentioned user from the server')
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member: discord.Member, *, reason='reason not provided'):
+        if member == ctx.author:
+            await send_embed(ctx, description='You cannot ban yourself', colour=discord.Colour.red())
+            return
         try:
             await send_embed(ctx, description=f'{member} was banned for {reason}', colour=discord.Colour.red())
             try:
@@ -26,17 +29,20 @@ class Moderation(commands.Cog):
                 pass
             await member.ban(reason=reason)
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+            await send_embed(ctx, description='Permission error')
     
     # Ban error response
     @ban.error
     async def ban_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Kick command
     @commands.command(name='kick', description='Kicks the mentioned user from the server')
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason='no reason'):
+        if member == ctx.author:
+            await send_embed(ctx, description='You cannot kick yourself', colour=discord.Colour.red())
+            return
         try:
             await send_embed(ctx, description=f'{member} was kicked for {reason}', colour=discord.Colour.red())
             try:
@@ -45,17 +51,20 @@ class Moderation(commands.Cog):
                 pass
             await member.kick(reason=reason)
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+            await send_embed(ctx, description='Permission error')
     
     # Kick error response
     @kick.error
     async def kick_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Unban command
     @commands.command(aliases=['ub'], description='Unbans the mentioned member from the server')
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, *, member):
+        if member == ctx.author:
+            await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
+            return
         banned_users = await ctx.guild.bans()
         name, discriminator = member.split('#')
         for _ in banned_users:
@@ -70,18 +79,21 @@ class Moderation(commands.Cog):
                     await ctx.guild.unban(user)
                     return
                 except discord.Forbidden:  # Permission error
-                    await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+                    await send_embed(ctx, description='Permission error')
                     return
     
     # Unban error response
     @unban.error
     async def unban_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Mute command
     @commands.command(name='mute', description='Mutes the specified user')
     @commands.has_permissions(manage_messages=True)
     async def mute(self, ctx, member: discord.Member, *, reason='no reason'):
+        if member == ctx.author:
+            await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
+            return
         guild = ctx.guild
         muted_role = discord.utils.get(guild.roles, name='Muted')  # Get the muted role
         if not muted_role:
@@ -96,32 +108,35 @@ class Moderation(commands.Cog):
             except discord.HTTPException:  # Direct messages cannot be sent to bots
                 pass
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+            await send_embed(ctx, description='Permission error')
     
     # Mute error response
     @mute.error
     async def mute_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Unmute command
     @commands.command(aliases=['um'], description='Unmutes the specified user')
     @commands.has_permissions(manage_messages=True)
     async def unmute(self, ctx, member: discord.Member):
+        if member == ctx.author:
+            await send_embed(ctx, description='You cannot unmute yourself', colour=discord.Colour.red())
+            return
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get muted role
         try:
             await member.remove_roles(muted_role)  # Remove role
-            await send_embed(ctx, description=f'{member} was unbanned', colour=discord.Colour.green())
+            await send_embed(ctx, description=f'{member} was unmuted', colour=discord.Colour.green())
             try:
                 await member.send(f'You have been unmuted in {ctx.guild.name}')
             except discord.HTTPException:  # Direct messages cannot be sent to bots
                 pass
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+            await send_embed(ctx, description='Permission error')
     
     # Unmute error response
     @unmute.error
     async def unmute_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Nuke command
     @commands.command(aliases=['nk'], description='Nukes the mentioned text channel')
@@ -146,12 +161,12 @@ class Moderation(commands.Cog):
                 except discord.NotFound:  # The previous channel itself could have been nuked
                     pass
             except discord.Forbidden:  # Permission error
-                await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+                await send_embed(ctx, description='Permission error')
     
     # Nuke error response
     @nuke.error
     async def nuke_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Lock command
     @commands.command(name='lock', description='Locks the current channel')
@@ -162,12 +177,12 @@ class Moderation(commands.Cog):
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
             await send_embed(ctx, description=f'{channel} is in lockdown', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+            await send_embed(ctx, description='Permission error')
     
     # Lock error response
     @lock.error
     async def lock_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
     # Unlock command
     @commands.command(name='unlock', description='Unlocks te current channel')
@@ -178,12 +193,12 @@ class Moderation(commands.Cog):
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
             await send_embed(ctx, description=f'{channel} has been unlocked', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error', colour=discord.Colour.red())
+            await send_embed(ctx, description='Permission error')
     
     # Unlock error response
     @unlock.error
     async def unlock_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}', colour=discord.Colour.red())
+        await send_embed(ctx, description=f'Error: {error}')
 
 
 # Setup
