@@ -74,8 +74,8 @@ class Misc(commands.Cog):
     async def servericon(self, ctx):
         # Getting the urls
         url = str(ctx.guild.icon)
-        png_url = str(url).replace('webp', 'png')
-        jpg_url = str(url).replace('webp', 'jpg')
+        png_url = url.replace('webp', 'png')
+        jpg_url = url.replace('webp', 'jpg')
         # Response embed
         embed = discord.Embed(colour=discord.Colour.random())
         embed.set_author(name=ctx.guild.name, icon_url=url)

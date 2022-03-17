@@ -41,7 +41,7 @@ class Music(commands.Cog):
     def search_yt(self, item):
         with YoutubeDL(self._ydl_options) as ydl:
             try:
-                info = ydl.extract_info("ytsearch:%s" % item, download=False)['entries'][0]
+                info = ydl.extract_info(f"ytsearch:{item}", download=False)['entries'][0]
                 self.url = info['webpage_url']
                 self.title = info['title']
             except IndexError:

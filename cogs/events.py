@@ -52,7 +52,7 @@ class Events(commands.Cog):
         if message.content.lower() == 'no one cares':
             await message.reply('https://tenor.com/view/no-one-cares-i-dont-care-idc-nobody-cares-gif-8737514')
 
-        if message.content.lower() == 'no u' or message.content.lower() == 'nou':
+        if message.content.lower() in ['no u', 'nou']:
             await message.reply('https://tenor.com/view/no-u-reverse-card-anti-orders-gif-19358543')
 
         if self.bot.user.id in message.raw_mentions and message.content != '@everyone' and message.content != '@here':
@@ -77,10 +77,7 @@ class Events(commands.Cog):
             )
             await message.reply(gif)
 
-        if (message.content.lower() == 'amogus' or
-                message.content.lower() == 'amongus' or
-                message.content.lower() == 'amog us' or
-                message.content.lower() == 'among us'):
+        if message.content.lower() in ['amogus', 'amongus', 'amog us', 'among us']:
             await message.reply('https://tenor.com/view/amogus-spin-gif-22146300')
 
         if message.content.lower() == 'rickroll':
@@ -99,7 +96,7 @@ class Events(commands.Cog):
                 'https://tenor.com/view/amogus-spin-gif-22146300'])
             await message.reply(gif)
 
-        if message.content.lower() == 'zucc' or message.content.lower() == 'zuck' or message.content.lower() == 'zuckerberg':
+        if message.content.lower() in ['zucc', 'zuck', 'zuckerberg']:
             await message.reply('https://tenor.com/view/mark-zuckerberg-facebook-ok-this-is-gif-11614677')
 
 
