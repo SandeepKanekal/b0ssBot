@@ -39,6 +39,10 @@ class Misc(commands.Cog):
         embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
+    
+    @quote.error
+    async def quote_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Spam command
     @commands.command(aliases=['s'], description='Spams text or users')
@@ -68,6 +72,10 @@ class Misc(commands.Cog):
         embed.set_image(url=url)
         embed.add_field(name='Download this image', value=f'[webp]({url}) | [png]({png_url}) | [jpg]({jpg_url})')
         await ctx.reply(embed=embed)
+    
+    @avatar.error
+    async def avatar_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Servericon command
     @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon')
@@ -84,6 +92,10 @@ class Misc(commands.Cog):
         embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
+    
+    @servericon.error
+    async def servericon_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Megaspam command
     @commands.command(aliases=['ms'], description='Spams a message 25 times')
@@ -115,6 +127,10 @@ class Misc(commands.Cog):
         async def next_video_trigger(interaction):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+            
+            if not len(video_ids):
+                await interaction.response.edit_message('No more videos available')
                 return
 
             embed.clear_fields()

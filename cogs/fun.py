@@ -15,7 +15,7 @@ async def get_post(subreddit):
     submissions = subreddit.hot()
     async for submission in submissions:
         sub.append(submission)
-    return list(filter(lambda s: not s.over_18, sub))
+    return sub
 
 
 # A function to send embeds when there are false calls or errors
@@ -30,7 +30,7 @@ class Fun(commands.Cog):
         self.bot = bot
 
     # 8ball for fun
-    @commands.command(name='8ball', description='Ask a question, and get a reply!')
+    @commands.command(name='8ball', aliases=['8b'], description='Ask a question, and get a reply!')
     async def eight_ball(self, ctx, *, question):
         # Response list
         responses = [
@@ -57,12 +57,10 @@ class Fun(commands.Cog):
         ]
 
         response = random.choice(responses)
-        if 'tiktok' in question or 'tik tok' in question:
+        if 'tiktok' in question.lower() or 'tik tok' in question.lower():
             # TikTok is just horrible
             response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS!'
         embed = discord.Embed(title=f':8ball: {question}', description=response, colour=discord.Colour.random())
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}')
         await ctx.send(embed=embed)
 
     @eight_ball.error
@@ -75,6 +73,8 @@ class Fun(commands.Cog):
         subreddit = random.choice(['memes', 'dankmemes', 'meme'])
         submissions = await get_post(subreddit)
         submissions.pop(0)  # Pops the pinned post
+        if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
+            submissions = list(filter(lambda s: not s.over_18, submissions))
 
         next_meme = Button(label='Next Meme', style=discord.ButtonStyle.green)  # The button for going to the next meme
         end_interaction = Button(label='End Interaction',
@@ -89,7 +89,7 @@ class Fun(commands.Cog):
                                                         ephemeral=True)
                 return
 
-            if len(submissions) == 0:
+            if not len(submissions):
                 # This probably will never happen
                 await interaction.response.edit_message(content='No more memes available.')
                 return
@@ -132,13 +132,23 @@ class Fun(commands.Cog):
         # Callbacks
         next_meme.callback = next_meme_trigger
         end_interaction.callback = end_interaction_trigger
+    
+    @meme.error
+    async def meme_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Dankvideo command
     @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos')
     async def dankvideo(self, ctx):
         submission = await get_post(random.choice(['dankvideos', 'cursed_videomemes']))
+        if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
+            submission = list(filter(lambda s: not s.over_18, submission))
         submission = random.choice(submission)
         await ctx.send(f'https://reddit.com{submission.permalink}')
+    
+    @dankvideo.error
+    async def dankvideo_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Coinflip command
     @commands.command(aliases=['cf'], description='Heads or Tails?')
@@ -148,6 +158,10 @@ class Fun(commands.Cog):
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='Result:', value=result)
         await ctx.send(embed=embed)
+    
+    @coinflip.error
+    async def coinflip_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Post command
     @commands.command(aliases=['reddit', 'redditpost', 'rp'], description='Gets a post from the specified subreddit')
@@ -160,7 +174,7 @@ class Fun(commands.Cog):
                                                         ephemeral=True)
                 return
 
-            if len(submissions) == 0:
+            if not len(submissions):
                 await send_error_embed(ctx, description=f'No more posts available in r/{subreddit}')
                 return
 
@@ -170,7 +184,6 @@ class Fun(commands.Cog):
             view.add_item(view_post)
             embed_next = discord.Embed(colour=discord.Colour.orange())
             embed_next.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-
             embed_next.title = submissions[0].title
             embed_next.description = submissions[0].selftext
             embed_next.url = f'https://reddit.com{submissions[0].permalink}'
@@ -201,6 +214,10 @@ class Fun(commands.Cog):
 
         try:
             submissions = await get_post(subreddit)
+            if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
+                submissions = list(filter(lambda s: not s.over_18, submissions))
+            if not len(submissions):
+                await send_error_embed(ctx, description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
             embed = discord.Embed(colour=discord.Colour.orange())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             next_post = Button(label='Next Post', style=discord.ButtonStyle.green)

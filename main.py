@@ -8,7 +8,7 @@ from discord.ext import commands
 intents = discord.Intents.all()
 discord.Intents.members = True
 discord.Intents.webhooks = True
-bot = commands.Bot(command_prefix='-', case_insensitive=True, intents=intents)
+bot = commands.Bot(command_prefix=';', case_insensitive=True, intents=intents)
 bot.remove_command('help')
 cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util']
 
@@ -86,11 +86,20 @@ async def reloadcog(ctx, cog):
 async def reloadcog_error(ctx, error):
     await send_error_embed(ctx, description=f'Error: {error}')
 
+@bot.command(hidden=True)
+@commands.is_owner()
+async def guildlist(ctx):
+    await ctx.send(bot.guilds)
+
+@guildlist.error
+async def guildlist(ctx, error):
+    await send_error_embed(ctx, description=f'Error: {error}')
+
 
 # Loads the cog
 for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
-keep_alive.keep_alive()  # Keep alive
+# keep_alive.keep_alive()  # Keep alive
 bot.run(os.getenv('TOKEN'))  # Starts the bot

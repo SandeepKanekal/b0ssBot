@@ -1,4 +1,5 @@
 # Contains all bot events
+import contextlib
 import random
 import discord
 from discord.ext import commands
@@ -18,7 +19,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         print('Bot is ready')
-        await self.bot.change_presence(activity=discord.Game(name=f'Prefix is {self.bot.command_prefix}'))
+        await self.bot.change_presence(activity=discord.Game(name=f'{self.bot.command_prefix}help'))
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
@@ -30,10 +31,8 @@ class Events(commands.Cog):
         for item in afks:
             if item['member_id'] == message.author.id and item['guild_id'] == message.guild.id:
                 afks.pop(afk_index)
-                try:
+                with contextlib.suppress(discord.Forbidden):
                     await message.author.edit(nick=remove(message.author.display_name))
-                except discord.Forbidden:
-                    pass
                 await message.channel.send(f'Welcome back {message.author.name}, I removed your AFK')
                 break
             afk_index += 1
@@ -98,6 +97,16 @@ class Events(commands.Cog):
 
         if message.content.lower() in ['zucc', 'zuck', 'zuckerberg']:
             await message.reply('https://tenor.com/view/mark-zuckerberg-facebook-ok-this-is-gif-11614677')
+
+        if message.content.lower() in ['urmom', 'ur mom', 'your mom', 'yourmom']:
+            gif = random.choice([
+                'https://tenor.com/view/your-mother-great-argument-however-megamind-your-mom-yo-mama-gif-22994712',
+                'https://tenor.com/view/gul-ur-mom-gold-gul-ur-mom-gold-gif-19890779'
+            ])
+            await message.reply(gif)
+
+        if message.content.lower() in ['horny', 'horni']:
+            await message.reply('https://tenor.com/view/vorzek-vorzneck-oglg-og-lol-gang-gif-24901093')
 
 
 # Setup

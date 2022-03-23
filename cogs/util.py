@@ -1,4 +1,5 @@
 # All Util commands stored here
+import contextlib
 import discord
 import datetime
 from discord.ext import commands
@@ -20,10 +21,8 @@ class Util(commands.Cog):
     @commands.command(name='afk', description='Marks the user as AFK')
     async def afk(self, ctx, *, reason='No reason'):
         member = ctx.author
-        try:
+        with contextlib.suppress(discord.Forbidden):
             await member.edit(nick=f'[AFK] {member.display_name}')  # Changing the nickname
-        except discord.Forbidden:
-            pass  # Permission error
         # Append the member's details to the afk list
         afks.append(
             {
@@ -38,6 +37,10 @@ class Util(commands.Cog):
         embed.add_field(name='AFK note', value=reason)
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
+    
+    @afk.error
+    async def afk_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Ping command
     @commands.command(name="ping", description='Replies with the latency of the bot')

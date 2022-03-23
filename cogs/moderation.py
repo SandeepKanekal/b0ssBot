@@ -1,5 +1,7 @@
 # Moderation commands defined here
+import contextlib
 import discord
+import datetime
 from discord.ext import commands
 
 
@@ -23,10 +25,8 @@ class Moderation(commands.Cog):
             return
         try:
             await send_embed(ctx, description=f'{member} was banned for {reason}', colour=discord.Colour.red())
-            try:
+            with contextlib.suppress(discord.HTTPException):
                 await member.send(f'You were banned in {ctx.guild.name} for: {reason}')
-            except discord.HTTPException:  # Direct messages cannot be sent to bots
-                pass
             await member.ban(reason=reason)
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
@@ -45,10 +45,8 @@ class Moderation(commands.Cog):
             return
         try:
             await send_embed(ctx, description=f'{member} was kicked for {reason}', colour=discord.Colour.red())
-            try:
+            with contextlib.suppress(discord.HTTPException):
                 await member.send(f'You were kicked in {ctx.guild.name} for {reason}')
-            except discord.HTTPException:  # Direct messages cannot be sent to bots
-                pass
             await member.kick(reason=reason)
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
@@ -72,10 +70,8 @@ class Moderation(commands.Cog):
             if (user.name, user, discriminator) == (name, discriminator):
                 try:
                     await send_embed(ctx, description=f'{member} was unbanned', colour=discord.Colour.green())
-                    try:
+                    with contextlib.suppress(discord.HTTPException):
                         await member.send(f'You were unbanned in {ctx.guild}')
-                    except discord.HTTPException:  # Direct messages cannot be sent to bots
-                        pass
                     await ctx.guild.unban(user)
                     return
                 except discord.Forbidden:  # Permission error
@@ -103,10 +99,8 @@ class Moderation(commands.Cog):
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
             await send_embed(ctx, description=f'{member} has been muted for {reason}', colour=discord.Colour.red())
-            try:
+            with contextlib.suppress(discord.HTTPException):
                 await member.send(f'You were muted in {guild.name} for {reason}')
-            except discord.HTTPException:  # Direct messages cannot be sent to bots
-                pass
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
     
@@ -126,10 +120,8 @@ class Moderation(commands.Cog):
         try:
             await member.remove_roles(muted_role)  # Remove role
             await send_embed(ctx, description=f'{member} was unmuted', colour=discord.Colour.green())
-            try:
+            with contextlib.suppress(discord.HTTPException):
                 await member.send(f'You have been unmuted in {ctx.guild.name}')
-            except discord.HTTPException:  # Direct messages cannot be sent to bots
-                pass
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
     
@@ -156,10 +148,8 @@ class Moderation(commands.Cog):
                 await nuke_channel.delete()
                 await send_embed(new_channel, description='This channel was nuked!', colour=discord.Colour.red())
                 await new_channel.send('https://tenor.com/view/explosion-mushroom-cloud-atomic-bomb-bomb-boom-gif-4464831')
-                try:
+                with contextlib.suppress(discord.NotFound):
                     await ctx.reply("Nuked the Channel successfully!")
-                except discord.NotFound:  # The previous channel itself could have been nuked
-                    pass
             except discord.Forbidden:  # Permission error
                 await send_embed(ctx, description='Permission error')
     
@@ -198,6 +188,36 @@ class Moderation(commands.Cog):
     # Unlock error response
     @unlock.error
     async def unlock_error(self, ctx, error):
+        await send_embed(ctx, description=f'Error: {error}')
+    
+    # Timeout commands
+    @commands.command(name='timeout', description='Times out the mentioned user. Duration in minutes')
+    async def timeout(self, ctx, member: discord.Member, minutes: int, *, reason: str = 'No reason provided'):
+        if not member:
+            await send_embed(ctx, description='Whom must I timeout?')
+            return
+
+        if not minutes:
+            await send_embed(ctx, description='Mention a value in minutes above 0')
+            return
+
+        try:
+            duration = datetime.timedelta(minutes=minutes)
+            await member.timeout_for(duration=duration, reason=reason)
+            embed = discord.Embed(
+                description=f'{member.mention} has been timed out for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}',
+                colour = discord.Colour.green()
+            )
+            await ctx.send(embed=embed)
+            with contextlib.suppress(discord.HTTPException):
+                await member.send(f'You were timed out in {ctx.guild.name} for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}')
+        
+        except discord.Forbidden:  # Permission error
+            await send_embed(ctx, description='Permission error')
+    
+    # Timeout error response
+    @timeout.error
+    async def timeout_error(self, ctx, error):
         await send_embed(ctx, description=f'Error: {error}')
 
 
