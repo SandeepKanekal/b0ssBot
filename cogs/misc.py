@@ -1,25 +1,24 @@
 # All misc commands stored here
 import datetime
 import json
-import urllib.request
 import discord
-import pafy
 import requests
-import re
 import os
 import wikipedia
+import time
+from googleapiclient.discovery import build
 from discord.ext import commands
 from discord.ui import Button, View
 
 
 # Gets quote from https://zenquotes.io api
-def get_quote():
+def get_quote() -> list:
     response = requests.get('https://zenquotes.io/api/random')
     return json.loads(response.text)
 
 
 # A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description):
+async def send_error_embed(ctx, description: str) -> None:
     # Response embed
     embed = discord.Embed(description=description, colour=discord.Colour.red())
     await ctx.send(embed=embed)
@@ -36,7 +35,7 @@ class Misc(commands.Cog):
         embed = discord.Embed(colour=discord.Colour.orange())
         embed.add_field(name=quote[0]['q'], value=quote[0]['a'], inline=True)
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
     
@@ -57,20 +56,17 @@ class Misc(commands.Cog):
     # Av command
     @commands.command(aliases=['av', 'pfp'], description='Shows the specified user\'s avatar')
     async def avatar(self, ctx, member: discord.Member = None):
-        if member is not None:  # A member is mentioned
-            # Getting the urls
-            url = str(member.avatar)
-        else:
-            member = ctx.message.author  # Member is the author of the message sent
-            # Getting the urls
-            url = member.avatar
-        png_url = str(url).replace('webp', 'png')
-        jpg_url = str(url).replace('webp', 'jpg')
+        if member is None:
+            member = ctx.author
+        # Getting the urls
+        png_url = str(member.avatar) if member.avatar else str(member.default_avatar)
+        webp_url = png_url.replace('png', 'webp')
+        jpg_url = png_url.replace('png', 'jpg')
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=str(member), icon_url=url)
-        embed.set_image(url=url)
-        embed.add_field(name='Download this image', value=f'[webp]({url}) | [png]({png_url}) | [jpg]({jpg_url})')
+        embed.set_author(name=str(member), icon_url=png_url)
+        embed.set_image(url=png_url)
+        embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
         await ctx.reply(embed=embed)
     
     @avatar.error
@@ -80,16 +76,19 @@ class Misc(commands.Cog):
     # Servericon command
     @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon')
     async def servericon(self, ctx):
+        if ctx.guild.icon is None:
+            await send_error_embed(ctx, description='This server has no icon')
+            return
         # Getting the urls
-        url = str(ctx.guild.icon)
-        png_url = url.replace('webp', 'png')
-        jpg_url = url.replace('webp', 'jpg')
+        png_url = str(ctx.guild.icon)
+        webp_url = png_url.replace('png', 'webp')
+        jpg_url = png_url.replace('png', 'jpg')
         # Response embed
         embed = discord.Embed(colour=discord.Colour.random())
-        embed.set_author(name=ctx.guild.name, icon_url=url)
-        embed.set_image(url=url)
-        embed.add_field(name='Download this image', value=f'[webp]({url}) | [png]({png_url}) | [jpg]({jpg_url})')
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
+        embed.set_author(name=ctx.guild.name, icon_url=png_url)
+        embed.set_image(url=png_url)
+        embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
     
@@ -111,46 +110,64 @@ class Misc(commands.Cog):
     # Search command
     @commands.command(aliases=['yt', 'youtube', 'ytsearch'],
                       description='Searches YouTube and responds with the top result')
-    async def search(self, ctx, *, query):
-        original_query = query
-        query = query.replace(' ', '+')  # Replacing white spaces with +
-        html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + query)
-        video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
-        try:
-            video = pafy.new("https://www.youtube.com/watch?v=" + video_ids[0])  # Getting video details
-        except OSError as e:
-            embed = discord.Embed(description=f'Could not get video. {e}', colour=discord.Colour.red())
-            await ctx.send(embed=embed)
-            return
+    async def youtubesearch(self, ctx, *, query):
+        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
+        req = youtube.search().list(q=query, part='snippet', type='video', maxResults=100)
+        res = req.execute()
+
+        video_ids = []
+        thumbnails = []
+        titles = []
+        publish_dates = []
+        channel_ids = []
+        authors = []
+
+        for item in res['items']:
+            # Getting the video details
+            video_ids.append(item['id']['videoId'])
+            thumbnails.append(item['snippet']['thumbnails']['high']['url'])
+            titles.append(item['snippet']['title'])
+            channel_ids.append(item['snippet']['channelId'])
+            authors.append(item['snippet']['channelTitle'])
+
+            # Getting the publish date and converting it to unix time
+            publish_date = item['snippet']['publishedAt']
+            publish_date = publish_date.strip('Z')
+            publish_date = publish_date.split('T')
+            publish_date = list(publish_date[0].split('-'))
+            publish_date.extend(publish_date[1].split('.'))
+            publish_date = [int(x) for x in publish_date]
+            publish_date = tuple(publish_date)
+            publish_date = datetime.datetime(*publish_date)
+            publish_date = f'<t:{int(time.mktime(publish_date.timetuple()))}:R>'
+            publish_dates.append(publish_date)
+        
 
         # Gets the next video
         async def next_video_trigger(interaction):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
                 return
-            
-            if not len(video_ids):
-                await interaction.response.edit_message('No more videos available')
-                return
 
             embed.clear_fields()
-            try:
-                video_ids.pop(0)
-            except IndexError:
-                emb = discord.Embed(description='No more videos available', colour=discord.Colour.red())
-                await interaction.response.edit_message(embed=emb)
+            video_ids.pop(0)
+            thumbnails.pop(0)
+            titles.pop(0)
+            publish_dates.pop(0)
+            channel_ids.pop(0)
+            authors.pop(0)
+            if not video_ids:
+                await interaction.response.edit_message('No more results available', embed=None)
+                return
 
-            vid = pafy.new(f'https://www.youtube.com/watch?v={video_ids[0]}')
-            embed.add_field(name='Search Query:',
-                            value=f'[{original_query.upper()}](https://www.youtube.com/results?search_query={query})')
-            embed.add_field(name='Result:', value=f'[{vid.title}](https://www.youtube.com/watch?v={video_ids[0]})')
-            if vid.author == vid.username:
-                embed.add_field(name='Video Author:', value=f'[{vid.author}](https://youtube.com/c/{vid.author})')
-            else:
-                embed.add_field(name='Video Author:',
-                                value=f'[{vid.author}](https://youtube.com/channel/{vid.username})')
-            embed.set_image(url=vid.bigthumbhd)
-            embed.set_footer(text=f'Duration: {vid.duration}, 🎥: {vid.viewcount}, 👍: {vid.likes}')
+            stats = youtube.videos().list(part='statistics,contentDetails', id=video_ids[0]).execute()
+
+            embed.add_field(name='Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
+            embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
+            embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
+            embed.set_image(url=thumbnails[0])
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_footer(text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
             watch_video.url = f'https://www.youtube.com/watch?v={video_ids[0]}'
             view.remove_item(watch_video)
             view.add_item(watch_video)
@@ -165,19 +182,15 @@ class Misc(commands.Cog):
             view.remove_item(end_interaction)
             await interaction.response.edit_message(view=view)
 
+        stats = youtube.videos().list(id=video_ids[0], part='statistics,contentDetails').execute()
         # Response embed
         embed = discord.Embed(colour=discord.Colour.red())
-        embed.add_field(name='Search Query:',
-                        value=f'[{original_query.upper()}](https://www.youtube.com/results?search_query={query})')
-        embed.add_field(name=f'Result:', value=f'[{video.title}](https://www.youtube.com/watch?v={video_ids[0]})')
-        if video.author == video.username:
-            embed.add_field(name='Video Author:', value=f'[{video.author}](https://youtube.com/c/{video.author})')
-        else:
-            embed.add_field(name='Video Author:',
-                            value=f'[{video.author}](https://youtube.com/channel/{video.username})')
-        embed.set_image(url=video.bigthumbhd)
+        embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
+        embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
+        embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
+        embed.set_image(url=thumbnails[0])
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Duration: {video.duration}, 🎥: {video.viewcount}, 👍: {video.likes}')
+        embed.set_footer(text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
         next_video = Button(label='Next Video ⏭️', style=discord.ButtonStyle.green)
         end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
         watch_video = Button(label='Watch Video', url=f'https://www.youtube.com/watch?v={video_ids[0]}')
@@ -189,9 +202,9 @@ class Misc(commands.Cog):
         next_video.callback = next_video_trigger
         end_interaction.callback = end_interaction_trigger
 
-    @search.error
-    async def search_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+    # @youtubesearch.error
+    # async def search_error(self, ctx, error):
+    #     await send_error_embed(ctx, description=f'Error: {error}')
 
     # Code command
     @commands.command(name='code', description='Shows the code of the module')

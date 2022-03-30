@@ -8,7 +8,7 @@ from discord.ui import Button, View
 
 
 # Gets post from the specified subreddit
-async def get_post(subreddit):
+async def get_post(subreddit: str) -> list:
     reddit = asyncpraw.Reddit('bot', user_agent='bot user agent')
     subreddit = await reddit.subreddit(subreddit)
     sub = []
@@ -19,7 +19,7 @@ async def get_post(subreddit):
 
 
 # A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description):
+async def send_error_embed(ctx, description: str) -> None:
     # Response embed
     embed = discord.Embed(description=description, colour=discord.Colour.red())
     await ctx.send(embed=embed)
@@ -66,6 +66,26 @@ class Fun(commands.Cog):
     @eight_ball.error
     async def eight_ball_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
+
+    @commands.command(aliases=['roll'], description='Rolls a dice')
+    async def dice(self, ctx):
+        async def callback(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+            await interaction.response.edit_message(content='**Rolling.**')
+            await interaction.followup.edit_message(content='**Rolling..**', message_id=msg.id)
+            await interaction.followup.edit_message(content='**Rolling...**', message_id=msg.id)
+            await interaction.followup.edit_message(content=f'**You rolled a {random.randint(1, 6)}!** :game_die:', message_id=msg.id)
+        msg = await ctx.send('**Rolling**')
+        await msg.edit('**Rolling.**')
+        await msg.edit('**Rolling..**')
+        await msg.edit('**Rolling...**')
+        roll = Button(label='Roll again', style=discord.ButtonStyle.green)
+        view = View()
+        view.add_item(roll)
+        await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**', view=view)
+        roll.callback = callback
 
     # Meme command
     @commands.command(aliases=['m'], description='Posts memes from the most famous meme subreddits')
@@ -132,7 +152,7 @@ class Fun(commands.Cog):
         # Callbacks
         next_meme.callback = next_meme_trigger
         end_interaction.callback = end_interaction_trigger
-    
+
     @meme.error
     async def meme_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
@@ -145,7 +165,7 @@ class Fun(commands.Cog):
             submission = list(filter(lambda s: not s.over_18, submission))
         submission = random.choice(submission)
         await ctx.send(f'https://reddit.com{submission.permalink}')
-    
+
     @dankvideo.error
     async def dankvideo_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
@@ -158,14 +178,14 @@ class Fun(commands.Cog):
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='Result:', value=result)
         await ctx.send(embed=embed)
-    
+
     @coinflip.error
     async def coinflip_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
     # Post command
-    @commands.command(aliases=['reddit', 'redditpost', 'rp'], description='Gets a post from the specified subreddit')
-    async def post(self, ctx, subreddit):
+    @commands.command(aliases=['reddit', 'post', 'rp'], description='Gets a post from the specified subreddit')
+    async def redditpost(self, ctx, subreddit):
 
         async def next_post_trigger(interaction):
             # Callback to next_post triggers this function
@@ -175,7 +195,7 @@ class Fun(commands.Cog):
                 return
 
             if not len(submissions):
-                await send_error_embed(ctx, description=f'No more posts available in r/{subreddit}')
+                await send_error_embed(ctx, description=f'No more posts available in **r/{subreddit}**')
                 return
 
             submissions.pop(0)  # Popping previous submission
@@ -217,7 +237,8 @@ class Fun(commands.Cog):
             if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
                 submissions = list(filter(lambda s: not s.over_18, submissions))
             if not len(submissions):
-                await send_error_embed(ctx, description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
+                await send_error_embed(ctx,
+                                       description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
             embed = discord.Embed(colour=discord.Colour.orange())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             next_post = Button(label='Next Post', style=discord.ButtonStyle.green)
@@ -250,12 +271,12 @@ class Fun(commands.Cog):
 
         except AttributeError:
             # Could not get a post
-            await send_error_embed(description='Could not retrieve a post from **r/{subreddit}**')
+            await send_error_embed(ctx, description='Could not retrieve a post from **r/{subreddit}**')
 
         except asyncprawcore.exceptions.AsyncPrawcoreException as e:
-            await send_error_embed(description=e)
+            await send_error_embed(ctx, description=e)
 
-    @post.error
+    @redditpost.error
     async def post_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 

@@ -14,7 +14,7 @@ from youtube_dl import YoutubeDL
 
 
 # A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description):
+async def send_error_embed(ctx, description: str) -> None:
     # Response embed
     embed = discord.Embed(description=description, colour=discord.Colour.red())
     await ctx.send(embed=embed)
@@ -38,6 +38,14 @@ class Music(commands.Cog):
                                 'options': '-vn'}
         self.repeat = {}  # Stores if the guild has loop enabled
         self.repeat_details = {}  # Stores the details of the first track
+        self.start_time = {}  # Stores the date when the track started to play
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        with contextlib.suppress(AttributeError):  # The player is disconnected when there is no one in the voice channel
+            vc = discord.utils.get(self.bot.voice_clients, guild=member.guild)
+            if len(before.channel.members) == 1:
+                await vc.disconnect()
 
     # Searches YouTube for the item.
     # Possible errors:
@@ -84,6 +92,7 @@ class Music(commands.Cog):
         self.repeat_details[ctx.guild.id] = self.music_queue[index]
         self.now_playing[ctx.guild.id] = self.music_queue[index][0]['title']
         self.now_playing_url[ctx.guild.id] = self.music_queue[index][0]['url']
+        self.start_time[ctx.guild.id] = datetime.datetime.now()
         with contextlib.suppress(IndexError):
             # The queue is emptied when the stop command is used, hence, it raises IndexError when the player tries to play the music again. Thus, the suppression
             if not self.repeat[ctx.guild.id]:
@@ -110,6 +119,7 @@ class Music(commands.Cog):
             self.now_playing_url.update({ctx.guild.id: self.music_queue[index][0]['url']})
             self.repeat_details.update({ctx.guild.id: self.music_queue[index]})
             m_url = self.music_queue[index][0]['source']
+            self.start_time[ctx.guild.id] = datetime.datetime.now()
             # Popping is done to ensure the finished songs are not left in the queue
         except IndexError:
             return
@@ -125,7 +135,7 @@ class Music(commands.Cog):
         # try to pop as you are playing it
         if not self.repeat[ctx.guild.id]:
             self.music_queue.pop(index)
-    
+
     @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in')
     async def join(self, ctx):
         voice_channel = ctx.author.voice.channel
@@ -136,7 +146,7 @@ class Music(commands.Cog):
             await voice_channel.connect()
         except discord.ClientException:
             await send_error_embed(ctx, description='Already connected to the voice channel')
-    
+
     @join.error
     async def join_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
@@ -253,7 +263,9 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
             if vc.is_playing():
                 # Response embed
-                embed = discord.Embed(description=f'Paused [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})', colour=discord.Colour.green())
+                embed = discord.Embed(
+                    description=f'Paused [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+                    colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 vc.pause()
             else:
@@ -272,7 +284,9 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
             if vc.is_paused():
                 # Response embed
-                embed = discord.Embed(description=f'Resumed [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})', colour=discord.Colour.green())
+                embed = discord.Embed(
+                    description=f'Resumed [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+                    colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 vc.resume()
             else:
@@ -301,7 +315,9 @@ class Music(commands.Cog):
 
             if vc is not None:
                 # Response embed
-                embed = discord.Embed(description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})', colour=discord.Colour.green())
+                embed = discord.Embed(
+                    description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+                    colour=discord.Colour.green())
                 await ctx.send(embed=embed)
                 vc.stop()  # Stopping the player
         else:
@@ -343,6 +359,7 @@ class Music(commands.Cog):
                 self.now_playing_url[ctx.guild.id] = None
                 with contextlib.suppress(KeyError):
                     self.repeat.pop(ctx.guild.id)
+                    self.start_time.pop(ctx.guild.id)
 
         else:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
@@ -377,6 +394,7 @@ class Music(commands.Cog):
                 self.now_playing_url[ctx.guild.id] = None
                 with contextlib.suppress(KeyError):
                     self.repeat.pop(ctx.guild.id)
+                    self.start_time.pop(ctx.guild.id)
         else:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
 
@@ -399,20 +417,38 @@ class Music(commands.Cog):
             await send_error_embed(ctx, description='No audio is being played')
             return
 
+        # Getting the video details
+        video = pafy.new(url=self.now_playing_url[ctx.guild.id])
+
+        # Time calculations
+        time_now = datetime.datetime.now()
+        seconds_between = (time_now - self.start_time[ctx.guild.id]).seconds  # Calculating the time elapsed
+        minutes_between = seconds_between // 60  # Calculating the minutes elapsed
+        hours_between = minutes_between // 60  # Calculating the hours elapsed
+        seconds_between = seconds_between % 60  # Seconds cannot exceed 60
+        minutes_between = minutes_between % 60  # Minutes cannot exceed 60
+        # Concatenate 0 if the number is less than 10
+        if seconds_between < 10:
+            seconds_between = f'0{str(seconds_between)}'
+        if minutes_between < 10:
+            minutes_between = f'0{str(minutes_between)}'
+        if hours_between < 10:
+            hours_between = f'0{str(hours_between)}'
+        progress_string = f'{hours_between}:{minutes_between}:{seconds_between}/{video.duration}'
+
+        # Response embed
+        embed = discord.Embed(description='Now Playing', colour=discord.Colour.dark_teal())
+        if video.username in video.author:
+            embed.add_field(name='Track Name:',
+                            value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]}) by [{video.author}](https://youtube.com/c/{video.author})')
         else:
-            # Response embed
-            video = pafy.new(url=self.now_playing_url[ctx.guild.id])
-            embed = discord.Embed(description='Now Playing', colour=discord.Colour.dark_teal())
-            if video.username in video.author:
-                embed.add_field(name='Track Name:',
-                                value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]}) by [{video.author}](https://youtube.com/c/{video.author})')
-            else:
-                embed.add_field(name='Track Name:',
-                                value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]}) by [{video.author}](https://youtube.com/channel/{video.username})')
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_thumbnail(url=video.bigthumbhd)
-            embed.set_footer(text=f'Duration: {video.duration}, 🎥: {video.viewcount}, 👍: {video.likes}')
-            await ctx.send(embed=embed)
+            embed.add_field(name='Track Name:',
+                            value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]}) by [{video.author}](https://youtube.com/channel/{video.username})')
+        embed.add_field(name='Progress:', value=progress_string, inline=False)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_thumbnail(url=video.bigthumbhd)
+        embed.set_footer(text=f'Duration: {video.duration}, 🎥: {video.viewcount}, 👍: {video.likes}')
+        await ctx.send(embed=embed)
 
     @nowplaying.error
     async def nowplaying_error(self, ctx, error):
@@ -484,7 +520,7 @@ class Music(commands.Cog):
                 embed = discord.Embed(title=f'Lyrics for {self.now_playing[ctx.guild.id]}', description=lyrics,
                                       colour=discord.Colour.blue())
                 embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
+                embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
                 embed.timestamp = datetime.datetime.now()
                 await ctx.send(embed=embed)
 
@@ -527,7 +563,7 @@ class Music(commands.Cog):
     @lyrics.error
     async def lyrics_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
-    
+
     # Repeat/Loop command
     @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode')
     async def loop(self, ctx, mode: int):
@@ -544,7 +580,7 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
             return
-            
+
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         if self.music_queue and not bool(mode):
             voice_channel = ctx.author.voice.channel
@@ -553,10 +589,10 @@ class Music(commands.Cog):
                 if item[1] == voice_channel:
                     self.music_queue.pop(index)
                     break
-            
+
             embed = discord.Embed(
                 description=f'Loop mode set to {self.repeat[ctx.guild.id]}',
-                colour = discord.Colour.green()
+                colour=discord.Colour.green()
             )
             await ctx.send(embed=embed)
             return
@@ -570,14 +606,15 @@ class Music(commands.Cog):
             self.music_queue.append(music_queue)
         embed = discord.Embed(
             description=f'Loop mode set to {self.repeat[ctx.guild.id]}\n',
-            colour = discord.Colour.green()
+            colour=discord.Colour.green()
         )
         await ctx.send(embed=embed)
-    
+
     # Error in the loop command
     @loop.error
     async def loop_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
+
 
 # Setup
 def setup(bot):

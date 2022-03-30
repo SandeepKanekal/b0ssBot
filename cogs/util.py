@@ -2,20 +2,64 @@
 import contextlib
 import discord
 import datetime
+import asyncio
+import time
 from discord.ext import commands
 from afks import afks
 
 
 # A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description):
+async def send_error_embed(ctx, description: str) -> None:
     # Response embed
     embed = discord.Embed(description=description, colour=discord.Colour.red())
     await ctx.send(embed=embed)
 
 
+# A function to convert datetime to unix time for dynamic date-time displays
+def convert_to_unix_time(datetime: str, fmt: str = 'R') -> str:
+    datetime_tuple = tuple(int(x) for x in datetime[:10].split('-')) + tuple(int(x) for x in datetime[11:].split(':'))
+    datetime = datetime.datetime(*datetime_tuple)
+    return f'<t:{int(time.mktime(datetime.timetuple()))}:{fmt}>'
+
+
 class Util(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.sniped_message = {}
+    
+    # A listener which defines what must be done when a message is deleted
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        self.sniped_message[message.guild.id] = {  # Store the details of the message
+            'author': message.author,
+            'message': message.content,
+            'channel': message.channel,
+            'time': datetime.datetime.now()
+        }
+
+        await asyncio.sleep(60)
+        self.snipe_message.pop(message.guild.id)
+    
+    # Snipe command
+    @commands.command(name='snipe', description='Snipes the most recently deleted message')
+    async def snipe(self, ctx):
+        try:
+            # Get the time of deletion and convert to unix time
+            del_time = self.sniped_message[ctx.guild.id]['time']
+            del_time = convert_to_unix_time(del_time)
+            # Response embed
+            embed = discord.Embed(
+                title='Sniped a message!',
+                description=f'Author: {self.sniped_message[ctx.guild.id]["author"].mention}\nDeleted message: {self.sniped_message[ctx.guild.id]["message"]}\nChannel: {self.sniped_message[ctx.guild.id]["channel"].mention}\nTime: {del_time}',
+                colour=discord.Colour.green()
+            )
+            await ctx.send(embed=embed)
+        except KeyError:
+            await send_error_embed(ctx, 'There are no messages to snipe')
+
+    @snipe.error
+    async def snipe_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # AFK command
     @commands.command(name='afk', description='Marks the user as AFK')
@@ -32,7 +76,7 @@ class Util(commands.Cog):
             }
         )
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour)
-        embed.set_thumbnail(url=member.avatar)
+        embed.set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='AFK note', value=reason)
         embed.timestamp = datetime.datetime.now()
@@ -71,7 +115,10 @@ class Util(commands.Cog):
     @commands.command(name='poll', description='Make a poll!')
     async def poll(self, ctx, channel: discord.TextChannel = None, *, question):
         embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.yellow())
-        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar)
+        embed.set_author(
+            name=ctx.author,
+            icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar)
+        )
         embed.timestamp = datetime.datetime.now()
 
         msg = await channel.send(embed=embed)
@@ -99,9 +146,9 @@ class Util(commands.Cog):
                         await ctx.send(embed=embed)
                 except IndexError:
                     embed = discord.Embed(colour=message.author.colour)
-                    embed.set_author(name=message.author, icon_url=message.author.avatar)
+                    embed.set_author(name=message.author, icon_url=str(message.author.avatar) if message.author.avatar else str(message.author.default_avatar))
                     embed.add_field(name=message.content, value=f'\n[Jump to message]({message_link})')
-                    embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
+                    embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
                     embed.timestamp = datetime.datetime.now()
                     await ctx.send(embed=embed)
             except discord.NotFound:
@@ -118,9 +165,9 @@ class Util(commands.Cog):
                         await ctx.send(embed=embed)
                 except IndexError:
                     embed = discord.Embed(colour=message.author.colour)
-                    embed.set_author(name=message.author, icon_url=message.author.avatar)
+                    embed.set_author(name=message.author, icon_url=str(message.author.avatar) if message.author.avatar else str(message.author.default_avatar))
                     embed.add_field(name=message.content, value=f'\n[Jump to message]({message_link})')
-                    embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
+                    embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
                     embed.timestamp = datetime.datetime.now()
                     await ctx.send(embed=embed)
             except discord.NotFound:

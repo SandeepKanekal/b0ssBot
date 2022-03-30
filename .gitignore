@@ -4,3 +4,4 @@
 /__pycache__
 /cogs/__pycache__
 /praw.ini
+/tests.py

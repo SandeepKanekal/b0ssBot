@@ -6,7 +6,7 @@ from discord.ext import commands
 
 
 # A function to make simple embeds without thumbnails, footers and authors
-async def send_embed(ctx, description, colour: discord.Colour = discord.Colour.red()):
+async def send_embed(ctx, description: str, colour: discord.Colour = discord.Colour.red()) -> None:
     # Response embed
     embed = discord.Embed(description=description, colour=colour)
     await ctx.send(embed=embed)
