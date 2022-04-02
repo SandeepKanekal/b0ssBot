@@ -2,12 +2,12 @@
 import contextlib
 import random
 import discord
+from sql_tools import SQL
 from discord.ext import commands
 from discord.utils import get
-from afks import afks
 
 
-def remove(nick_name):
+def remove(nick_name: str) -> str:
     return " ".join(nick_name.split()[1:]) if '[AFK]' in nick_name.split() else nick_name
 
 
@@ -17,33 +17,46 @@ class Events(commands.Cog):
 
     # Bot activity on starting
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         print('Bot is ready')
-        await self.bot.change_presence(activity=discord.Game(name=f'{self.bot.command_prefix}help'))
+        await self.bot.change_presence(activity=discord.Game(name='Game Of b0sses'))
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
-    async def on_message(self, message):  # sourcery no-metrics
-        afk_index = 0
+    async def on_message(self, message: discord.Message) -> None:  # sourcery no-metrics
+        sql = SQL('b0ssbot')
         if message.author.bot:
             return
 
-        for item in afks:
-            if item['member_id'] == message.author.id and item['guild_id'] == message.guild.id:
-                afks.pop(afk_index)
-                with contextlib.suppress(discord.Forbidden):
-                    await message.author.edit(nick=remove(message.author.display_name))
-                await message.channel.send(f'Welcome back {message.author.name}, I removed your AFK')
-                break
-            afk_index += 1
+        afk_user = sql.select(
+            elements=['member_id', 'guild_id', 'reason'],
+            table='afks',
+            where=f'member_id = \'{str(message.author.id)}\' and guild_id = \'{str(message.guild.id)}\'',
+        )
 
-        for item in afks:
-            member = get(message.guild.members, id=item['member_id'])
-            if (message.reference and
-                member == (await message.channel.fetch_message(message.reference.message_id)).author) \
-                    or member.id in message.raw_mentions \
-                    and item['guild_id'] == message.guild.id:
-                await message.reply(f'{member.name} is AFK ; AFK note: {item["reason"]}')
+        if afk_user and message.author.id == int(afk_user[0][0]):  # Remove AFK if the user is the author
+            sql.delete(table='afks', where=f'member_id = \'{str(message.author.id)}\' and guild_id = \'{str(message.guild.id)}\'')
+            with contextlib.suppress(discord.Forbidden):
+                await message.author.edit(nick=remove(message.author.display_name))
+            await message.reply(
+                embed = discord.Embed(
+                    description=f'Welcome back {message.author.mention}, I removed your AFK!', 
+                    colour=discord.Colour.green()
+                    )
+            )
+
+        # If an AFK user is mentioned, inform the author
+        if message.mentions:
+            for mention in message.mentions:
+                afk_user = sql.select(elements=['member_id', 'guild_id', 'reason'], table='afks', where=f'member_id = \'{mention.id}\' and guild_id = \'{message.guild.id}\'')
+                member = get(message.guild.members, id=int(afk_user[0][0]))
+                if member in message.mentions and message.guild.id == int(afk_user[0][1]):
+                    await message.reply(
+                        embed = discord.Embed(
+                            description=f'{message.author.mention}, {member.mention} is AFK!\nAFK note: {afk_user[0][2]}', 
+                            colour=discord.Colour.red()
+                            ).set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
+                    )           
 
         if message.content.lower() == 'ghanta':
             await message.reply('https://tenor.com/view/adclinic-sino-gif-19344591')
@@ -107,6 +120,11 @@ class Events(commands.Cog):
 
         if message.content.lower() in ['horny', 'horni']:
             await message.reply('https://tenor.com/view/vorzek-vorzneck-oglg-og-lol-gang-gif-24901093')
+    
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        sql = SQL('b0ssbot')
+        sql.insert(table='prefixes', columns=['guild_id', 'prefix'], values=[f'\'{guild.id}\'', '\'-\''])
 
 
 # Setup

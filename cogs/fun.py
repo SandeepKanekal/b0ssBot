@@ -69,6 +69,7 @@ class Fun(commands.Cog):
 
     @commands.command(aliases=['roll'], description='Rolls a dice')
     async def dice(self, ctx):
+        
         async def callback(interaction):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}', ephemeral=True)
@@ -77,15 +78,25 @@ class Fun(commands.Cog):
             await interaction.followup.edit_message(content='**Rolling..**', message_id=msg.id)
             await interaction.followup.edit_message(content='**Rolling...**', message_id=msg.id)
             await interaction.followup.edit_message(content=f'**You rolled a {random.randint(1, 6)}!** :game_die:', message_id=msg.id)
+        
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+            await interaction.response.edit_message(view=None)
+
         msg = await ctx.send('**Rolling**')
         await msg.edit('**Rolling.**')
         await msg.edit('**Rolling..**')
         await msg.edit('**Rolling...**')
         roll = Button(label='Roll again', style=discord.ButtonStyle.green)
+        end_interaction = Button(label='Stop Rolling', style=discord.ButtonStyle.red)
         view = View()
         view.add_item(roll)
+        view.add_item(end_interaction)
         await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**', view=view)
         roll.callback = callback
+        end_interaction.callback = end_interaction_trigger
 
     # Meme command
     @commands.command(aliases=['m'], description='Posts memes from the most famous meme subreddits')

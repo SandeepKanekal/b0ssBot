@@ -1,5 +1,6 @@
 import discord
 import datetime
+from sql_tools import SQL
 from discord.ext import commands
 
 
@@ -12,6 +13,8 @@ class Help(commands.Cog):
                     description='Shows the list of all commands or the information about one command if specified',
                     hidden=True)
     async def help(self, ctx, command=None):  # sourcery no-metrics
+        sql = SQL('b0ssbot')
+        command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
         if command is not None:
             for cmd in self.bot.commands:
                 if (command.lower() == cmd.name.lower() or command.lower() in cmd.aliases) and not cmd.hidden:
@@ -37,17 +40,17 @@ class Help(commands.Cog):
                     embed.add_field(name='Parameters', value=f'`{param_string}`', inline=False)
                     if param_string != 'None':
                         embed.add_field(name='Command Usage',
-                                        value=f'`{self.bot.command_prefix}{cmd.name} {param_string_embed}`',
+                                        value=f'`{command_prefix}{cmd.name} {param_string_embed}`',
                                         inline=False)
                     else:
-                        embed.add_field(name='Command Usage', value=f'`{self.bot.command_prefix}{cmd.name}`',
+                        embed.add_field(name='Command Usage', value=f'`{command_prefix}{cmd.name}`',
                                         inline=False)
                     await ctx.reply(embed=embed)
         else:
             # Command string
             cmds = ''
             # Response embed
-            embed = discord.Embed(title='Help Page', description=f'Shows the list of all commands\nUse `{self.bot.command_prefix}help <command>` to get more information about a command',
+            embed = discord.Embed(title='Help Page', description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
                                   colour=discord.Colour.blue())
             for cog in self.bot.cogs:
                 if cog in ['Help', 'Events']:

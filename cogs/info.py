@@ -14,10 +14,10 @@ async def send_error_embed(ctx, description: str) -> None:
 
 
 # A function to convert datetime to unix time for dynamic date-time displays
-def convert_to_unix_time(datetime: str, fmt: str = 'R') -> str:
-    datetime_tuple = tuple(int(x) for x in datetime[:10].split('-')) + tuple(int(x) for x in datetime[11:].split(':'))
-    datetime = datetime.datetime(*datetime_tuple)
-    return f'<t:{int(time.mktime(datetime.timetuple()))}:{fmt}>'
+def convert_to_unix_time(date_time: str, fmt: str = 'R') -> str:
+    datetime_tuple = tuple(int(x) for x in date_time[:10].split('-')) + tuple(int(x) for x in date_time[11:].split(':'))
+    date_time = datetime.datetime(*datetime_tuple)
+    return f'<t:{int(time.mktime(date_time.timetuple()))}:{fmt}>'
 
 
 class Info(commands.Cog):

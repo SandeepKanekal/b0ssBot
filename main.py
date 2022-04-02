@@ -1,12 +1,18 @@
 # Main module
 import discord, os, keep_alive
+from sql_tools  import SQL
 from discord.ext import commands
+
+
+def get_prefix(bot, message):
+    return sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{message.guild.id}\'')[0][0]
 
 # Pre-run requirements
 intents = discord.Intents.all()
+sql = SQL('b0ssbot')
 discord.Intents.members = True
 discord.Intents.webhooks = True
-bot = commands.Bot(command_prefix='-', case_insensitive=True, intents=intents)
+bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents)
 bot.remove_command('help')
 cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util']
 
