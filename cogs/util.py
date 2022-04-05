@@ -210,7 +210,20 @@ class Util(commands.Cog):
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon)
         await ctx.reply(embed = embed)
+    
+    @prefix.error
+    async def prefix_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
+    
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def query(self, ctx, *, query):
+        sql = SQL('b0ssbot')
+        await ctx.send(sql.query(query))
 
+    @query.error
+    async def query_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
 def setup(bot):
     bot.add_cog(Util(bot))

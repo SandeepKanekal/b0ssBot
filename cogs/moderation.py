@@ -2,6 +2,8 @@
 import contextlib
 import discord
 import datetime
+import asyncio
+from sql_tools import SQL
 from discord.ext import commands
 
 
@@ -12,9 +14,290 @@ async def send_embed(ctx, description: str, colour: discord.Colour = discord.Col
     await ctx.send(embed=embed)
 
 
+def modlog_enabled(guild_id) -> bool:
+    # Check if modlog is enabled
+    sql = SQL('b0ssbot')
+    return sql.select(elements=['mode'], table='modlogs', where=f"guild_id='{guild_id}'")[0][0]
+
+
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member) -> None:
+        if modlog_enabled(member.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
+                0]
+            channel = discord.utils.get(member.guild.channels, id=int(channel_id))
+            # Send embed
+            await channel.send(
+                embed=discord.Embed(
+                    title='Member Joined',
+                    description=f'{member.mention} has joined the server',
+                    colour=discord.Colour.green()
+                ).set_author(name=member.name,
+                             icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            )
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member) -> None:
+        if modlog_enabled(member.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
+                0]
+            channel = discord.utils.get(member.guild.channels, id=int(channel_id))
+            # Send embed
+            await channel.send(
+                embed=discord.Embed(
+                    title='Member Left',
+                    description=f'{member.mention} has left the server',
+                    colour=discord.Colour.green()
+                ).set_author(name=member.name,
+                             icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            )
+
+    @commands.Cog.listener()
+    async def on_message_delete(self, message: discord.Message) -> None:
+        if modlog_enabled(message.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{message.guild.id}'")[0][0]
+            channel = discord.utils.get(message.guild.channels, id=int(channel_id))
+            # Send embed
+            await channel.send(
+                embed=discord.Embed(
+                    title=f'Message Deleted in {message.channel}',
+                    description=f'{message.author.mention} has deleted a message\nContent: **{message.content}**',
+                    colour=discord.Colour.green()
+                ).set_author(name=message.author.name,
+                             icon_url=str(message.author.avatar) if message.author.avatar else str(
+                                 message.author.default_avatar))
+            )
+
+    @commands.Cog.listener()
+    async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
+        if modlog_enabled(before.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][
+                0]
+            channel = discord.utils.get(before.guild.channels, id=int(channel_id))
+            # Send embed
+
+            if before.content == after.content:
+                return
+
+            if not before.embeds and not before.content:
+                return
+
+            await channel.send(
+                embed=discord.Embed(
+                    title=f'Message Edited in {before.channel}',
+                    description=f'{before.author.mention} has edited a message\nBefore: **{before.content}**\nAfter: **{after.content}**',
+                    colour=discord.Colour.green()
+                ).set_author(name=before.author.name,
+                             icon_url=str(before.author.avatar) if before.author.avatar else str(
+                                 before.author.default_avatar))
+            )
+
+    @commands.Cog.listener()
+    async def on_member_ban(self, guild: discord.Guild, user: discord.User) -> None:
+        if modlog_enabled(guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]
+            channel = discord.utils.get(guild.channels, id=int(channel_id))
+            # Send embed
+            await channel.send(
+                embed=discord.Embed(
+                    title=f'Member Banned in {guild.name}',
+                    description=f'{user} has been banned',
+                    colour=discord.Colour.green()
+                ).set_author(name=user.name, icon_url=str(user.avatar) if user.avatar else str(user.default_avatar))
+            )
+
+    @commands.Cog.listener()
+    async def on_member_unban(self, guild: discord.Guild, user: discord.User) -> None:
+        if modlog_enabled(guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]
+            channel = discord.utils.get(guild.channels, id=int(channel_id))
+            # Send embed
+            await channel.send(
+                embed=discord.Embed(
+                    title=f'Member Unbanned in {guild.name}',
+                    description=f'{user} has been unbanned',
+                    colour=discord.Colour.green()
+                ).set_author(name=user.name, icon_url=str(user.avatar) if user.avatar else str(user.default_avatar))
+            )
+
+    @commands.Cog.listener()
+    async def on_guild_channel_create(self, channel: discord.TextChannel) -> None:
+        if modlog_enabled(channel.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{channel.guild.id}'")[0][0]
+            mod_channel = discord.utils.get(channel.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title=f'Channel Created in {channel.guild.name}',
+                description=f'{channel.mention} has been created',
+                colour=discord.Colour.green()
+            )
+            if channel.guild.icon:
+                embed.set_author(name=channel.guild.name, icon_url=channel.guild.icon)
+            else:
+                embed.set_author(name=channel.guild.name)
+            # Send embed
+            await mod_channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_delete(self, channel: discord.TextChannel) -> None:
+        if modlog_enabled(channel.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{channel.guild.id}'")[0][0]
+            mod_channel = discord.utils.get(channel.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title=f'Channel Deleted in {channel.guild.name}',
+                description=f'{channel} has been deleted',
+                colour=discord.Colour.green()
+            )
+            if channel.guild.icon:
+                embed.set_author(name=channel.guild.name, icon_url=channel.guild.icon)
+            else:
+                embed.set_author(name=channel.guild.name)
+            # Send embed
+            await mod_channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_update(self, before: discord.TextChannel, after: discord.TextChannel) -> None:
+        if modlog_enabled(before.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][
+                0]
+            mod_channel = discord.utils.get(before.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title=f'Channel Updated in {before.guild.name}',
+                description=f'{before.mention} has been updated to {after.mention}',
+                colour=discord.Colour.green()
+            )
+            if before.guild.icon:
+                embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
+            else:
+                embed.set_author(name=before.guild.name)
+            # Send embed
+            await mod_channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_guild_role_create(self, role: discord.Role) -> None:
+        if modlog_enabled(role.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{role.guild.id}'")[0][0]
+            channel = discord.utils.get(role.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title=f'Channel Created in {channel.guild.name}',
+                description=f'{channel} has been created',
+                colour=discord.Colour.green()
+            )
+            if channel.guild.icon:
+                embed.set_author(name=channel.guild.name, icon_url=channel.guild.icon)
+            else:
+                embed.set_author(name=channel.guild.name)
+            # Send embed
+            await channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_guild_role_delete(self, role: discord.Role) -> None:
+        if modlog_enabled(role.guild.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{role.guild.id}'")[0][0]
+            channel = discord.utils.get(role.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title=f'Role Deleted in {role.guild.name}',
+                description=f'{role} has been deleted',
+                colour=discord.Colour.green()
+            )
+            if role.guild.icon:
+                embed.set_author(name=role.guild.name, icon_url=role.guild.icon)
+            else:
+                embed.set_author(name=role.guild.name)
+            # Send embed
+            await channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_guild_update(self, before: discord.Guild, after: discord.Guild) -> None:
+        if modlog_enabled(before.id):
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.id}'")[0][0]
+            channel = discord.utils.get(before.channels, id=int(channel_id))
+            if before.name != after.name:
+                embed = discord.Embed(
+                    title='Guild Name Changed',
+                    description=f'Guild Name has been changed to {after.name}',
+                    colour=discord.Colour.green()
+                )
+                if before.icon:
+                    embed.set_author(name=before.name, icon_url=before.icon)
+                else:
+                    embed.set_author(name=before.name)
+                # Send embed
+                await channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+        # sourcery no-metrics
+        if not modlog_enabled(before.guild.id):
+            return
+        # Get modlog channel
+        sql = SQL('b0ssbot')
+        channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][0]
+        channel = discord.utils.get(before.guild.channels, id=int(channel_id))
+
+        if before.roles != after.roles:
+            role_str = ''
+            if len(after.roles) < len(before.roles):
+                for role in before.roles:
+                    if role not in after.roles:
+                        role_str += f'{role.mention} '
+                embed = discord.Embed(
+                    title=f'Member Updated in {before.guild.name}',
+                    description=f'Edited Member: {before.mention}\nRemoved Roles: {role_str}',
+                    colour=discord.Colour.green()
+                )
+            else:
+                for role in after.roles:
+                    if role not in before.roles:
+                        role_str += f'{role.mention} '
+                embed = discord.Embed(
+                    title=f'Member Updated in {before.guild.name}',
+                    description=f'Edited Member: {before.mention}\nAdded Roles: {role_str}',
+                    colour=discord.Colour.green()
+                )
+            if before.guild.icon:
+                embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
+            else:
+                embed.set_author(name=before.guild.name)
+            await channel.send(embed=embed)
+        if before.nick != after.nick:
+            embed = discord.Embed(
+                title=f'Member Updated in {before.guild.name}',
+                description=f'Edited Member: {before.mention}\nNickname: {before.nick} -> {after.nick}',
+                colour=discord.Colour.green()
+            )
+            if before.guild.icon:
+                embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
+            else:
+                embed.set_author(name=before.guild.name)
+            await channel.send(embed=embed)
 
     # Ban command
     @commands.command(name='ban', description='Bans the mentioned user from the server')
@@ -25,12 +308,12 @@ class Moderation(commands.Cog):
             return
         try:
             await send_embed(ctx, description=f'{member} was banned for {reason}', colour=discord.Colour.red())
-            with contextlib.suppress(discord.HTTPException):
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were banned in {ctx.guild.name} for: {reason}')
             await member.ban(reason=reason)
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Ban error response
     @ban.error
     async def ban_error(self, ctx, error):
@@ -45,12 +328,12 @@ class Moderation(commands.Cog):
             return
         try:
             await send_embed(ctx, description=f'{member} was kicked for {reason}', colour=discord.Colour.red())
-            with contextlib.suppress(discord.HTTPException):
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were kicked in {ctx.guild.name} for {reason}')
             await member.kick(reason=reason)
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Kick error response
     @kick.error
     async def kick_error(self, ctx, error):
@@ -70,14 +353,15 @@ class Moderation(commands.Cog):
             if (user.name, user, discriminator) == (name, discriminator):
                 try:
                     await send_embed(ctx, description=f'{member} was unbanned', colour=discord.Colour.green())
-                    with contextlib.suppress(discord.HTTPException):
+                    with contextlib.suppress(
+                            discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                         await member.send(f'You were unbanned in {ctx.guild}')
                     await ctx.guild.unban(user)
                     return
                 except discord.Forbidden:  # Permission error
                     await send_embed(ctx, description='Permission error')
                     return
-    
+
     # Unban error response
     @unban.error
     async def unban_error(self, ctx, error):
@@ -95,18 +379,52 @@ class Moderation(commands.Cog):
         if not muted_role:
             muted_role = await guild.create_role(name='Muted')  # Create a muted role if not present
             for channel in guild.channels:
-                await channel.set_permissions(muted_role, speak=False, send_messages=False)  # Set permissions of the muted role
+                await channel.set_permissions(muted_role, speak=False,
+                                              send_messages=False)  # Set permissions of the muted role
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
             await send_embed(ctx, description=f'{member} has been muted for {reason}', colour=discord.Colour.red())
-            with contextlib.suppress(discord.HTTPException):
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were muted in {guild.name} for {reason}')
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Mute error response
     @mute.error
     async def mute_error(self, ctx, error):
+        await send_embed(ctx, description=f'Error: {error}')
+
+    # Tempmute command
+    @commands.command(aliases=['tm'],
+                      description='Temporarily mutes the specified user\nDuration must be mentioned in minutes')
+    @commands.has_permissions(manage_messages=True)
+    async def tempmute(self, ctx, member: discord.Member, duration: int, *, reason='no reason'):
+        if member == ctx.author:
+            await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
+            return
+        guild = ctx.guild
+        muted_role = discord.utils.get(guild.roles, name='Muted')  # Get the muted role
+        if not muted_role:
+            muted_role = await guild.create_role(name='Muted')
+            for channel in guild.channels:
+                await channel.set_permissions(muted_role, speak=False, send_messages=False)
+        try:
+            await member.add_roles(muted_role, reason=reason)
+            await send_embed(ctx, description=f'{member} has been muted for {reason} for {duration} seconds',
+                             colour=discord.Colour.red())
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
+                await member.send(f'You were muted in {guild.name} for {reason} for {duration} seconds')
+            await asyncio.sleep(duration * 60)
+            await member.remove_roles(muted_role, reason=reason)
+            await send_embed(ctx, description=f'{member} has been unmuted', colour=discord.Colour.green())
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
+                await member.send(f'You were unmuted in {guild.name}')
+        except discord.Forbidden:  # Permission error
+            await send_embed(ctx, description='Permission error')
+
+    # Tempmute error response
+    @tempmute.error
+    async def tempmute_error(self, ctx, error):
         await send_embed(ctx, description=f'Error: {error}')
 
     # Unmute command
@@ -120,11 +438,11 @@ class Moderation(commands.Cog):
         try:
             await member.remove_roles(muted_role)  # Remove role
             await send_embed(ctx, description=f'{member} was unmuted', colour=discord.Colour.green())
-            with contextlib.suppress(discord.HTTPException):
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You have been unmuted in {ctx.guild.name}')
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Unmute error response
     @unmute.error
     async def unmute_error(self, ctx, error):
@@ -147,12 +465,13 @@ class Moderation(commands.Cog):
                 new_channel = await nuke_channel.clone(reason="Has been Nuked!")
                 await nuke_channel.delete()
                 await send_embed(new_channel, description='This channel was nuked!', colour=discord.Colour.red())
-                await new_channel.send('https://tenor.com/view/explosion-mushroom-cloud-atomic-bomb-bomb-boom-gif-4464831')
+                await new_channel.send(
+                    'https://tenor.com/view/explosion-mushroom-cloud-atomic-bomb-bomb-boom-gif-4464831')
                 with contextlib.suppress(discord.NotFound):
                     await ctx.reply("Nuked the Channel successfully!")
             except discord.Forbidden:  # Permission error
                 await send_embed(ctx, description='Permission error')
-    
+
     # Nuke error response
     @nuke.error
     async def nuke_error(self, ctx, error):
@@ -168,7 +487,7 @@ class Moderation(commands.Cog):
             await send_embed(ctx, description=f'{channel} is in lockdown', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Lock error response
     @lock.error
     async def lock_error(self, ctx, error):
@@ -184,12 +503,12 @@ class Moderation(commands.Cog):
             await send_embed(ctx, description=f'{channel} has been unlocked', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Unlock error response
     @unlock.error
     async def unlock_error(self, ctx, error):
         await send_embed(ctx, description=f'Error: {error}')
-    
+
     # Timeout commands
     @commands.command(name='timeout', description='Times out the mentioned user. Duration in minutes')
     async def timeout(self, ctx, member: discord.Member, minutes: int, *, reason: str = 'No reason provided'):
@@ -206,18 +525,143 @@ class Moderation(commands.Cog):
             await member.timeout_for(duration=duration, reason=reason)
             embed = discord.Embed(
                 description=f'{member.mention} has been timed out for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}',
-                colour = discord.Colour.green()
+                colour=discord.Colour.green()
             )
             await ctx.send(embed=embed)
-            with contextlib.suppress(discord.HTTPException):
-                await member.send(f'You were timed out in {ctx.guild.name} for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}')
-        
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
+                await member.send(
+                    f'You were timed out in {ctx.guild.name} for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}')
+
         except discord.Forbidden:  # Permission error
             await send_embed(ctx, description='Permission error')
-    
+
     # Timeout error response
     @timeout.error
     async def timeout_error(self, ctx, error):
+        await send_embed(ctx, description=f'Error: {error}')
+
+    # Modlogs command
+    @commands.command(aliases=['modlog', 'ml'],
+                      description='Sets the modlog channel\nMention channel for setting or updating the channel\nDon\'t mention channel to disable modlogs')
+    @commands.has_permissions(manage_guild=True)
+    async def modlogs(self, ctx, channel: discord.TextChannel = None):
+        sql = SQL('b0ssbot')
+        mode = sql.select(elements=['mode'], table='modlogs', where=f"guild_id = '{ctx.guild.id}'")
+        if channel is None and not mode:
+            await send_embed(ctx, description='Please mention the channel to set the modlogs to')
+            return
+
+        if channel is None:
+            await send_embed(ctx, description='Modlogs have been disabled for this server')
+            sql.update(table='modlogs', column='mode', value=0, where=f"guild_id = '{ctx.guild.id}'")
+            sql.update(table='modlogs', column='channel_id', value="'None'", where=f"guild_id = '{ctx.guild.id}'")
+            return
+
+        sql.update(table='modlogs', column='channel_id', value=channel.id, where=f"guild_id = '{ctx.guild.id}'")
+        sql.update(table='modlogs', column='mode', value=1, where=f"guild_id = '{ctx.guild.id}'")
+        await send_embed(ctx, description=f'Modlogs channel has been set to {channel.mention}')
+
+    # Modlogs error response
+    @modlogs.error
+    async def modlogs_error(self, ctx, error):
+        await send_embed(ctx, description=f'Error: {error}')
+
+    # Warn command
+    @commands.command(name='warn',
+                      description='View: `warn view <user>`\nWarn: `warn add <user> <reason>`\nUnwarn: `warn remove <user>`')
+    @commands.has_permissions(manage_guild=True)
+    async def warn(self, ctx, subcommand: str, member: discord.Member, *, reason: str = None):
+        # sourcery no-metrics
+        if subcommand not in ['view', 'add', 'remove']:
+            await send_embed(ctx, description='Please specify a valid subcommand\nSubcommands: `view`, `add`, `remove`')
+            return
+
+        sql = SQL('b0ssbot')
+
+        if subcommand == 'add':
+            if not member:
+                await send_embed(ctx, description='Please mention a user to warn')
+                return
+
+            if member == ctx.author:
+                await send_embed(ctx, description='You can\'t warn yourself')
+                return
+
+            if not reason:
+                await send_embed(ctx, description='Please specify a reason for the warn')
+                return
+
+            if warns := sql.select(
+                    elements=['warns', 'reason'],
+                    table='warns',
+                    where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'",
+            ):
+                reason_arr = warns[0][1]
+                reason_arr.append(reason)
+                reason_str = ''.join(f'\'{r}\', ' for r in reason_arr)
+                reason_str = reason_str[:-2]
+                sql.update(table='warns', column='warns', value=warns[0][0] + 1,
+                           where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
+                sql.update(table='warns', column='reason', value=f"ARRAY[{reason_str}]",
+                           where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
+
+            else:
+                sql.insert(table='warns', columns=['member_id', 'warns', 'guild_id', 'reason'],
+                           values=[f"'{member.id}'", "1", f"'{ctx.guild.id}'", f"ARRAY['{reason}']"])
+            embed = discord.Embed(
+                title=f'{member.mention} has been warned',
+                description=f'Reason: {reason}',
+                colour=discord.Colour.red()
+            ).set_author(name=member.name, icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            await ctx.send(embed=embed)
+
+        elif subcommand == 'view':
+            if not member:
+                await send_embed(ctx, description='Please mention a user to view their warns')
+                return
+
+            warn = sql.select(elements=['member_id', 'warns', 'reason'], table='warns',
+                              where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
+            if not warn:
+                await send_embed(ctx, description=f'{member.mention} has no warns')
+                return
+
+            embed = discord.Embed(
+                title=f'{member} has {warn[0][1]} {("warn" if warn[0][1] == 1 else "warns")}',
+                description=f'Reason for latest warn: **{warn[0][2][warn[0][1] - 1]}**',
+                colour=discord.Colour.red()
+            ).set_author(name=member.name, icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            await ctx.send(embed=embed)
+
+        else:
+            if not member:
+                await send_embed(ctx, description='Please mention a user to unwarn')
+                return
+
+            warns = sql.select(elements=['warns', 'reason'], table='warns',
+                               where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
+            if not warns:
+                await send_embed(ctx, description=f'{member.mention} has no warns')
+                return
+
+            if not warns[0][0] - 1:
+                sql.delete(table='warns', where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
+                await send_embed(ctx, description=f'{member.mention}\'s oldest warn has been removed',
+                                 colour=discord.Colour.green())
+                return
+
+            reason_arr = warns[0][1]
+            reason_arr.pop(0)
+            reason_str = ''.join(f'\'{r}\', ' for r in reason_arr)
+            sql.update(table='warns', column='warns', value=f'{warns[0][0] - 1}')
+            reason_str = reason_str[:-2]
+            sql.update(table='warns', column='reason', value=f'ARRAY[{reason_str}]',
+                       where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
+            await send_embed(ctx, description=f'{member.mention}\'s oldest warn has been removed',
+                             colour=discord.Colour.green())
+
+    @warn.error
+    async def warn_error(self, ctx, error):
         await send_embed(ctx, description=f'Error: {error}')
 
 

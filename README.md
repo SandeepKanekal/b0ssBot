@@ -5,7 +5,6 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + py-cord 2.0+ (https://github.com/Pycord-Development/pycord)
 + Flask
 + FFmpeg (Add FFmpeg to PATH in Windows/Mac, Linux requires only installation. Download from ffmpeg.org, not the pip package)
-+ pafy (Comment line 54 in pafy.backend_youtube_dl)
 + asyncpraw (praw.ini file required)
 + PyNaCl
 + lyrics-extractor
@@ -25,6 +24,9 @@ Currently, there are 3 tables:
 + afks (columns: SN, member, member_id, guild_id, reason)
 + snipes (columns: SN, author_id, message, channel_id, time)
 + prefixes (columns: SN, guild_id, prefix)
++ modlogs (columns: SN, guild_id, mode, channel_id)
++ warns (columns: SN, guild_id, member_id, reason, warns)
++ queue (columns: SN, guild_id, source, title, url)
 
 More details in DATABASE.md
 

@@ -1,11 +1,15 @@
 # Main module
-import discord, os, keep_alive
-from sql_tools  import SQL
+import discord
+import keep_alive
+import os
 from discord.ext import commands
+
+from sql_tools import SQL
 
 
 def get_prefix(bot, message):
     return sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{message.guild.id}\'')[0][0]
+
 
 # Pre-run requirements
 intents = discord.Intents.all()
@@ -19,7 +23,6 @@ cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util']
 
 # A function to send embeds when there are false calls or errors
 async def send_error_embed(ctx, description: str) -> None:
-    # Get keyword arguments for the embed
     # Response embed
     embed = discord.Embed(description=description, colour=discord.Colour.red())
     await ctx.send(embed=embed)

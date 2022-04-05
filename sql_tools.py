@@ -1,13 +1,14 @@
-from typing import Any
+from typing import Any, List, Tuple
 import psycopg2
 import os
+
 
 class SQL(object):
 
     def __init__(self, database: str) -> None:
         self.database = database
 
-    def select(self, elements: list, table: str, where: str = None) -> tuple:
+    def select(self, elements: list, table: str, where: str = None) -> list[tuple[Any, ...]]:
         """
         Selects elements from a database.
         """
@@ -28,7 +29,7 @@ class SQL(object):
         conn.close()
         return results
 
-    def update(self, table: str, column: str, value: str, where: str = None) -> None:
+    def update(self, table: str, column: str, value: Any, where: str = None) -> None:
         """
         Updates a database.
         """

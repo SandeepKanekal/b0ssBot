@@ -35,10 +35,11 @@ class Misc(commands.Cog):
         embed = discord.Embed(colour=discord.Colour.orange())
         embed.add_field(name=quote[0]['q'], value=quote[0]['a'], inline=True)
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
+        embed.set_footer(text=f'Requested by {ctx.author}',
+                         icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
-    
+
     @quote.error
     async def quote_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
@@ -68,7 +69,7 @@ class Misc(commands.Cog):
         embed.set_image(url=png_url)
         embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
         await ctx.reply(embed=embed)
-    
+
     @avatar.error
     async def avatar_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
@@ -88,10 +89,11 @@ class Misc(commands.Cog):
         embed.set_author(name=ctx.guild.name, icon_url=png_url)
         embed.set_image(url=png_url)
         embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
+        embed.set_footer(text=f'Requested by {ctx.author}',
+                         icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
-    
+
     @servericon.error
     async def servericon_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
@@ -130,7 +132,7 @@ class Misc(commands.Cog):
             channel_ids.append(item['snippet']['channelId'])
             authors.append(item['snippet']['channelTitle'])
 
-            # Getting the publish date and converting it to unix time
+            # Getting the publishing date and converting it to unix time
             publish_date = item['snippet']['publishedAt']
             publish_date = publish_date.strip('Z')
             publish_date = publish_date.split('T')
@@ -141,7 +143,6 @@ class Misc(commands.Cog):
             publish_date = datetime.datetime(*publish_date)
             publish_date = f'<t:{int(time.mktime(publish_date.timetuple()))}:R>'
             publish_dates.append(publish_date)
-        
 
         # Gets the next video
         async def next_video_trigger(interaction):
@@ -160,14 +161,15 @@ class Misc(commands.Cog):
                 await interaction.response.edit_message('No more results available', embed=None)
                 return
 
-            stats = youtube.videos().list(part='statistics,contentDetails', id=video_ids[0]).execute()
+            statistics = youtube.videos().list(part='statistics,contentDetails', id=video_ids[0]).execute()
 
             embed.add_field(name='Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
             embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
             embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
             embed.set_image(url=thumbnails[0])
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_footer(text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
+            embed.set_footer(
+                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}')
             watch_video.url = f'https://www.youtube.com/watch?v={video_ids[0]}'
             view.remove_item(watch_video)
             view.add_item(watch_video)
@@ -190,7 +192,8 @@ class Misc(commands.Cog):
         embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
         embed.set_image(url=thumbnails[0])
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
+        embed.set_footer(
+            text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
         next_video = Button(label='Next Video ⏭️', style=discord.ButtonStyle.green)
         end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
         watch_video = Button(label='Watch Video', url=f'https://www.youtube.com/watch?v={video_ids[0]}')
@@ -202,9 +205,9 @@ class Misc(commands.Cog):
         next_video.callback = next_video_trigger
         end_interaction.callback = end_interaction_trigger
 
-    # @youtubesearch.error
-    # async def search_error(self, ctx, error):
-    #     await send_error_embed(ctx, description=f'Error: {error}')
+    @youtubesearch.error
+    async def search_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Code command
     @commands.command(name='code', description='Shows the code of the module')
@@ -242,7 +245,7 @@ class Misc(commands.Cog):
             await ctx.send(embed=embed)
 
         except wikipedia.exceptions.WikipediaException as e:
-            await send_error_embed(ctx, description=e)
+            await send_error_embed(ctx, description=str(e))
 
     @wikipedia.error
     async def wikipedia_error(self, ctx, error):

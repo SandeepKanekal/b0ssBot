@@ -19,7 +19,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         print('Bot is ready')
-        await self.bot.change_presence(activity=discord.Game(name='Game Of b0sses'))
+        await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
@@ -35,28 +35,33 @@ class Events(commands.Cog):
         )
 
         if afk_user and message.author.id == int(afk_user[0][0]):  # Remove AFK if the user is the author
-            sql.delete(table='afks', where=f'member_id = \'{str(message.author.id)}\' and guild_id = \'{str(message.guild.id)}\'')
+            sql.delete(table='afks',
+                       where=f'member_id = \'{str(message.author.id)}\' and guild_id = \'{str(message.guild.id)}\'')
             with contextlib.suppress(discord.Forbidden):
                 await message.author.edit(nick=remove(message.author.display_name))
             await message.reply(
-                embed = discord.Embed(
-                    description=f'Welcome back {message.author.mention}, I removed your AFK!', 
+                embed=discord.Embed(
+                    description=f'Welcome back {message.author.mention}, I removed your AFK!',
                     colour=discord.Colour.green()
-                    )
+                )
             )
 
         # If an AFK user is mentioned, inform the author
         if message.mentions:
             for mention in message.mentions:
-                afk_user = sql.select(elements=['member_id', 'guild_id', 'reason'], table='afks', where=f'member_id = \'{mention.id}\' and guild_id = \'{message.guild.id}\'')
-                member = get(message.guild.members, id=int(afk_user[0][0]))
-                if member in message.mentions and message.guild.id == int(afk_user[0][1]):
-                    await message.reply(
-                        embed = discord.Embed(
-                            description=f'{message.author.mention}, {member.mention} is AFK!\nAFK note: {afk_user[0][2]}', 
-                            colour=discord.Colour.red()
+                if afk_user := sql.select(
+                        elements=['member_id', 'guild_id', 'reason'],
+                        table='afks',
+                        where=f'member_id = \'{mention.id}\' and guild_id = \'{message.guild.id}\'',
+                ):
+                    member = get(message.guild.members, id=int(afk_user[0][0]))
+                    if member in message.mentions and message.guild.id == int(afk_user[0][1]):
+                        await message.reply(
+                            embed=discord.Embed(
+                                description=f'{message.author.mention}, {member.mention} is AFK!\nAFK note: {afk_user[0][2]}',
+                                colour=discord.Colour.red()
                             ).set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
-                    )           
+                        )
 
         if message.content.lower() == 'ghanta':
             await message.reply('https://tenor.com/view/adclinic-sino-gif-19344591')
@@ -120,11 +125,19 @@ class Events(commands.Cog):
 
         if message.content.lower() in ['horny', 'horni']:
             await message.reply('https://tenor.com/view/vorzek-vorzneck-oglg-og-lol-gang-gif-24901093')
-    
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         sql = SQL('b0ssbot')
         sql.insert(table='prefixes', columns=['guild_id', 'prefix'], values=[f'\'{guild.id}\'', '\'-\''])
+        sql.insert(table='modlogs', columns=['guild_id', 'mode', 'channel_id'],
+                   values=[f"'{guild.id}'", '\'0\'', '\'None\''])
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild):
+        sql = SQL('b0ssbot')
+        sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='modlogs', where=f'guild_id = \'{guild.id}\'')
 
 
 # Setup

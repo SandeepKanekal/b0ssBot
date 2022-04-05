@@ -69,19 +69,22 @@ class Fun(commands.Cog):
 
     @commands.command(aliases=['roll'], description='Rolls a dice')
     async def dice(self, ctx):
-        
+
         async def callback(interaction):
             if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
                 return
             await interaction.response.edit_message(content='**Rolling.**')
             await interaction.followup.edit_message(content='**Rolling..**', message_id=msg.id)
             await interaction.followup.edit_message(content='**Rolling...**', message_id=msg.id)
-            await interaction.followup.edit_message(content=f'**You rolled a {random.randint(1, 6)}!** :game_die:', message_id=msg.id)
-        
+            await interaction.followup.edit_message(content=f'**You rolled a {random.randint(1, 6)}!** :game_die:',
+                                                    message_id=msg.id)
+
         async def end_interaction_trigger(interaction):
             if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
                 return
             await interaction.response.edit_message(view=None)
 
@@ -184,11 +187,37 @@ class Fun(commands.Cog):
     # Coinflip command
     @commands.command(aliases=['cf'], description='Heads or Tails?')
     async def coinflip(self, ctx):
-        result = random.choice(['Heads', 'Tails'])
-        embed = discord.Embed(title=':coin: Coinflip!', colour=discord.Colour.random())
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.add_field(name='Result:', value=result)
-        await ctx.send(embed=embed)
+        async def callback(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+            await interaction.response.edit_message(content='**Flipping.**')
+            await interaction.followup.edit_message(content='**Flipping..**', message_id=msg.id)
+            await interaction.followup.edit_message(content='**Flipping...**', message_id=msg.id)
+            await interaction.followup.edit_message(
+                content=f'**You flipped a {random.choice(["Heads", "Tails"])}!** :coin:',
+                message_id=msg.id)
+
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+            await interaction.response.edit_message(view=None)
+
+        msg = await ctx.send('**Flipping**')
+        await msg.edit('**Flipping.**')
+        await msg.edit('**Flipping..**')
+        await msg.edit('**Flipping...**')
+        flip = Button(label='Flip again', style=discord.ButtonStyle.green)
+        end_interaction = Button(label='Stop Flipping', style=discord.ButtonStyle.red)
+        view = View()
+        view.add_item(flip)
+        view.add_item(end_interaction)
+        await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**', view=view)
+        flip.callback = callback
+        end_interaction.callback = end_interaction_trigger
 
     @coinflip.error
     async def coinflip_error(self, ctx, error):
@@ -285,7 +314,7 @@ class Fun(commands.Cog):
             await send_error_embed(ctx, description='Could not retrieve a post from **r/{subreddit}**')
 
         except asyncprawcore.exceptions.AsyncPrawcoreException as e:
-            await send_error_embed(ctx, description=e)
+            await send_error_embed(ctx, description=str(e))
 
     @redditpost.error
     async def post_error(self, ctx, error):
