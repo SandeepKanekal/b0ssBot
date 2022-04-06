@@ -27,6 +27,7 @@ Currently, there are 3 tables:
 + modlogs (columns: SN, guild_id, mode, channel_id)
 + warns (columns: SN, guild_id, member_id, reason, warns)
 + queue (columns: SN, guild_id, source, title, url)
++ loop (columns: SN, guild_id, source, title, url)
 
 More details in DATABASE.md
 

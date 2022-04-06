@@ -1,6 +1,6 @@
-from typing import Any, List, Tuple
 import psycopg2
 import os
+from typing import Any
 
 
 class SQL(object):
@@ -94,7 +94,7 @@ class SQL(object):
         # Query the database
         cursor.execute(q)
         # Fetch the results
-        results = cursor.fetchall()
+        results = cursor.fetchall() if q.startswith('SELECT') else None
         # Close the connection
         cursor.close()
         conn.close()

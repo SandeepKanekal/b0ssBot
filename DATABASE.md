@@ -1,10 +1,7 @@
 # Database 
 PostgreSQL is used. You can change the database details (username, host, database) to your convinience. 
 
-Currently, there are 3 tables:
-+ afks (columns: SN, member, member_id, guild_id, reason)
-+ snipes (columns: SN, author_id, message, channel_id, time)
-+ prefixes (columns: SN, guild_id, prefix)
+Table information:
 
 # afks 
 Stores AFK members
@@ -36,15 +33,23 @@ Stores if the guild has enabled modlogs, and the channel if enabled
 + channel_id: Channel ID of the modlog channel (Not Null, VARCHAR(18))
 
 # warns
-Stores warns for members for that specific guild
+Store warns for members for that specific guild
 + SN: Serial number (Not Null, Primary Key)
 + guild_id: Guild ID (Not Null, VARCHAR(18))
 + member_id: Member ID (Not Null, VARCHAR(18))
-+ reason: Reason for the warn (Not Null, VARCHAR(2000))
++ reason: Reason for warning (Not Null, VARCHAR\[](2000))
 + warns: Number of warns for the user (Not Null, int)
 
 # queue
 Stores the music queue for all guilds
++ SN: Serial number (Not Null, Primary Key)
++ guild_id: Guild ID (Not Null, VARCHAR(18))
++ source: Source of the song (Not Null, VARCHAR(2000))
++ title: Title of the song (Not Null, VARCHAR(2000))
++ url: URL of the song (Not Null, VARCHAR(2000))
+
+# loop
+Stores the details of the track to be looped for the guilds
 + SN: Serial number (Not Null, Primary Key)
 + guild_id: Guild ID (Not Null, VARCHAR(18))
 + source: Source of the song (Not Null, VARCHAR(2000))
