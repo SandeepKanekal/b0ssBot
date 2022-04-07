@@ -1,9 +1,11 @@
 # Contains all bot events
 import contextlib
+import os
 import random
 import discord
 from sql_tools import SQL
-from discord.ext import commands
+from discord.ext import commands, tasks
+from googleapiclient.discovery import build
 from discord.utils import get
 
 
@@ -20,6 +22,7 @@ class Events(commands.Cog):
     async def on_ready(self) -> None:
         print('Bot is ready')
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
+        self.check_for_videos.start()
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
@@ -63,18 +66,10 @@ class Events(commands.Cog):
                             ).set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
                         )
 
-        if message.content.lower() == 'ghanta':
-            await message.reply('https://tenor.com/view/adclinic-sino-gif-19344591')
-
-        if message.content.lower() == 'no one cares':
-            await message.reply('https://tenor.com/view/no-one-cares-i-dont-care-idc-nobody-cares-gif-8737514')
-
-        if message.content.lower() in ['no u', 'nou']:
-            await message.reply('https://tenor.com/view/no-u-reverse-card-anti-orders-gif-19358543')
-
         if self.bot.user.id in message.raw_mentions and message.content != '@everyone' and message.content != '@here':
+            command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{message.guild.id}'")
             embed = discord.Embed(
-                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{self.bot.command_prefix}**',
+                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix}**',
                 colour=self.bot.user.colour)
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await message.reply(embed=embed)
@@ -94,37 +89,22 @@ class Events(commands.Cog):
             )
             await message.reply(gif)
 
-        if message.content.lower() in ['amogus', 'amongus', 'amog us', 'among us']:
-            await message.reply('https://tenor.com/view/amogus-spin-gif-22146300')
-
-        if message.content.lower() == 'rickroll':
-            await message.reply('https://tenor.com/view/rickroll-roll-rick-never-gonna-give-you-up-never-gonna-gif'
-                                '-22954713')
-
-        if message.content.lower() == '69':
-            await message.reply('NICE!!')
-
-        if message.content.lower() == 'yes!':
-            await message.reply('https://tenor.com/view/yes-baby-goal-funny-face-gif-13347383')
-
         if message.content.lower() == 'sus':
             gif = random.choice([
                 'https://tenor.com/view/the-rock-the-rock-sus-the-rock-meme-tthe-rock-sus-meme-dwayne-johnson-gif-23805584',
                 'https://tenor.com/view/amogus-spin-gif-22146300'])
             await message.reply(gif)
 
-        if message.content.lower() in ['zucc', 'zuck', 'zuckerberg']:
-            await message.reply('https://tenor.com/view/mark-zuckerberg-facebook-ok-this-is-gif-11614677')
+        with contextlib.suppress(IndexError):
+            if sql.select(elements=['guild_id'], table='message_responses', where=f"message = '{message.content}'")[0][0] == "default":
+                await message.reply(
+                    sql.select(elements=['response'], table='message_responses',
+                               where=f"message = '{message.content}'")[0][0]
+                )
 
-        if message.content.lower() in ['urmom', 'ur mom', 'your mom', 'yourmom']:
-            gif = random.choice([
-                'https://tenor.com/view/your-mother-great-argument-however-megamind-your-mom-yo-mama-gif-22994712',
-                'https://tenor.com/view/gul-ur-mom-gold-gul-ur-mom-gold-gif-19890779'
-            ])
-            await message.reply(gif)
-
-        if message.content.lower() in ['horny', 'horni']:
-            await message.reply('https://tenor.com/view/vorzek-vorzneck-oglg-og-lol-gang-gif-24901093')
+            if response := sql.select(elements=['response'], table='message_responses',
+                                      where=f"message = '{message.content}' AND guild_id = '{message.guild.id}'")[0][0]:
+                await message.reply(response)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -138,6 +118,25 @@ class Events(commands.Cog):
         sql = SQL('b0ssbot')
         sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='modlogs', where=f'guild_id = \'{guild.id}\'')
+
+    @tasks.loop(seconds=60)
+    async def check_for_videos(self):
+        sql = SQL('b0ssbot')
+        channel = sql.select(elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name'],
+                             table='youtube')
+        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
+        for data in channel:
+            c = youtube.channels().list(part='contentDetails', id=data[0]).execute()
+            latest_video_id = \
+                youtube.playlistItems().list(playlistId=c['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
+                                             part='contentDetails').execute()['items'][0]['contentDetails']['videoId']
+            if data[1] != latest_video_id:
+                guild = discord.utils.get(self.bot.guilds, id=int(data[2]))
+                text_channel = discord.utils.get(guild.text_channels, id=int(data[3]))
+                await text_channel.send(
+                    f'New video uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**! https://www.youtube.com/watch?v={latest_video_id}')
+                sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
+                           where=f'channel_id = \'{data[0]}\'')
 
 
 # Setup

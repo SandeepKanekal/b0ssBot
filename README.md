@@ -28,6 +28,8 @@ Currently, there are 3 tables:
 + warns (columns: SN, guild_id, member_id, reason, warns)
 + queue (columns: SN, guild_id, source, title, url)
 + loop (columns: SN, guild_id, source, title, url)
++ message_responses(columns: SN, guild_id, message, response)
++ youtube(columns: SN, guild_id, text_channel_id, channel_id, channel_name, latest_video_id)
 
 More details in DATABASE.md
 

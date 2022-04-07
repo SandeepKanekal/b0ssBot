@@ -94,7 +94,10 @@ class SQL(object):
         # Query the database
         cursor.execute(q)
         # Fetch the results
-        results = cursor.fetchall() if q.startswith('SELECT') else None
+        results = cursor.fetchall() if q.startswith('SELECT') or q.startswith('select') else None
+        if q.startswith('INSERT') or q.startswith('insert') or q.startswith('UPDATE') or q.startswith(
+                'update') or q.startswith('DELETE') or q.startswith('delete'):
+            conn.commit()  # Commit
         # Close the connection
         cursor.close()
         conn.close()

@@ -8,6 +8,7 @@ import wikipedia
 import time
 from googleapiclient.discovery import build
 from discord.ext import commands
+from sql_tools import SQL
 from discord.ui import Button, View
 
 
@@ -249,6 +250,70 @@ class Misc(commands.Cog):
 
     @wikipedia.error
     async def wikipedia_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
+
+    # YouTube notify command
+    @commands.command(name='youtubenotification', aliases=['ytnotification', 'ytnotify'],
+                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nExample: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000')
+    async def youtubenotification(self, ctx, mode: str, text_channel: discord.TextChannel = None, *, youtube_channel: str = None):
+        # sourcery no-metrics
+        if mode not in ['add', 'remove', 'view']:
+            await send_error_embed(ctx, description='Mode must be add, remove or view')
+            return
+
+        sql = SQL('b0ssbot')
+        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
+        if mode == 'add':
+            if not youtube_channel.startswith('https://www.youtube.com/'):
+                await send_error_embed(ctx, description='Channel must be a valid YouTube channel')
+                return
+            channel = youtube.channels().list(forUsername=youtube_channel.split('/c/')[1], part='snippet, contentDetails').execute() if '/c/' in youtube_channel else youtube.channels().list(id=youtube_channel.split('/channel/')[1], part='snippet, contentDetails').execute()
+
+            latest_video_id = youtube.playlistItems().list(
+                playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
+                part='contentDetails').execute()['items'][0]['contentDetails']['videoId']
+            sql.insert(table='youtube',
+                       columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
+                       values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
+                               f"'{channel['items'][0]['snippet']['title']}'", f"'{latest_video_id}'"])
+            await ctx.send(embed=discord.Embed(
+                colour=discord.Colour.green(),
+                description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
+                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
+
+        elif mode == 'remove':
+            channel = youtube.channels().list(forUsername=youtube_channel.split('/c/')[1],
+                                              part='snippet').execute() if '/c/' in youtube_channel else youtube.channels().list(
+                id=youtube_channel.split('/channel/')[1], part='snippet').execute()
+
+            sql.delete(table='youtube', where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{channel["items"][0]["id"]}\'')
+            await ctx.send(embed=discord.Embed(
+                colour=discord.Colour.green(),
+                description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will no longer be sent to {text_channel.mention}').set_thumbnail(
+                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
+
+        else:
+            channels = sql.select(elements=['channel_name', 'channel_id'], table='youtube',
+                                  where=f'guild_id = \'{ctx.guild.id}\'')
+            if not channels:
+                await send_error_embed(ctx, description='No channels are currently set up for notifications')
+                return
+            embed = discord.Embed(
+                description='',
+                colour=discord.Colour.dark_red()
+            )
+            for index, channel in enumerate(channels):
+                embed.description += f'{index + 1}. **[{channel[0]}](https://youtube.com/channel/{channel[1]})**\n'
+            if ctx.guild.icon:
+                embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+            else:
+                embed.set_author(name=ctx.guild.name)
+            embed.set_thumbnail(
+                url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj')
+            await ctx.send(embed=embed)
+
+    @youtubenotification.error
+    async def youtubenotification_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
 

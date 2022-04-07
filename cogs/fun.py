@@ -4,6 +4,7 @@ import asyncpraw
 import asyncprawcore
 import datetime
 from discord.ext import commands
+from sql_tools import SQL
 from discord.ui import Button, View
 
 
@@ -34,33 +35,33 @@ class Fun(commands.Cog):
     async def eight_ball(self, ctx, *, question):
         # Response list
         responses = [
-            "As I see it, yes.",
-            "Ask again later.",
-            "Better not tell you now.",
-            "Cannot predict now.",
-            "Concentrate and ask again.",
-            "Don't count on it.",
-            "It is certain.",
-            "It is decidedly so.",
-            "Most likely.",
-            "My reply is no.",
-            "My sources say no.",
-            "Outlook not so good.",
-            "Outlook good.",
-            "Reply hazy, try again.",
-            "Signs point to yes.",
-            "Very doubtful.",
-            "Without a doubt.",
-            "Yes.",
-            "Yes - definitely.",
-            "You may rely on it."
+            "As I see it, yes",
+            "Ask again later",
+            "Better not tell you now",
+            "Cannot predict now",
+            "Concentrate and ask again",
+            "Don't count on it",
+            "It is certain",
+            "It is decidedly so",
+            "Most likely",
+            "My reply is no",
+            "My sources say no",
+            "Outlook not so good",
+            "Outlook good",
+            "Reply hazy, try again",
+            "Signs point to yes",
+            "Very doubtful",
+            "Without a doubt",
+            "Yes",
+            "Yes - definitely",
+            "You may rely on it"
         ]
 
         response = random.choice(responses)
         if 'tiktok' in question.lower() or 'tik tok' in question.lower():
             # TikTok is just horrible
-            response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS!'
-        embed = discord.Embed(title=f':8ball: {question}', description=response, colour=discord.Colour.random())
+            response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS[!](https://bit.ly/3JgQ1QH)'
+        embed = discord.Embed(title=f':8ball: {question}', description=f'{response}[.](https://bit.ly/3JgQ1QH)', colour=discord.Colour.random())
         await ctx.send(embed=embed)
 
     @eight_ball.error
@@ -318,6 +319,75 @@ class Fun(commands.Cog):
 
     @redditpost.error
     async def post_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
+
+    # Message Response Command
+    @commands.command(name='messageresponse', aliases=['message', 'msg', 'response', 'mr'],
+                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse 1(True) to add and 0(False) to remove a response\nExample: `-messageresponse 1 hello | Hello there! `\nRemoving does not require a response parameter')
+    @commands.has_permissions(manage_guild=True)
+    async def message_response(self, ctx, mode: int, *, message_response: str = None):
+        # sourcery no-metrics
+        sql = SQL('b0ssbot')
+        if mode == 0:
+            if message_response is None:
+                await ctx.send(embed=discord.Embed(description='Please provide a message', colour=discord.Colour.red()))
+                return
+            if not message_response.strip():
+                await ctx.send(embed=discord.Embed(description='Please provide a message', colour=discord.Colour.red()))
+                return
+            if ' | ' in message_response:
+                await ctx.send(embed=discord.Embed(description='Use mode 1 instead to add a response',
+                                                   colour=discord.Colour.red()))
+                return
+            if not sql.select(elements=['message'], table='message_responses',
+                              where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'"):
+                await ctx.send(embed=discord.Embed(description=f'No response found for **{message_response}**',
+                                                   colour=discord.Colour.red()))
+                return
+            sql.delete(table='message_responses',
+                       where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'")
+            await ctx.send(embed=discord.Embed(description=f'Removed the response for **{message_response}**',
+                                               colour=discord.Colour.green()))
+
+        elif mode == 1:
+            if message_response is None:
+                await ctx.send(
+                    embed=discord.Embed(description='Please provide a message response', colour=discord.Colour.red()))
+                return
+
+            if '|' not in message_response:
+                await ctx.send(
+                    embed=discord.Embed(description='Please separate the message from the response using `|`',
+                                        colour=discord.Colour.red()))
+                return
+
+            message, response = message_response.split(' | ')
+            if message.strip() == '' or response.strip() == '':
+                await ctx.send(
+                    embed=discord.Embed(description='Please provide a message and response',
+                                        colour=discord.Colour.red()))
+                return
+
+            if sql.select(elements=['message', 'response'], table='message_responses',
+                          where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
+                sql.update(table='message_responses', elements=['response'], values=[response],
+                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
+                await ctx.send(embed=discord.Embed(description=f'Updated the response for **{message}**',
+                                                   colour=discord.Colour.green()))
+            else:
+                sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
+                           values=[f"'{ctx.guild.id}'", f"'{message}'", f"'{response}'"])
+                await ctx.send(
+                    embed=discord.Embed(description=f'Added the response for **{message}**',
+                                        colour=discord.Colour.green()))
+
+        else:
+            await ctx.send(embed=discord.Embed(
+                description='Please provide a valid mode\n1(True) adds a response\n0(False) removes a response',
+                colour=discord.Colour.red()))
+
+    @message_response.error
+    async def message_response_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
 

@@ -1,5 +1,6 @@
 # All Util commands stored here
 import contextlib
+import os
 import discord
 import datetime
 import asyncio
@@ -35,14 +36,17 @@ class Util(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         sql = SQL('b0ssbot')
-        values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'', f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'']
+        values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
+                  f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'']
         if sql.select(elements=['*'], table='snipes', where=f'channel_id = \'{message.channel.id}\''):
-            sql.update(table='snipes', column='author_id', value=values[0], where=f'channel_id = \'{message.channel.id}\'')
-            sql.update(table='snipes', column='message', value=values[1], where=f'channel_id = \'{message.channel.id}\'')
+            sql.update(table='snipes', column='author_id', value=values[0],
+                       where=f'channel_id = \'{message.channel.id}\'')
+            sql.update(table='snipes', column='message', value=values[1],
+                       where=f'channel_id = \'{message.channel.id}\'')
             sql.update(table='snipes', column='time', value=values[3], where=f'channel_id = \'{message.channel.id}\'')
         else:
             sql.insert(table='snipes', columns=['author_id', 'message', 'channel_id', 'time'], values=values)
-        
+
         await asyncio.sleep(60)
         sql.delete(table='snipes', where=f'channel_id = \'{message.channel.id}\'')
 
@@ -51,9 +55,9 @@ class Util(commands.Cog):
     async def snipe(self, ctx):
         sql = SQL('b0ssbot')
         if message := sql.select(
-            elements=['author_id', 'message', 'channel_id', 'time'],
-            table='snipes',
-            where=f'channel_id = \'{ctx.channel.id}\'',
+                elements=['author_id', 'message', 'channel_id', 'time'],
+                table='snipes',
+                where=f'channel_id = \'{ctx.channel.id}\'',
         ):
             # Get the time of deletion and convert to unix time
             del_time = message[0][3]
@@ -83,7 +87,7 @@ class Util(commands.Cog):
             await member.edit(nick=f'[AFK] {member.display_name}')  # Changing the nickname
         # Adds member details to the database
         sql.insert(table='afks', columns=['member', 'member_id', 'guild_id', 'reason'],
-                         values=[f'\'{member}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'', f'\'{reason}\''])
+                   values=[f'\'{member}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'', f'\'{reason}\''])
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour)
         embed.set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
@@ -193,37 +197,48 @@ class Util(commands.Cog):
     @refer.error
     async def refer_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
-    
+
     @commands.command(name='prefix', desrciption='Change the prefix of the bot')
     @commands.has_permissions(administrator=True)
     async def prefix(self, ctx, prefix):
         if len(prefix) > 2:
             await ctx.send('Prefix must be 2 characters or less')
             return
-        
+
         sql = SQL('b0ssbot')
         sql.update(table='prefixes', column='prefix', value=f'\'{prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
         embed = discord.Embed(
-                description = f'Prefix changed to **{prefix}**',
-                colour = discord.Colour.green()
-            )
+            description=f'Prefix changed to **{prefix}**',
+            colour=discord.Colour.green()
+        )
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon)
-        await ctx.reply(embed = embed)
-    
+        await ctx.reply(embed=embed)
+
     @prefix.error
     async def prefix_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
-    
+
     @commands.command(hidden=True)
     @commands.is_owner()
     async def query(self, ctx, *, query):
         sql = SQL('b0ssbot')
-        await ctx.send(sql.query(query))
+        results = sql.query(query)
+        try:
+            await ctx.send(results)
+        except discord.HTTPException:
+            if results:
+                with open('query.txt', 'w') as f:
+                    f.write(str(results))
+                await ctx.send(file=discord.File('query.txt'))
+                os.remove('query.txt')
+            else:
+                await ctx.send('Query provided returns None')
 
     @query.error
     async def query_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
+
 
 def setup(bot):
     bot.add_cog(Util(bot))

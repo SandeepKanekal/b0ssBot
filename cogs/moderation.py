@@ -32,14 +32,17 @@ class Moderation(commands.Cog):
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
                 0]
             channel = discord.utils.get(member.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title='Member Joined',
+                description=f'{member.mention} has joined the server',
+                colour=discord.Colour.green()
+            )
+            embed.set_author(name=member.name,
+                             icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            embed.set_footer(text=f'ID: {member.id}')
+            embed.timestamp = datetime.datetime.now()
             # Send embed
             await channel.send(
-                embed=discord.Embed(
-                    title='Member Joined',
-                    description=f'{member.mention} has joined the server',
-                    colour=discord.Colour.green()
-                ).set_author(name=member.name,
-                             icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
             )
 
     @commands.Cog.listener()
@@ -50,33 +53,39 @@ class Moderation(commands.Cog):
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
                 0]
             channel = discord.utils.get(member.guild.channels, id=int(channel_id))
-            # Send embed
-            await channel.send(
-                embed=discord.Embed(
-                    title='Member Left',
-                    description=f'{member.mention} has left the server',
-                    colour=discord.Colour.green()
-                ).set_author(name=member.name,
-                             icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            embed = discord.Embed(
+                title='Member Left',
+                description=f'{member.name}#{member.discriminator} has left the server',
+                colour=discord.Colour.red()
             )
+            embed.set_author(name=member.name,
+                             icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+            embed.set_footer(text=f'ID: {member.id}')
+            embed.timestamp = datetime.datetime.now()
+            # Send embed
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         if modlog_enabled(message.guild.id):
             # Get modlog channel
             sql = SQL('b0ssbot')
-            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{message.guild.id}'")[0][0]
+            channel_id = \
+                sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{message.guild.id}'")[0][0]
             channel = discord.utils.get(message.guild.channels, id=int(channel_id))
-            # Send embed
-            await channel.send(
-                embed=discord.Embed(
-                    title=f'Message Deleted in {message.channel}',
-                    description=f'{message.author.mention} has deleted a message\nContent: **{message.content}**',
-                    colour=discord.Colour.green()
-                ).set_author(name=message.author.name,
+            embed = discord.Embed(
+                title=f'Message Deleted in {message.channel}',
+                description=message.content,
+                colour=discord.Colour.green()
+            )
+            embed.set_author(name=message.author.name,
                              icon_url=str(message.author.avatar) if message.author.avatar else str(
                                  message.author.default_avatar))
-            )
+            embed.set_footer(text=f'ID: {message.id}')
+            embed.timestamp = datetime.datetime.now()
+
+            # Send embed
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
@@ -94,15 +103,18 @@ class Moderation(commands.Cog):
             if not before.embeds and not before.content:
                 return
 
-            await channel.send(
-                embed=discord.Embed(
-                    title=f'Message Edited in {before.channel}',
-                    description=f'{before.author.mention} has edited a message\nBefore: **{before.content}**\nAfter: **{after.content}**',
-                    colour=discord.Colour.green()
-                ).set_author(name=before.author.name,
+            embed = discord.Embed(
+                title=f'Message Edited in {before.channel}',
+                description=f'{before.author.mention} has edited a message\nBefore: **{before.content}**\nAfter: **{after.content}**',
+                colour=discord.Colour.green()
+            )
+            embed.set_author(name=before.author.name,
                              icon_url=str(before.author.avatar) if before.author.avatar else str(
                                  before.author.default_avatar))
-            )
+            embed.set_footer(text=f'ID: {before.id}')
+            embed.timestamp = datetime.datetime.now()
+            # Send Embed
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User) -> None:
@@ -111,14 +123,16 @@ class Moderation(commands.Cog):
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]
             channel = discord.utils.get(guild.channels, id=int(channel_id))
-            # Send embed
-            await channel.send(
-                embed=discord.Embed(
-                    title=f'Member Banned in {guild.name}',
-                    description=f'{user} has been banned',
-                    colour=discord.Colour.green()
-                ).set_author(name=user.name, icon_url=str(user.avatar) if user.avatar else str(user.default_avatar))
+            embed = discord.Embed(
+                title=f'Member Banned in {guild.name}',
+                description=f'{user} has been banned',
+                colour=discord.Colour.green()
             )
+            embed.set_author(name=user.name, icon_url=str(user.avatar) if user.avatar else str(user.default_avatar))
+            embed.set_footer(text=f'ID: {user.id}')
+            embed.timestamp = datetime.datetime.now()
+            # Send embed
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User) -> None:
@@ -127,21 +141,24 @@ class Moderation(commands.Cog):
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]
             channel = discord.utils.get(guild.channels, id=int(channel_id))
-            # Send embed
-            await channel.send(
-                embed=discord.Embed(
-                    title=f'Member Unbanned in {guild.name}',
-                    description=f'{user} has been unbanned',
-                    colour=discord.Colour.green()
-                ).set_author(name=user.name, icon_url=str(user.avatar) if user.avatar else str(user.default_avatar))
+            embed = discord.Embed(
+                title=f'Member Unbanned in {guild.name}',
+                description=f'{user} has been unbanned',
+                colour=discord.Colour.green()
             )
+            embed.set_author(name=user.name, icon_url=str(user.avatar) if user.avatar else str(user.default_avatar))
+            embed.set_footer(text=f'ID: {user.id}')
+            embed.timestamp = datetime.datetime.now()
+            # Send embed
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.TextChannel) -> None:
         if modlog_enabled(channel.guild.id):
             # Get modlog channel
             sql = SQL('b0ssbot')
-            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{channel.guild.id}'")[0][0]
+            channel_id = \
+                sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{channel.guild.id}'")[0][0]
             mod_channel = discord.utils.get(channel.guild.channels, id=int(channel_id))
             embed = discord.Embed(
                 title=f'Channel Created in {channel.guild.name}',
@@ -152,6 +169,8 @@ class Moderation(commands.Cog):
                 embed.set_author(name=channel.guild.name, icon_url=channel.guild.icon)
             else:
                 embed.set_author(name=channel.guild.name)
+            embed.set_footer(text=f'ID: {channel.id}')
+            embed.timestamp = datetime.datetime.now()
             # Send embed
             await mod_channel.send(embed=embed)
 
@@ -160,7 +179,8 @@ class Moderation(commands.Cog):
         if modlog_enabled(channel.guild.id):
             # Get modlog channel
             sql = SQL('b0ssbot')
-            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{channel.guild.id}'")[0][0]
+            channel_id = \
+                sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{channel.guild.id}'")[0][0]
             mod_channel = discord.utils.get(channel.guild.channels, id=int(channel_id))
             embed = discord.Embed(
                 title=f'Channel Deleted in {channel.guild.name}',
@@ -171,6 +191,8 @@ class Moderation(commands.Cog):
                 embed.set_author(name=channel.guild.name, icon_url=channel.guild.icon)
             else:
                 embed.set_author(name=channel.guild.name)
+            embed.set_footer(text=f'ID: {channel.id}')
+            embed.timestamp = datetime.datetime.now()
             # Send embed
             await mod_channel.send(embed=embed)
 
@@ -191,6 +213,8 @@ class Moderation(commands.Cog):
                 embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
             else:
                 embed.set_author(name=before.guild.name)
+            embed.set_footer(text=f'ID: {before.id}')
+            embed.timestamp = datetime.datetime.now()
             # Send embed
             await mod_channel.send(embed=embed)
 
@@ -210,6 +234,7 @@ class Moderation(commands.Cog):
                 embed.set_author(name=channel.guild.name, icon_url=channel.guild.icon)
             else:
                 embed.set_author(name=channel.guild.name)
+            embed.timestamp = datetime.datetime.now()
             # Send embed
             await channel.send(embed=embed)
 
@@ -229,6 +254,7 @@ class Moderation(commands.Cog):
                 embed.set_author(name=role.guild.name, icon_url=role.guild.icon)
             else:
                 embed.set_author(name=role.guild.name)
+            embed.timestamp = datetime.datetime.now()
             # Send embed
             await channel.send(embed=embed)
 
@@ -249,6 +275,8 @@ class Moderation(commands.Cog):
                     embed.set_author(name=before.name, icon_url=before.icon)
                 else:
                     embed.set_author(name=before.name)
+                embed.set_footer(text=f'ID: {before.id}')
+                embed.timestamp = datetime.datetime.now()
                 # Send embed
                 await channel.send(embed=embed)
 
@@ -286,6 +314,8 @@ class Moderation(commands.Cog):
                 embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
             else:
                 embed.set_author(name=before.guild.name)
+            embed.set_footer(text=f'ID: {before.id}')
+            embed.timestamp = datetime.datetime.now()
             await channel.send(embed=embed)
         if before.nick != after.nick:
             embed = discord.Embed(
@@ -297,6 +327,8 @@ class Moderation(commands.Cog):
                 embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
             else:
                 embed.set_author(name=before.guild.name)
+            embed.set_footer(text=f'ID: {before.id}')
+            embed.timestamp = datetime.datetime.now()
             await channel.send(embed=embed)
 
     # Ban command
