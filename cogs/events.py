@@ -31,6 +31,9 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
+        if "'" in message.content:
+            message.content = message.content.replace("'", "''")
+
         afk_user = sql.select(
             elements=['member_id', 'guild_id', 'reason'],
             table='afks',
@@ -69,7 +72,7 @@ class Events(commands.Cog):
         if self.bot.user.id in message.raw_mentions and message.content != '@everyone' and message.content != '@here':
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{message.guild.id}'")
             embed = discord.Embed(
-                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix}**',
+                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**',
                 colour=self.bot.user.colour)
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await message.reply(embed=embed)
@@ -96,7 +99,8 @@ class Events(commands.Cog):
             await message.reply(gif)
 
         with contextlib.suppress(IndexError):
-            if sql.select(elements=['guild_id'], table='message_responses', where=f"message = '{message.content}'")[0][0] == "default":
+            if sql.select(elements=['guild_id'], table='message_responses',
+                          where=f"message = '{message.content}'")[0][0] == "default":
                 await message.reply(
                     sql.select(elements=['response'], table='message_responses',
                                where=f"message = '{message.content}'")[0][0]
@@ -133,8 +137,17 @@ class Events(commands.Cog):
             if data[1] != latest_video_id:
                 guild = discord.utils.get(self.bot.guilds, id=int(data[2]))
                 text_channel = discord.utils.get(guild.text_channels, id=int(data[3]))
-                await text_channel.send(
-                    f'New video uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**! https://www.youtube.com/watch?v={latest_video_id}')
+
+                webhooks = await guild.webhooks()
+                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
+                if webhook is None:
+                    webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
+                await webhook.send(
+                    f'New **[video](https://www.youtube.com/watch?v={latest_video_id})** uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
+                    username=f'{self.bot.user.name} YouTube Notifier',
+                    avatar_url=self.bot.user.avatar
+                )
+
                 sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
                            where=f'channel_id = \'{data[0]}\'')
 

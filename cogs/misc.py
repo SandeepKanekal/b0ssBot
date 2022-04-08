@@ -254,8 +254,9 @@ class Misc(commands.Cog):
 
     # YouTube notify command
     @commands.command(name='youtubenotification', aliases=['ytnotification', 'ytnotify'],
-                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nExample: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000')
-    async def youtubenotification(self, ctx, mode: str, text_channel: discord.TextChannel = None, *, youtube_channel: str = None):
+                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nExamples: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000`\n`-youtubenotification remove #new-videos https://www.youtube.com/c/MrBeast6000`\n`-youtubenotification view`')
+    async def youtubenotification(self, ctx, mode: str, text_channel: discord.TextChannel = None, *,
+                                  youtube_channel: str = None):
         # sourcery no-metrics
         if mode not in ['add', 'remove', 'view']:
             await send_error_embed(ctx, description='Mode must be add, remove or view')
@@ -264,14 +265,20 @@ class Misc(commands.Cog):
         sql = SQL('b0ssbot')
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
         if mode == 'add':
-            if not youtube_channel.startswith('https://www.youtube.com/'):
-                await send_error_embed(ctx, description='Channel must be a valid YouTube channel')
-                return
-            channel = youtube.channels().list(forUsername=youtube_channel.split('/c/')[1], part='snippet, contentDetails').execute() if '/c/' in youtube_channel else youtube.channels().list(id=youtube_channel.split('/channel/')[1], part='snippet, contentDetails').execute()
+            channel_id = requests.get(
+                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
+                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
 
+            if sql.select(elements=['*'], table='youtube',
+                          where=f"guild_id='{ctx.guild.id}' and channel_id = '{channel_id}'"):
+                await send_error_embed(ctx, description='Channel already added')
+                return
+
+            channel = youtube.channels().list(id=channel_id, part='snippet, contentDetails').execute()
             latest_video_id = youtube.playlistItems().list(
                 playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
                 part='contentDetails').execute()['items'][0]['contentDetails']['videoId']
+
             sql.insert(table='youtube',
                        columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
                        values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
@@ -279,14 +286,23 @@ class Misc(commands.Cog):
             await ctx.send(embed=discord.Embed(
                 colour=discord.Colour.green(),
                 description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
-                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
+                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]).set_footer(
+                text='Use the command again to update the channel')
+            )
 
         elif mode == 'remove':
-            channel = youtube.channels().list(forUsername=youtube_channel.split('/c/')[1],
-                                              part='snippet').execute() if '/c/' in youtube_channel else youtube.channels().list(
-                id=youtube_channel.split('/channel/')[1], part='snippet').execute()
+            channel_id = requests.get(
+                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
+                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
+            channel = youtube.channels().list(id=channel_id, part='snippet, contentDetails').execute()
 
-            sql.delete(table='youtube', where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{channel["items"][0]["id"]}\'')
+            if not sql.select(elements=['*'], table='youtube',
+                              where=f"guild_id='{ctx.guild.id}' and channel_id = '{channel_id}'"):
+                await send_error_embed(ctx, description='Channel not added')
+                return
+
+            sql.delete(table='youtube',
+                       where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{channel["items"][0]["id"]}\'')
             await ctx.send(embed=discord.Embed(
                 colour=discord.Colour.green(),
                 description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will no longer be sent to {text_channel.mention}').set_thumbnail(

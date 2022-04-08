@@ -100,7 +100,9 @@ class Music(commands.Cog):
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
         # Delete the track from the queue
         if not self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{track[0][1]}'")
+            title = track[0][1]
+            title = title.replace("'", "''")
+            self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
 
     # The play_music function is used to play music when the player is not connected or nothing is being played
     async def play_music(self, ctx):
@@ -127,7 +129,9 @@ class Music(commands.Cog):
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
         # Delete the track as it is being played
         if not self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{track[0][1]}'")
+            title = track[0][1]
+            title = title.replace("'", "''")
+            self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
 
     @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in')
     async def join(self, ctx):
@@ -167,7 +171,7 @@ class Music(commands.Cog):
             await voice_client.move_to(voice_channel)
 
         song = self.search_yt(query)
-        title = song["title"].replace("'", "")
+        song["title"] = song["title"].replace("'", "''")
 
         if isinstance(song, Exception):
             await send_error_embed(ctx, description=f'Error: {song}')
@@ -179,10 +183,11 @@ class Music(commands.Cog):
             values=[
                 f"'{ctx.guild.id}'",
                 f"'{song['source']}'",
-                f"'{title}'",
+                f"'{song['title']}'",
                 f"'{song['url']}'"
             ]
         )
+        song["title"] = song["title"].replace("''", "'")
 
         video = get_video_stats(song['url'])
         embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
@@ -584,15 +589,17 @@ class Music(commands.Cog):
             await send_error_embed(ctx, description='Nothing is playing')
             return
 
+        title = self.now_playing[ctx.guild.id]
+        title = title.replace("'", "''")
         # Delete/Insert into the loop table
         if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'") and not bool(mode):
             self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
             self.sql.delete(table='queue',
-                            where=f"guild_id = '{ctx.guild.id}' AND title = '{self.now_playing[ctx.guild.id]}'")
+                            where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
         else:
             self.sql.insert(table='loop', columns=['guild_id', 'source', 'title', 'url'],
                             values=[f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
-                                    f"'{self.now_playing[ctx.guild.id]}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
+                                    f"'{title}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
         await ctx.send(embed=discord.Embed(description=f'Loop mode set to {bool(mode)}', colour=discord.Colour.blue()))
 
     # Error in the loop command

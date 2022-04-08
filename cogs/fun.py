@@ -339,6 +339,7 @@ class Fun(commands.Cog):
                 await ctx.send(embed=discord.Embed(description='Use mode 1 instead to add a response',
                                                    colour=discord.Colour.red()))
                 return
+            message_response = message_response.replace("'", "''")
             if not sql.select(elements=['message'], table='message_responses',
                               where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'"):
                 await ctx.send(embed=discord.Embed(description=f'No response found for **{message_response}**',
@@ -346,6 +347,7 @@ class Fun(commands.Cog):
                 return
             sql.delete(table='message_responses',
                        where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'")
+            message_response = message_response.replace("''", "'")
             await ctx.send(embed=discord.Embed(description=f'Removed the response for **{message_response}**',
                                                colour=discord.Colour.green()))
 
@@ -368,15 +370,21 @@ class Fun(commands.Cog):
                                         colour=discord.Colour.red()))
                 return
 
+            message = message.replace("'", "''")
+            response = response.replace("'", "''")
             if sql.select(elements=['message', 'response'], table='message_responses',
                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
-                sql.update(table='message_responses', elements=['response'], values=[response],
+                sql.update(table='message_responses', column='response', value=f"'{response}'",
                            where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
+                message = message.replace("'", "''")
+                response = response.replace("'", "''")
                 await ctx.send(embed=discord.Embed(description=f'Updated the response for **{message}**',
                                                    colour=discord.Colour.green()))
             else:
                 sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
                            values=[f"'{ctx.guild.id}'", f"'{message}'", f"'{response}'"])
+                message = message.replace("''","'")
+                response = response.replace("''", "'")
                 await ctx.send(
                     embed=discord.Embed(description=f'Added the response for **{message}**',
                                         colour=discord.Colour.green()))

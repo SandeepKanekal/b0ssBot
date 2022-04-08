@@ -204,19 +204,20 @@ class Moderation(commands.Cog):
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][
                 0]
             mod_channel = discord.utils.get(before.guild.channels, id=int(channel_id))
-            embed = discord.Embed(
-                title=f'Channel Updated in {before.guild.name}',
-                description=f'{before.mention} has been updated to {after.mention}',
-                colour=discord.Colour.green()
-            )
-            if before.guild.icon:
-                embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
-            else:
-                embed.set_author(name=before.guild.name)
-            embed.set_footer(text=f'ID: {before.id}')
-            embed.timestamp = datetime.datetime.now()
-            # Send embed
-            await mod_channel.send(embed=embed)
+            if before.name != after.name:
+                embed = discord.Embed(
+                    title=f'Channel Updated in {before.guild.name}',
+                    description=f'#{before.name} has been updated to #{after.name}',
+                    colour=discord.Colour.green()
+                )
+                if before.guild.icon:
+                    embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
+                else:
+                    embed.set_author(name=before.guild.name)
+                embed.set_footer(text=f'ID: {before.id}')
+                embed.timestamp = datetime.datetime.now()
+                # Send embed
+                await mod_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
