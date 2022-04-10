@@ -42,8 +42,7 @@ class Moderation(commands.Cog):
             embed.set_footer(text=f'ID: {member.id}')
             embed.timestamp = datetime.datetime.now()
             # Send embed
-            await channel.send(
-            )
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:

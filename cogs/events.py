@@ -100,14 +100,14 @@ class Events(commands.Cog):
 
         with contextlib.suppress(IndexError):
             if sql.select(elements=['guild_id'], table='message_responses',
-                          where=f"message = '{message.content}'")[0][0] == "default":
+                          where=f"message = '{message.content.lower()}'")[0][0] == "default":
                 await message.reply(
                     sql.select(elements=['response'], table='message_responses',
-                               where=f"message = '{message.content}'")[0][0]
+                               where=f"message = '{message.content.lower()}'")[0][0]
                 )
 
             if response := sql.select(elements=['response'], table='message_responses',
-                                      where=f"message = '{message.content}' AND guild_id = '{message.guild.id}'")[0][0]:
+                                      where=f"message = '{message.content.lower()}' AND guild_id = '{message.guild.id}'")[0][0]:
                 await message.reply(response)
 
     @commands.Cog.listener()
@@ -123,9 +123,10 @@ class Events(commands.Cog):
         sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='modlogs', where=f'guild_id = \'{guild.id}\'')
 
-    @tasks.loop(seconds=60)
+    @tasks.loop(minutes=60)
     async def check_for_videos(self):
         sql = SQL('b0ssbot')
+        print('Checking for videos...')
         channel = sql.select(elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name'],
                              table='youtube')
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
@@ -143,10 +144,9 @@ class Events(commands.Cog):
                 if webhook is None:
                     webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
                 await webhook.send(
-                    f'New **[video](https://www.youtube.com/watch?v={latest_video_id})** uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
+                    f'New video uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
                     username=f'{self.bot.user.name} YouTube Notifier',
-                    avatar_url=self.bot.user.avatar
-                )
+                    avatar_url=self.bot.user.avatar)
 
                 sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
                            where=f'channel_id = \'{data[0]}\'')

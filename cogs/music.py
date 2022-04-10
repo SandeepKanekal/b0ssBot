@@ -171,11 +171,10 @@ class Music(commands.Cog):
             await voice_client.move_to(voice_channel)
 
         song = self.search_yt(query)
-        song["title"] = song["title"].replace("'", "''")
-
         if isinstance(song, Exception):
             await send_error_embed(ctx, description=f'Error: {song}')
             return
+        song["title"] = song["title"].replace("'", "''")
 
         self.sql.insert(
             table='queue',
@@ -254,9 +253,9 @@ class Music(commands.Cog):
         else:
             await send_error_embed(ctx, description='No audio is being played')
 
-    # @queue.error
-    # async def queue_error(self, ctx, error):
-    #     await send_error_embed(ctx, description=f'Error: {error}')
+    @queue.error
+    async def queue_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
 
     # Self-explanatory
     @commands.command(name='pause', description='Pauses the current track')

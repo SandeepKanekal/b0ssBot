@@ -339,7 +339,7 @@ class Fun(commands.Cog):
                 await ctx.send(embed=discord.Embed(description='Use mode 1 instead to add a response',
                                                    colour=discord.Colour.red()))
                 return
-            message_response = message_response.replace("'", "''")
+            message_response = message_response.replace("'", "''").lower()
             if not sql.select(elements=['message'], table='message_responses',
                               where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'"):
                 await ctx.send(embed=discord.Embed(description=f'No response found for **{message_response}**',
@@ -370,7 +370,7 @@ class Fun(commands.Cog):
                                         colour=discord.Colour.red()))
                 return
 
-            message = message.replace("'", "''")
+            message = message.replace("'", "''").lower()
             response = response.replace("'", "''")
             if sql.select(elements=['message', 'response'], table='message_responses',
                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
@@ -396,6 +396,9 @@ class Fun(commands.Cog):
 
     @message_response.error
     async def message_response_error(self, ctx, error):
+        if isinstance(error, commands.CommandInvokeError):
+            await send_error_embed(ctx, description='Please seperate the message and the response using ` | ` (with a space in front and back)')
+            return
         await send_error_embed(ctx, description=f'Error: {error}')
 
 
