@@ -235,11 +235,10 @@ class Fun(commands.Cog):
                                                         ephemeral=True)
                 return
 
-            if not len(submissions):
-                await send_error_embed(ctx, description=f'No more posts available in **r/{subreddit}**')
-                return
-
             submissions.pop(0)  # Popping previous submission
+            if not len(submissions):
+                await interaction.response.edit_message(embed=discord.Embed(description=f'No more posts available in **r/{subreddit}**', colour=discord.Colour.red()), view=None)
+
             view.remove_item(view_post)
             view_post.url = f'https://reddit.com{submissions[0].permalink}'
             view.add_item(view_post)
