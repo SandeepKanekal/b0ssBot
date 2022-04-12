@@ -136,13 +136,7 @@ class Info(commands.Cog):
     
     @commands.command(aliases=['cl'], description='Shows the changelog')
     async def changelog(self, ctx):
-        changelog = '''
-        1. Loop commands have been disabled temporarily.
-        2. Added modlogging and warning systems.
-        3. Small modifications in the commands of the fun module.
-        4. The music commands now use a database rather than storing the information in the memory
-        5. Added a tempmute command
-        6. The commands involving now do not use pafy. A custom API fetches data instead'''
+        changelog = ''''''
         embed = discord.Embed(title='Changelog', url='https://github.com/SandeepKanekal/b0ssBot', description=changelog, colour=discord.Color.blue())
         embed.set_thumbnail(url=self.bot.user.avatar)
         embed.timestamp = datetime.datetime.now()

@@ -4,12 +4,7 @@ import json
 import discord
 import requests
 import os
-import wikipedia
-import time
-from googleapiclient.discovery import build
 from discord.ext import commands
-from sql_tools import SQL
-from discord.ui import Button, View
 
 
 # Gets quote from https://zenquotes.io api
@@ -110,108 +105,9 @@ class Misc(commands.Cog):
     async def megaspam_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
-    # Search command
-    @commands.command(aliases=['yt', 'youtube', 'ytsearch'],
-                      description='Searches YouTube and responds with the top result')
-    async def youtubesearch(self, ctx, *, query):
-        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        req = youtube.search().list(q=query, part='snippet', type='video', maxResults=100)
-        res = req.execute()
-
-        video_ids = []
-        thumbnails = []
-        titles = []
-        publish_dates = []
-        channel_ids = []
-        authors = []
-
-        for item in res['items']:
-            # Getting the video details
-            video_ids.append(item['id']['videoId'])
-            thumbnails.append(item['snippet']['thumbnails']['high']['url'])
-            titles.append(item['snippet']['title'])
-            channel_ids.append(item['snippet']['channelId'])
-            authors.append(item['snippet']['channelTitle'])
-
-            # Getting the publishing date and converting it to unix time
-            publish_date = item['snippet']['publishedAt']
-            publish_date = publish_date.strip('Z')
-            publish_date = publish_date.split('T')
-            publish_date = list(publish_date[0].split('-'))
-            publish_date.extend(publish_date[1].split('.'))
-            publish_date = [int(x) for x in publish_date]
-            publish_date = tuple(publish_date)
-            publish_date = datetime.datetime(*publish_date)
-            publish_date = f'<t:{int(time.mktime(publish_date.timetuple()))}:R>'
-            publish_dates.append(publish_date)
-
-        # Gets the next video
-        async def next_video_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            embed.clear_fields()
-            video_ids.pop(0)
-            thumbnails.pop(0)
-            titles.pop(0)
-            publish_dates.pop(0)
-            channel_ids.pop(0)
-            authors.pop(0)
-            if not video_ids:
-                await interaction.response.edit_message('No more results available', embed=None)
-                return
-
-            statistics = youtube.videos().list(part='statistics,contentDetails', id=video_ids[0]).execute()
-
-            embed.add_field(name='Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
-            embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
-            embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
-            embed.set_image(url=thumbnails[0])
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_footer(
-                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}')
-            watch_video.url = f'https://www.youtube.com/watch?v={video_ids[0]}'
-            view.remove_item(watch_video)
-            view.add_item(watch_video)
-            await interaction.response.edit_message(embed=embed, view=view)
-
-        # Ends the interaction
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-            view.remove_item(next_video)
-            view.remove_item(end_interaction)
-            await interaction.response.edit_message(view=view)
-
-        stats = youtube.videos().list(id=video_ids[0], part='statistics,contentDetails').execute()
-        # Response embed
-        embed = discord.Embed(colour=discord.Colour.red())
-        embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
-        embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
-        embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
-        embed.set_image(url=thumbnails[0])
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(
-            text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
-        next_video = Button(label='Next Video ⏭️', style=discord.ButtonStyle.green)
-        end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-        watch_video = Button(label='Watch Video', url=f'https://www.youtube.com/watch?v={video_ids[0]}')
-        view = View()
-        view.add_item(next_video)
-        view.add_item(end_interaction)
-        view.add_item(watch_video)
-        await ctx.send(embed=embed, view=view)
-        next_video.callback = next_video_trigger
-        end_interaction.callback = end_interaction_trigger
-
-    @youtubesearch.error
-    async def search_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-
     # Code command
-    @commands.command(name='code', description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, MISC, Moderation, Music, Util')
+    @commands.command(name='code',
+                      description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, MISC, Moderation, Music, Util')
     async def code(self, ctx, module):
         module = module.lower()
         try:
@@ -224,112 +120,11 @@ class Misc(commands.Cog):
             os.remove(f'Code for {module}.txt')  # Remove file to avoid problems in version control
 
         except FileNotFoundError:
-            await send_error_embed(ctx, description=f'Module {module} not found\nModules of the bot: Events, Fun, Help, Info, MISC, Moderation, Music, Util')
+            await send_error_embed(ctx,
+                                   description=f'Module {module} not found\nModules of the bot: Events, Fun, Help, Info, MISC, Moderation, Music, Util')
 
     @code.error
     async def code_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-
-    # Wikipedia command
-    @commands.command(aliases=['wiki'], description='Gets a summary of the query from wikipedia')
-    async def wikipedia(self, ctx, *, query):
-        # Gets the data from wikipedia
-        try:
-            summary = wikipedia.summary(query, sentences=5)
-            thumbnail = wikipedia.page(query).images[0]
-            url = wikipedia.page(query).url
-            # Response embed
-            summary += f'[ Read More...]({url})'
-            embed = discord.Embed(title=wikipedia.page(query).title, url=url, description=summary,
-                                  colour=discord.Colour.random())
-            embed.set_thumbnail(url=thumbnail)
-            await ctx.send(embed=embed)
-
-        except wikipedia.exceptions.WikipediaException as e:
-            await send_error_embed(ctx, description=str(e))
-
-    @wikipedia.error
-    async def wikipedia_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-
-    # YouTube notify command
-    @commands.command(name='youtubenotification', aliases=['ytnotification', 'ytnotify'],
-                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nExamples: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000`\n`-youtubenotification remove #new-videos https://www.youtube.com/c/MrBeast6000`\n`-youtubenotification view`')
-    async def youtubenotification(self, ctx, mode: str, text_channel: discord.TextChannel = None, *,
-                                  youtube_channel: str = None):
-        # sourcery no-metrics
-        if mode not in ['add', 'remove', 'view']:
-            await send_error_embed(ctx, description='Mode must be add, remove or view')
-            return
-
-        sql = SQL('b0ssbot')
-        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        if mode == 'add':
-            channel_id = requests.get(
-                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
-                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
-
-            if sql.select(elements=['*'], table='youtube',
-                          where=f"guild_id='{ctx.guild.id}' and channel_id = '{channel_id}'"):
-                await send_error_embed(ctx, description='Channel already added')
-                return
-
-            channel = youtube.channels().list(id=channel_id, part='snippet, contentDetails').execute()
-            latest_video_id = youtube.playlistItems().list(
-                playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
-                part='contentDetails').execute()['items'][0]['contentDetails']['videoId']
-
-            sql.insert(table='youtube',
-                       columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
-                       values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
-                               f"'{channel['items'][0]['snippet']['title']}'", f"'{latest_video_id}'"])
-            await ctx.send(embed=discord.Embed(
-                colour=discord.Colour.green(),
-                description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
-                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]).set_footer(
-                text='Use the command again to update the channel')
-            )
-
-        elif mode == 'remove':
-            channel_id = requests.get(
-                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
-                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
-            channel = youtube.channels().list(id=channel_id, part='snippet, contentDetails').execute()
-
-            if not sql.select(elements=['*'], table='youtube',
-                              where=f"guild_id='{ctx.guild.id}' and channel_id = '{channel_id}'"):
-                await send_error_embed(ctx, description='Channel not added')
-                return
-
-            sql.delete(table='youtube',
-                       where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{channel["items"][0]["id"]}\'')
-            await ctx.send(embed=discord.Embed(
-                colour=discord.Colour.green(),
-                description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will no longer be sent to {text_channel.mention}').set_thumbnail(
-                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
-
-        else:
-            channels = sql.select(elements=['channel_name', 'channel_id'], table='youtube',
-                                  where=f'guild_id = \'{ctx.guild.id}\'')
-            if not channels:
-                await send_error_embed(ctx, description='No channels are currently set up for notifications')
-                return
-            embed = discord.Embed(
-                description='',
-                colour=discord.Colour.dark_red()
-            )
-            for index, channel in enumerate(channels):
-                embed.description += f'{index + 1}. **[{channel[0]}](https://youtube.com/channel/{channel[1]})**\n'
-            if ctx.guild.icon:
-                embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
-            else:
-                embed.set_author(name=ctx.guild.name)
-            embed.set_thumbnail(
-                url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj')
-            await ctx.send(embed=embed)
-
-    @youtubenotification.error
-    async def youtubenotification_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
 

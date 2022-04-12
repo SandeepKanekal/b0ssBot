@@ -18,7 +18,7 @@ discord.Intents.members = True
 discord.Intents.webhooks = True
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents)
 bot.remove_command('help')
-cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util']
+cogs = ['events', 'help', 'fun', 'info', 'misc', 'music', 'moderation', 'util', 'internet']
 
 
 # A function to send embeds when there are false calls or errors

@@ -508,58 +508,35 @@ class Music(commands.Cog):
             if not vc.is_playing():
                 await send_error_embed(ctx, description='No audio is being played')
                 return
+            query = self.now_playing[ctx.guild.id]
 
-            try:
-                # Gets the lyrics of the current track
-                query = self.now_playing[ctx.guild.id]
-                extract_lyrics = lyrics_extractor.SongLyrics(os.getenv('json_api_key'), os.getenv('engine_id'))
-                song = extract_lyrics.get_lyrics(query)
-                lyrics = song['lyrics']
+        try:
+            # Gets the lyrics of the current track
+            extract_lyrics = lyrics_extractor.SongLyrics(os.getenv('json_api_key'), os.getenv('engine_id'))
+            song = extract_lyrics.get_lyrics(query)
+            lyrics = song['lyrics']
 
-                # Response embed
-                embed = discord.Embed(title=f'Lyrics for {self.now_playing[ctx.guild.id]}', description=lyrics,
-                                      colour=discord.Colour.blue())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.set_footer(text=f'Requested by {ctx.author}',
-                                 icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
-                                     ctx.author.default_avatar))
-                embed.timestamp = datetime.datetime.now()
-                await ctx.send(embed=embed)
+            # Response embed
+            embed = discord.Embed(title=f'Lyrics for {query}', description=lyrics,
+                                    colour=discord.Colour.blue())
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_footer(text=f'Requested by {ctx.author}',
+                                icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
+                                    ctx.author.default_avatar))
+            embed.timestamp = datetime.datetime.now()
+            await ctx.send(embed=embed)
 
-            # Lyrics not found exception
-            except lyrics_extractor.lyrics.LyricScraperException:
-                await send_error_embed(ctx,
-                                       description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found')
+        # Lyrics not found exception
+        except lyrics_extractor.lyrics.LyricScraperException:
+            await send_error_embed(ctx,
+                                    description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found')
 
-            # Some songs' lyrics are too long to be sent, in that case, this response is sent
-            except discord.HTTPException:
-                await send_error_embed(ctx,
-                                       description=f'The lyrics for {self.now_playing[ctx.guild.id]} is too long to be sent')
-
-        # If there is a query, the user is asking the lyrics for a specific song
-        else:
-            try:
-                # Gets the lyrics
-                extract_lyrics = lyrics_extractor.SongLyrics(os.getenv('json_api_key'), os.getenv('engine_id'))
-                song = extract_lyrics.get_lyrics(query)
-                lyrics = song['lyrics']
-
-                embed = discord.Embed(title=f'Lyrics for {query}', description=lyrics,
-                                      colour=discord.Colour.blue())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar))
-                embed.timestamp = datetime.datetime.now()
-                await ctx.send(embed=embed)
-
-            # Lyrics not found exception
-            except lyrics_extractor.lyrics.LyricScraperException:
-                await send_error_embed(ctx,
-                                       description=f'Lyrics for the song {query} could not be found')
-
-            # Some songs' lyrics are too long to be sent, in that case, this response is sent
-            except discord.HTTPException:
-                await send_error_embed(ctx,
-                                       description=f'The lyrics for {query} is too long to be sent')
+        # Some songs' lyrics are too long to be sent, in that case, a text file is sent
+        except discord.HTTPException:
+            with open('lyrics.txt', 'w') as f:
+                f.write(lyrics)
+            await ctx.send(file=discord.File('lyrics.txt'))
+            os.remove('lyrics.txt')
 
     # Error in lyrics command
     @lyrics.error

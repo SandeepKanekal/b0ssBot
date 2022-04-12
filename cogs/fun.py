@@ -1,7 +1,6 @@
 import random
 import discord
 import asyncpraw
-import asyncprawcore
 import datetime
 from discord.ext import commands
 from sql_tools import SQL
@@ -222,102 +221,6 @@ class Fun(commands.Cog):
 
     @coinflip.error
     async def coinflip_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-
-    # Post command
-    @commands.command(aliases=['reddit', 'post', 'rp'], description='Gets a post from the specified subreddit')
-    async def redditpost(self, ctx, subreddit):
-
-        async def next_post_trigger(interaction):
-            # Callback to next_post triggers this function
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            submissions.pop(0)  # Popping previous submission
-            if not len(submissions):
-                await interaction.response.edit_message(embed=discord.Embed(description=f'No more posts available in **r/{subreddit}**', colour=discord.Colour.red()), view=None)
-
-            view.remove_item(view_post)
-            view_post.url = f'https://reddit.com{submissions[0].permalink}'
-            view.add_item(view_post)
-            embed_next = discord.Embed(colour=discord.Colour.orange())
-            embed_next.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed_next.title = submissions[0].title
-            embed_next.description = submissions[0].selftext
-            embed_next.url = f'https://reddit.com{submissions[0].permalink}'
-            embed_next.set_footer(
-                text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-            embed_next.timestamp = datetime.datetime.now()
-
-            # Checking if the submission is text-only
-            if not submissions[0].is_self:
-                embed_next.set_image(url=submissions[0].url)
-
-            try:
-                await interaction.response.edit_message(embed=embed_next, view=view)
-            except discord.HTTPException:
-                embed_next.description = 'The post content was too long to be sent'
-                await ctx.send(embed=embed_next)
-
-        async def end_interaction_trigger(interaction):
-            # Callback to end_interaction triggers this function
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            view.remove_item(next_post)
-            view.remove_item(end_interaction)
-            await interaction.response.edit_message(view=view)
-
-        try:
-            submissions = await get_post(subreddit)
-            if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
-                submissions = list(filter(lambda s: not s.over_18, submissions))
-            if not len(submissions):
-                await send_error_embed(ctx,
-                                       description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
-            embed = discord.Embed(colour=discord.Colour.orange())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            next_post = Button(label='Next Post', style=discord.ButtonStyle.green)
-            end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-            view_post = Button(label='View Post', url=f'https://reddit.com{submissions[0].permalink}')
-            view = View()
-            view.add_item(next_post)
-            view.add_item(end_interaction)
-            view.add_item(view_post)
-            next_post.callback = next_post_trigger
-            end_interaction.callback = end_interaction_trigger
-
-            embed.title = submissions[0].title
-            embed.description = submissions[0].selftext
-            embed.url = submissions[0].url
-            embed.set_footer(
-                text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-            embed.timestamp = datetime.datetime.now()
-
-            # Checking if the submission is text-only
-            if not submissions[0].is_self:
-                embed.set_image(url=submissions[0].url)
-
-            try:
-                await ctx.send(embed=embed, view=view)
-            except discord.HTTPException:
-                embed = discord.Embed(description='The post content was too long to be sent',
-                                      colour=discord.Colour.orange())
-                await ctx.send(embed=embed, view=view)
-
-        except AttributeError:
-            # Could not get a post
-            await send_error_embed(ctx, description='Could not retrieve a post from **r/{subreddit}**')
-
-        except asyncprawcore.exceptions.AsyncPrawcoreException as e:
-            await send_error_embed(ctx, description=str(e))
-
-    @redditpost.error
-    async def post_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
     # Message Response Command
