@@ -254,7 +254,7 @@ class Internet(commands.Cog):
             return
 
         embed = discord.Embed(
-            title=f'Weather for {weather_data["name"]}',
+            title=f'Weather for {weather_data["name"]}, {weather_data["sys"]["country"]}',
             description=f'{weather_data["weather"][0]["description"].capitalize()}',
             colour=discord.Colour.blue()
         )

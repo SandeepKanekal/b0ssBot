@@ -146,53 +146,30 @@ class Util(commands.Cog):
     # Refer command
     @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter')
     async def refer(self, ctx, message_reference=None):
-        if not message_reference.startswith('https://discord.com/channels/'):  # Message ID
-            try:
-                guild_id = ctx.guild.id
-                channel_id = ctx.channel.id
-                message_id = message_reference
-                message_link = f'https://discord.com/channels/{str(guild_id)}/{str(channel_id)}/{str(message_id)}'
-                message = await ctx.fetch_message(message_id)
-                try:
-                    embed = message.embeds[0]
-                    if embed:  # Sends the embed if it exists
-                        await ctx.send(embed=embed)
-                except IndexError:
-                    embed = discord.Embed(colour=message.author.colour)
-                    embed.set_author(name=message.author,
-                                     icon_url=str(message.author.avatar) if message.author.avatar else str(
-                                         message.author.default_avatar))
-                    embed.add_field(name=message.content, value=f'\n[Jump to message]({message_link})')
-                    embed.set_footer(text=f'Requested by {ctx.author}',
-                                     icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
-                                         ctx.author.default_avatar))
-                    embed.timestamp = datetime.datetime.now()
-                    await ctx.send(embed=embed)
-            except discord.NotFound:
-                await ctx.send('Message could not be found')
-        else:
-            try:
-                message_link = message_reference
-                link = message_link.split('/')
-                message_id = int(link[6])  # Getting the message_id
-                message = await ctx.fetch_message(message_id)
-                try:
-                    embed = message.embeds[0]
-                    if embed:  # Sends the embed if it exists
-                        await ctx.send(embed=embed)
-                except IndexError:
-                    embed = discord.Embed(colour=message.author.colour)
-                    embed.set_author(name=message.author,
-                                     icon_url=str(message.author.avatar) if message.author.avatar else str(
-                                         message.author.default_avatar))
-                    embed.add_field(name=message.content, value=f'\n[Jump to message]({message_link})')
-                    embed.set_footer(text=f'Requested by {ctx.author}',
-                                     icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
-                                         ctx.author.default_avatar))
-                    embed.timestamp = datetime.datetime.now()
-                    await ctx.send(embed=embed)
-            except discord.NotFound:
-                await ctx.send('Message could not be found')
+        message_id = message_reference
+        if message_reference.startswith('https://discord.com/channels/'):  # Message ID
+            message_id = message_reference.split('/')[6]
+
+        try:
+            message_link = f'https://discord.com/channels/{str(ctx.guild.id)}/{str(ctx.channel.id)}/{str(message_id)}'
+            message = await ctx.fetch_message(message_id)
+
+            if message.embeds:  # Send the embeds in the original message
+                for index, embed in enumerate(message.embeds):
+                    await ctx.send(f'Embed no. {index+1}', embed=embed)
+
+            embed = discord.Embed(colour=message.author.colour)
+            embed.set_author(name=message.author,
+                             icon_url=str(message.author.avatar) if message.author.avatar else str(
+                                 message.author.default_avatar))
+            embed.add_field(name=message.content or "Message does not contain content", value=f'\n[Jump to message]({message_link})')
+            embed.set_footer(text=f'Requested by {ctx.author}',
+                             icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
+                                 ctx.author.default_avatar))
+            embed.timestamp = datetime.datetime.now()
+            await ctx.send(embed=embed)
+        except discord.NotFound:
+            await send_error_embed(ctx, description='Message not found')
 
     @refer.error
     async def refer_error(self, ctx, error):

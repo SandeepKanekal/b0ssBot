@@ -425,11 +425,16 @@ class Music(commands.Cog):
             hours_between = f'0{str(hours_between)}'
 
         duration = video["contentDetails"]["duration"].strip("PT")  # Getting the duration of the video
-        if "H" not in duration:
-            duration = f'0H{duration}'  # Adding 0 hours if there are no hours in the duration
-        duration = duration.replace("H", ":")  # Replacing the H with :
-        if "M" not in duration:
-            duration = f'0M{duration}'  # Adding 0 minutes if there are no minutes in the duration
+        if "S" not in duration:  # Putting 0S if there are no seconds
+            duration = f"{duration}0S"
+        if "H" in duration and "M" not in duration:  # Putting 0M if hours are present, without minutes
+            dur = duration.split("H")
+            duration = f'{dur[0]}H0M{dur[1]}'
+        if "M" not in duration:  # Putting 0M if there are no minutes
+            duration = f'0M{duration}'
+        if "H" not in duration:  # Putting 0H if there are no hours
+            duration = f'0H{duration}'
+        duration = duration.replace('H', ':')  # Replacing H with :
         duration = duration.replace("M", ":")  # Replacing the M with :
         duration = duration.replace("S", "")  # Removing the S
         dur = duration.split(":")  # Splitting the duration into hours, minutes and seconds
@@ -520,9 +525,7 @@ class Music(commands.Cog):
             embed = discord.Embed(title=f'Lyrics for {query}', description=lyrics,
                                     colour=discord.Colour.blue())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_footer(text=f'Requested by {ctx.author}',
-                                icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
-                                    ctx.author.default_avatar))
+            embed.set_footer(text='Powered by genius.com and google custom search engine')
             embed.timestamp = datetime.datetime.now()
             await ctx.send(embed=embed)
 
@@ -535,6 +538,7 @@ class Music(commands.Cog):
         except discord.HTTPException:
             with open('lyrics.txt', 'w') as f:
                 f.write(lyrics)
+                f.write('\n\nPowered by genius.com and google custom search engine')
             await ctx.send(file=discord.File('lyrics.txt'))
             os.remove('lyrics.txt')
 

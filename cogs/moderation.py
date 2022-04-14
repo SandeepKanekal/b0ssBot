@@ -45,7 +45,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -70,7 +70,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -90,8 +90,8 @@ class Moderation(commands.Cog):
                 colour=discord.Colour.green()
             )
             embed.set_author(name=message.author.name,
-                            icon_url=str(message.author.avatar) if message.author.avatar else str(
-                                message.author.default_avatar))
+                             icon_url=str(message.author.avatar) if message.author.avatar else str(
+                                 message.author.default_avatar))
             embed.set_footer(text=f'ID: {message.id}')
             embed.timestamp = datetime.datetime.now()
             webhooks = await channel.guild.webhooks()
@@ -156,7 +156,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -179,7 +179,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -206,7 +206,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await mod_channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -233,7 +233,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await mod_channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -257,8 +257,13 @@ class Moderation(commands.Cog):
                     embed.set_author(name=before.guild.name)
                 embed.set_footer(text=f'ID: {before.id}')
                 embed.timestamp = datetime.datetime.now()
-                # Send embed
-                await mod_channel.send(embed=embed)
+                webhooks = await mod_channel.guild.webhooks()
+                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+                if webhook is None:
+                    webhook = await mod_channel.create_webhook(name=f'{self.bot.user.name} Logging')
+
+                # Send webhook
+                await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
@@ -281,7 +286,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -306,7 +311,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            
+
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
@@ -427,24 +432,28 @@ class Moderation(commands.Cog):
     @commands.command(aliases=['ub'], description='Unbans the mentioned member from the server')
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, *, member):
-        if member == ctx.author:
+        if member == f'{ctx.author}#{ctx.author.discriminator}':
             await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
             return
-        banned_users = await ctx.guild.bans()
+        banned_users = ctx.guild.bans()
+        if '#' not in member:
+            await send_embed(ctx, description='Invalid user')
+            return
         name, discriminator = member.split('#')
-        for _ in banned_users:
-            user = _.user
-            if (user.name, user, discriminator) == (name, discriminator):
+        user_flag = 0
+        async for ban in banned_users:
+            user = ban.user
+            if (user.name, user.discriminator) == (name, discriminator):
+                user_flag += 1
                 try:
                     await send_embed(ctx, description=f'{member} was unbanned', colour=discord.Colour.green())
-                    with contextlib.suppress(
-                            discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
-                        await member.send(f'You were unbanned in {ctx.guild}')
                     await ctx.guild.unban(user)
                     return
                 except discord.Forbidden:  # Permission error
                     await send_embed(ctx, description='Permission error')
                     return
+        if user_flag == 0:
+            await send_embed(ctx, description='User not found')
 
     # Unban error response
     @unban.error

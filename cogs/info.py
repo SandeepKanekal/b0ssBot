@@ -63,6 +63,9 @@ class Info(commands.Cog):
         user_count = len(ctx.guild.members)  # includes bots
         member_count = len([m for m in ctx.guild.members if not m.bot])  # bots not included
         bot_count = user_count - member_count
+        ban_count = 0
+        async for _ in ctx.guild.bans():
+            ban_count += 1
 
         # Channel stats
         text_channel_count = sum(1 for _ in ctx.guild.text_channels)
@@ -79,7 +82,7 @@ class Info(commands.Cog):
         created_at = ctx.guild.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')
         created_at = convert_to_unix_time(created_at)
 
-        # User strings
+        # User and channel strings
         member_string = f'Total: **{user_count}**\nMembers: **{member_count}**\nBots: **{bot_count}**'
         channel_string = f'Text Channels: **{text_channel_count}**\nVoice Channels **{voice_channel_count}**'
 
@@ -93,7 +96,7 @@ class Info(commands.Cog):
         embed.add_field(name='Channels', value=channel_string)
         embed.add_field(name='Server Emojis', value=emoji_string)
         embed.add_field(name='Server Boosts', value=ctx.guild.premium_subscription_count)
-        embed.add_field(name='Number of Bans', value=len(await ctx.guild.bans()))
+        embed.add_field(name='Number of Bans', value=str(ban_count))
         try:
             embed.add_field(name='Muted Users', value=len(discord.utils.get(ctx.guild.roles, name='Muted').members))
         except AttributeError:

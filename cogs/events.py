@@ -23,6 +23,9 @@ class Events(commands.Cog):
         print('Bot is ready')
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
         self.check_for_videos.start()
+        sql = SQL('b0ssbot')
+        sql.delete(table='queue')
+        sql.delete(table='loop')
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
@@ -77,35 +80,7 @@ class Events(commands.Cog):
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await message.reply(embed=embed)
 
-        if message.content.lower() == 'vibe':
-            gif = random.choice(
-                [
-                    'https://tenor.com/view/vibe-gif-21932627',
-                    'https://tenor.com/view/cat-vibe-153bpm-gif-18260767',
-                    'https://tenor.com/view/vibe-cat-gif-230916650',
-                    'https://cdn.discordapp.com/emojis/781962404161388584.gif?v=1&size=40',
-                    'https://tenor.com/view/indian-gif-5336861',
-                    'https://tenor.com/view/dance-kid-kid-dance-india-indian-gif-20780888',
-                    'https://tenor.com/view/fat-guy-dancing-moves-gif-14156580',
-                    'https://tenor.com/view/disco-disco-time-munna-indian-cricistan-gif-19206126'
-                ]
-            )
-            await message.reply(gif)
-
-        if message.content.lower() == 'sus':
-            gif = random.choice([
-                'https://tenor.com/view/the-rock-the-rock-sus-the-rock-meme-tthe-rock-sus-meme-dwayne-johnson-gif-23805584',
-                'https://tenor.com/view/amogus-spin-gif-22146300'])
-            await message.reply(gif)
-
         with contextlib.suppress(IndexError):
-            if sql.select(elements=['guild_id'], table='message_responses',
-                          where=f"message = '{message.content.lower()}'")[0][0] == "default":
-                await message.reply(
-                    sql.select(elements=['response'], table='message_responses',
-                               where=f"message = '{message.content.lower()}'")[0][0]
-                )
-
             if response := sql.select(elements=['response'], table='message_responses',
                                       where=f"message = '{message.content.lower()}' AND guild_id = '{message.guild.id}'")[0][0]:
                 await message.reply(response)

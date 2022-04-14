@@ -107,7 +107,7 @@ class Misc(commands.Cog):
 
     # Code command
     @commands.command(name='code',
-                      description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, MISC, Moderation, Music, Util')
+                      description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, Internet, MISC, Moderation, Music, Util')
     async def code(self, ctx, module):
         module = module.lower()
         try:
@@ -121,7 +121,7 @@ class Misc(commands.Cog):
 
         except FileNotFoundError:
             await send_error_embed(ctx,
-                                   description=f'Module {module} not found\nModules of the bot: Events, Fun, Help, Info, MISC, Moderation, Music, Util')
+                                   description=f'Module {module} not found\nModules of the bot: Events, Fun, Help, Info, Internet, MISC, Moderation, Music, Util')
 
     @code.error
     async def code_error(self, ctx, error):
