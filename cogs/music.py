@@ -330,6 +330,7 @@ class Music(commands.Cog):
 
     # Stop command
     @commands.command(name='stop', description='Stops the current track and clears the queue')
+    @commands.has_permissions(move_members=True)
     async def stop(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -364,6 +365,7 @@ class Music(commands.Cog):
 
     # Disconnect command
     @commands.command(aliases=['dc', 'leave'], description="Disconnecting bot from VC")
+    @commands.has_permissions(move_members=True)
     async def disconnect(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -482,8 +484,8 @@ class Music(commands.Cog):
 
             # Removing the track from the queue
             remove = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
-            remove_title = remove[0][0]
-            remove_url = remove[0][1]
+            remove_title = remove[track_number-1][0]
+            remove_url = remove[track_number-1][1]
             self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{remove_title}'")
 
             # Response embed
@@ -503,6 +505,7 @@ class Music(commands.Cog):
     @commands.command(aliases=['ly'], description='Gets the lyrics of the current track')
     async def lyrics(self, ctx, *, query=None):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        lyrics = ''
 
         # If the query is of type None, this means the user wants the lyrics of the current playing track
         if query is None:

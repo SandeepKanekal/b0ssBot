@@ -96,6 +96,7 @@ class Misc(commands.Cog):
 
     # Megaspam command
     @commands.command(aliases=['ms'], description='Spams a message 25 times')
+    @commands.has_permissions(manage_messages=True)
     async def megaspam(self, ctx, *, message):
         await ctx.message.delete()
         for _ in range(25):

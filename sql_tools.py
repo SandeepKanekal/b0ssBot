@@ -67,7 +67,7 @@ class SQL(object):
         cursor.close()
         conn.close()
 
-    def delete(self, table: str, where: str):
+    def delete(self, table: str, where: str = None) -> None:
         """
         Deletes from a database.
         """
@@ -76,7 +76,7 @@ class SQL(object):
                                 host='localhost')
         cursor = conn.cursor()
         # Delete from the database
-        cursor.execute(f'DELETE FROM {table} WHERE {where}')
+        cursor.execute(f'DELETE FROM {table} WHERE {where}' if where else f'DELETE FROM {table}')
         # Commit
         conn.commit()
         # Close the connection

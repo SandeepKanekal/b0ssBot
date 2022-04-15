@@ -158,7 +158,7 @@ class Internet(commands.Cog):
 
     # YouTube notify command
     @commands.command(name='youtubenotification', aliases=['ytnotification', 'ytnotify'],
-                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nExamples: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000`\n`-youtubenotification remove #new-videos https://www.youtube.com/c/MrBeast6000`\n`-youtubenotification view`')
+                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nAdd: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000`\nRemove: `-youtubenotification remove #new-videos https://www.youtube.com/c/MrBeast6000`\nView: `-youtubenotification view`')
     async def youtubenotification(self, ctx, mode: str, text_channel: discord.TextChannel = None, *,
                                   youtube_channel: str = None):
         # sourcery no-metrics
@@ -278,40 +278,73 @@ class Internet(commands.Cog):
 
     # Post command
     @commands.command(aliases=['reddit', 'post', 'rp'], description='Gets a post from the specified subreddit')
-    async def redditpost(self, ctx, subreddit):
+    async def redditpost(self, ctx, subreddit):  # sourcery no-metrics
+        index = 0
 
         async def next_post_trigger(interaction):
+            nonlocal index
             # Callback to next_post triggers this function
             if interaction.user != ctx.author:
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
                                                         ephemeral=True)
                 return
 
-            submissions.pop(0)  # Popping previous submission
-            if not len(submissions):
-                await interaction.response.edit_message(embed=discord.Embed(description=f'No more posts available in **r/{subreddit}**', colour=discord.Colour.red()), view=None)
+            if index == len(submissions) - 1:
+                index = 0
+            else:
+                index += 1  # Increment index
 
-            view.remove_item(view_post)
-            view_post.url = f'https://reddit.com{submissions[0].permalink}'
-            view.add_item(view_post)
             embed_next = discord.Embed(colour=discord.Colour.orange())
             embed_next.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed_next.title = submissions[0].title
-            embed_next.description = submissions[0].selftext
-            embed_next.url = f'https://reddit.com{submissions[0].permalink}'
+            embed_next.title = submissions[index].title
+            embed_next.description = submissions[index].selftext
+            embed_next.url = f'https://reddit.com{submissions[index].permalink}'
             embed_next.set_footer(
-                text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
+                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
             embed_next.timestamp = datetime.datetime.now()
 
             # Checking if the submission is text-only
-            if not submissions[0].is_self:
-                embed_next.set_image(url=submissions[0].url)
+            if not submissions[index].is_self:
+                embed_next.set_image(url=submissions[index].url)
 
             try:
-                await interaction.response.edit_message(embed=embed_next, view=view)
+                await interaction.response.edit_message(embed=embed_next)
             except discord.HTTPException:
                 embed_next.description = 'The post content was too long to be sent'
                 await ctx.send(embed=embed_next)
+
+        async def previous_post_trigger(interaction):
+            nonlocal index
+            # Callback to previous_post triggers this function
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            if index == 0:
+                await interaction.response.send_message(content='This is the first post', ephemeral=True)
+                return
+
+            index -= 1  # Decrement index
+
+            embed_previous = discord.Embed(colour=discord.Colour.orange())
+            embed_previous.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed_previous.title = submissions[index].title
+            embed_previous.description = submissions[index].selftext
+            embed_previous.url = f'https://reddit.com{submissions[index].permalink}'
+            embed_previous.set_footer(
+                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
+            embed_previous.timestamp = datetime.datetime.now()
+
+            # Checking if the submission is text-only
+            if not submissions[index].is_self:
+                embed_previous.set_image(url=submissions[index].url)
+
+            try:
+                await interaction.response.edit_message(embed=embed_previous)
+            except discord.HTTPException:
+                embed_previous.description = 'The post content was too long to be sent'
+                await ctx.send(embed=embed_previous)
 
         async def end_interaction_trigger(interaction):
             # Callback to end_interaction triggers this function
@@ -319,10 +352,7 @@ class Internet(commands.Cog):
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
                                                         ephemeral=True)
                 return
-
-            view.remove_item(next_post)
-            view.remove_item(end_interaction)
-            await interaction.response.edit_message(view=view)
+            await interaction.response.edit_message(view=None)
 
         try:
             submissions = await get_post(subreddit)
@@ -333,15 +363,16 @@ class Internet(commands.Cog):
                                        description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
             embed = discord.Embed(colour=discord.Colour.orange())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            next_post = Button(label='Next Post', style=discord.ButtonStyle.green)
+            next_post = Button(emoji='⏭️', style=discord.ButtonStyle.green)
+            previous_post = Button(emoji='⏮️', style=discord.ButtonStyle.green)
             end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-            view_post = Button(label='View Post', url=f'https://reddit.com{submissions[0].permalink}')
             view = View()
+            view.add_item(previous_post)
             view.add_item(next_post)
             view.add_item(end_interaction)
-            view.add_item(view_post)
             next_post.callback = next_post_trigger
             end_interaction.callback = end_interaction_trigger
+            previous_post.callback = previous_post_trigger
 
             embed.title = submissions[0].title
             embed.description = submissions[0].selftext

@@ -83,15 +83,17 @@ class Moderation(commands.Cog):
         channel_id = \
             sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{message.guild.id}'")[0][0]
         channel = discord.utils.get(message.guild.channels, id=int(channel_id))
-        if message.content and not message.embeds:
+        if not message.embeds:
             embed = discord.Embed(
-                title=f'Message Deleted in {message.channel}',
+                title=f'Message Deleted in #{message.channel}',
                 description=message.content,
                 colour=discord.Colour.green()
             )
             embed.set_author(name=message.author.name,
                              icon_url=str(message.author.avatar) if message.author.avatar else str(
                                  message.author.default_avatar))
+            if message.attachments:
+                embed.add_field(name='Attachments', value='\n'.join([attachment.url for attachment in message.attachments]))
             embed.set_footer(text=f'ID: {message.id}')
             embed.timestamp = datetime.datetime.now()
             webhooks = await channel.guild.webhooks()
@@ -120,7 +122,7 @@ class Moderation(commands.Cog):
             return
 
         embed = discord.Embed(
-            title=f'Message Edited in {before.channel}',
+            title=f'Message Edited in #{before.channel}',
             description=f'{before.author.mention} has edited a message\n**Before**: {before.content}\n**After**: {after.content}',
             colour=discord.Colour.green()
         )
@@ -193,7 +195,7 @@ class Moderation(commands.Cog):
             mod_channel = discord.utils.get(channel.guild.channels, id=int(channel_id))
             embed = discord.Embed(
                 title=f'Channel Created in {channel.guild.name}',
-                description=f'{channel.mention} has been created',
+                description=f'#{channel} has been created',
                 colour=discord.Colour.green()
             )
             if channel.guild.icon:
@@ -220,7 +222,7 @@ class Moderation(commands.Cog):
             mod_channel = discord.utils.get(channel.guild.channels, id=int(channel_id))
             embed = discord.Embed(
                 title=f'Channel Deleted in {channel.guild.name}',
-                description=f'{channel} has been deleted',
+                description=f'#{channel} has been deleted',
                 colour=discord.Colour.green()
             )
             if channel.guild.icon:
@@ -273,8 +275,8 @@ class Moderation(commands.Cog):
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{role.guild.id}'")[0][0]
             channel = discord.utils.get(role.guild.channels, id=int(channel_id))
             embed = discord.Embed(
-                title=f'Channel Created in {channel.guild.name}',
-                description=f'{channel} has been created',
+                title=f'Role Created in {role.guild.name}',
+                description=f'{role.mention} has been created',
                 colour=discord.Colour.green()
             )
             if channel.guild.icon:
@@ -299,7 +301,7 @@ class Moderation(commands.Cog):
             channel = discord.utils.get(role.guild.channels, id=int(channel_id))
             embed = discord.Embed(
                 title=f'Role Deleted in {role.guild.name}',
-                description=f'{role} has been deleted',
+                description=f'{role.mention} has been deleted',
                 colour=discord.Colour.green()
             )
             if role.guild.icon:
@@ -314,6 +316,27 @@ class Moderation(commands.Cog):
 
             # Send webhook
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+    
+    @commands.Cog.listener()
+    async def on_guild_role_update(self, before: discord.Role, after: discord.Role) -> None:
+        if modlog_enabled(before.guild.id) and before.name != after.name:
+            # Get modlog channel
+            sql = SQL('b0ssbot')
+            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][0]
+            channel = discord.utils.get(before.guild.channels, id=int(channel_id))
+            embed = discord.Embed(
+                title='Role Name Changed',
+                description=f'@{before.name} has been changed to @{after.name}',
+                colour=discord.Colour.green()
+            )
+            if before.guild.icon:
+                embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
+            else:
+                embed.set_author(name=before.guild.name)
+            embed.set_footer(text=f'ID: {before.id}')
+            embed.timestamp = datetime.datetime.now()
+            # Send embed
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild) -> None:
@@ -324,8 +347,8 @@ class Moderation(commands.Cog):
             channel = discord.utils.get(before.channels, id=int(channel_id))
             if before.name != after.name:
                 embed = discord.Embed(
-                    title='Guild Name Changed',
-                    description=f'Guild Name has been changed to {after.name}',
+                    title='Server Name Changed',
+                    description=f'{before.name} has been changed to {after.name}',
                     colour=discord.Colour.green()
                 )
                 if before.icon:
@@ -702,8 +725,7 @@ class Moderation(commands.Cog):
                 sql.insert(table='warns', columns=['member_id', 'warns', 'guild_id', 'reason'],
                            values=[f"'{member.id}'", "1", f"'{ctx.guild.id}'", f"ARRAY['{reason}']"])
             embed = discord.Embed(
-                title=f'{member.mention} has been warned',
-                description=f'Reason: {reason}',
+                description=f'{member} has been warned for {reason}',
                 colour=discord.Colour.red()
             ).set_author(name=member.name, icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
             await ctx.send(embed=embed)
