@@ -10,9 +10,9 @@ class Help(commands.Cog):
         self.bot = bot
 
     @commands.command(name='help',
-                    description='Shows the list of all commands or the information about one command if specified',
-                    hidden=True)
-    async def help(self, ctx, command=None):  # sourcery no-metrics
+                      description='Shows the list of all commands or the information about one command if specified',
+                      hidden=True)
+    async def help(self, ctx, command: str = None):  # sourcery no-metrics
         sql = SQL('b0ssbot')
         command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
         if command is not None:
@@ -50,7 +50,8 @@ class Help(commands.Cog):
             # Command string
             cmds = ''
             # Response embed
-            embed = discord.Embed(title='Help Page', description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
+            embed = discord.Embed(title='Help Page',
+                                  description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
                                   colour=discord.Colour.blue())
             for cog in self.bot.cogs:
                 if cog in ['Help', 'Events']:
@@ -61,7 +62,8 @@ class Help(commands.Cog):
                 cmds = cmds[:-1]
                 embed.add_field(name=cog.upper(), value=cmds, inline=False)
                 cmds = ''
-            embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
+            embed.set_footer(text=f'Requested by {ctx.author}',
+                             icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
             embed.timestamp = datetime.datetime.now()
             await ctx.reply(embed=embed)
 

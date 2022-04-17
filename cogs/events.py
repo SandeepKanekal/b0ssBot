@@ -1,8 +1,9 @@
 # Contains all bot events
 import contextlib
 import os
-import random
 import discord
+import requests
+import datetime
 from sql_tools import SQL
 from discord.ext import commands, tasks
 from googleapiclient.discovery import build
@@ -23,6 +24,7 @@ class Events(commands.Cog):
         print('Bot is ready')
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
         self.check_for_videos.start()
+        self.hourly_weather.start()
         sql = SQL('b0ssbot')
         sql.delete(table='queue')
         sql.delete(table='loop')
@@ -82,7 +84,8 @@ class Events(commands.Cog):
 
         with contextlib.suppress(IndexError):
             if response := sql.select(elements=['response'], table='message_responses',
-                                      where=f"message = '{message.content.lower()}' AND guild_id = '{message.guild.id}'")[0][0]:
+                                      where=f"message = '{message.content.lower()}' AND guild_id = '{message.guild.id}'"
+                                      )[0][0]:
                 await message.reply(response)
 
     @commands.Cog.listener()
@@ -125,6 +128,36 @@ class Events(commands.Cog):
 
                 sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
                            where=f'channel_id = \'{data[0]}\'')
+
+    @tasks.loop(hours=1)
+    async def hourly_weather(self):
+        print('Checking for weather...')
+        sql = SQL('b0ssbot')
+        weather = sql.select(elements=['guild_id', 'channel_id', 'location'], table='hourlyweather')
+        for data in weather:
+            guild = discord.utils.get(self.bot.guilds, id=int(data[0]))
+            channel = discord.utils.get(guild.text_channels, id=int(data[1]))
+            location = data[2].replace("''", "'")
+            weather_data = requests.get(
+                f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={os.getenv("weather_api_key")}&units=metric').json()
+            if weather_data['cod'] == 200:
+                embed = discord.Embed(title=f'Weather for {data[2]}, {weather_data["sys"]["country"]}',
+                                      description=f'{weather_data["weather"][0]["description"]}',
+                                      colour=discord.Colour.blue())
+                embed.set_thumbnail(
+                    url=f'https://openweathermap.org/img/wn/{weather_data["weather"][0]["icon"]}@2x.png')
+                embed.add_field(name='Max. Temperature', value=f'{weather_data["main"]["temp_max"]}°C')
+                embed.add_field(name='Min. Temperature', value=f'{weather_data["main"]["temp_min"]}°C')
+                embed.add_field(name='Temperature', value=f'{weather_data["main"]["temp"]}°C')
+                embed.add_field(name='Feels Like', value=f'{weather_data["main"]["feels_like"]}°C')
+                embed.add_field(name='Humidity', value=f'{weather_data["main"]["humidity"]}%')
+                embed.add_field(name='Wind Speed', value=f'{weather_data["wind"]["speed"]}m/s')
+                embed.add_field(name='Pressure', value=f'{weather_data["main"]["pressure"]}hPa')
+                embed.add_field(name='Sunrise', value=f'<t:{weather_data["sys"]["sunrise"]}:R>')
+                embed.add_field(name='Sunset', value=f'<t:{weather_data["sys"]["sunset"]}:R>')
+                embed.set_footer(text='Powered by OpenWeatherMap')
+                embed.timestamp = datetime.datetime.now()
+                await channel.send(embed=embed)
 
 
 # Setup

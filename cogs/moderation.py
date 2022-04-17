@@ -325,8 +325,8 @@ class Moderation(commands.Cog):
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][0]
             channel = discord.utils.get(before.guild.channels, id=int(channel_id))
             embed = discord.Embed(
-                title='Role Name Changed',
-                description=f'@{before.name} has been changed to @{after.name}',
+                title=f'Role Updated in {before.guild.name}',
+                description=f'@{before.name} has been updated to @{after.name}',
                 colour=discord.Colour.green()
             )
             if before.guild.icon:
@@ -335,8 +335,13 @@ class Moderation(commands.Cog):
                 embed.set_author(name=before.guild.name)
             embed.set_footer(text=f'ID: {before.id}')
             embed.timestamp = datetime.datetime.now()
-            # Send embed
-            await channel.send(embed=embed)
+            webhooks = await channel.guild.webhooks()
+            webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+            if webhook is None:
+                webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+            
+            # Send webhook
+            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild) -> None:
@@ -357,8 +362,13 @@ class Moderation(commands.Cog):
                     embed.set_author(name=before.name)
                 embed.set_footer(text=f'ID: {before.id}')
                 embed.timestamp = datetime.datetime.now()
-                # Send embed
-                await channel.send(embed=embed)
+                webhooks = await channel.guild.webhooks()
+                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+                if webhook is None:
+                    webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+
+                # Send webhook
+                await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
@@ -409,7 +419,13 @@ class Moderation(commands.Cog):
                 embed.set_author(name=before.guild.name)
             embed.set_footer(text=f'ID: {before.id}')
             embed.timestamp = datetime.datetime.now()
-            await channel.send(embed=embed)
+            webhooks = await channel.guild.webhooks()
+            webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+            if webhook is None:
+                webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+
+            # Send webhook
+            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
     # Ban command
     @commands.command(name='ban', description='Bans the mentioned user from the server')

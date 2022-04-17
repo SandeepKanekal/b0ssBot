@@ -30,6 +30,7 @@ Currently, there are 9 tables:
 + loop (columns: SN, guild_id, source, title, url)
 + message_responses(columns: SN, guild_id, message, response)
 + youtube(columns: SN, guild_id, text_channel_id, channel_id, channel_name, latest_video_id)
++ hourlyweather(columns: SN, guild_id, channel_id, location)
 
 More details in DATABASE.md
 

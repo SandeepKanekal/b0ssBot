@@ -82,16 +82,18 @@ class Util(commands.Cog):
     @commands.command(name='afk', description='Marks the user as AFK')
     async def afk(self, ctx, *, reason: str = 'No reason'):
         member = ctx.author
+        reason = reason.replace("'", "''")
+        member_details = member.name.replace("'", "''") + '#' + member.discriminator
         sql = SQL('b0ssbot')
         with contextlib.suppress(discord.Forbidden):
             await member.edit(nick=f'[AFK] {member.display_name}')  # Changing the nickname
         # Adds member details to the database
         sql.insert(table='afks', columns=['member', 'member_id', 'guild_id', 'reason'],
-                   values=[f'\'{member}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'', f'\'{reason}\''])
+                   values=[f'\'{member_details}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'', f'\'{reason}\''])
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour)
         embed.set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.add_field(name='AFK note', value=reason)
+        embed.add_field(name='AFK note', value=reason.replace("''", "'"))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
@@ -111,7 +113,7 @@ class Util(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx, limit=0):
         if not limit:
-            await send_error_embed(description='Provide a limit')
+            await send_error_embed(ctx, description='Provide a limit')
             return
         if limit > 100:
             await ctx.send('Limit must be lesser than 100')
@@ -145,7 +147,7 @@ class Util(commands.Cog):
 
     # Refer command
     @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter')
-    async def refer(self, ctx, message_reference=None):
+    async def refer(self, ctx, message_reference: str):
         message_id = message_reference
         if message_reference.startswith('https://discord.com/channels/'):  # Message ID
             message_id = message_reference.split('/')[6]

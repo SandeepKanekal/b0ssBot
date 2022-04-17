@@ -38,16 +38,17 @@ class Music(commands.Cog):
         self.now_playing_url = {}  # Stores the url  of the currently playing track
         self.start_time = {}  # Stores the time when the track started playing
         self.source = {}  # Stores the source of the currently playing track
-        self._ydl_options = {'format': 'bestaudio', 'noplaylist': 'True'}
+        self.volume = {}  # Stores the volume of the currently playing track
+        self._ydl_options = {'format': 'bestaudio', 'noplaylist': 'True'}  # Options for youtube_dl
         self._ffmpeg_options = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-                                'options': '-vn'}
-        self.sql = SQL('b0ssbot')
+                                'options': '-vn'}  # Options for ffmpeg
+        self.sql = SQL('b0ssbot')  # SQL object
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState,
                                     after: discord.VoiceState) -> None:
-        with contextlib.suppress(
-                AttributeError):  # The player is disconnected when there is no one in the voice channel
+        with contextlib.suppress(AttributeError):
+            # The player is disconnected when there is no one in the voice channel
             vc = discord.utils.get(self.bot.voice_clients, guild=member.guild)
             if len(before.channel.members) == 1 and after != before:
                 await vc.disconnect()
@@ -61,36 +62,33 @@ class Music(commands.Cog):
     def search_yt(self, item):
         with YoutubeDL(self._ydl_options) as ydl:
             try:
-                info = ydl.extract_info(f"ytsearch:{item}", download=False)['entries'][0]
-            except IndexError:
-                return
+                info = ydl.extract_info(f"ytsearch:{item}", download=False)['entries'][0]  # Get the required details
             except youtube_dl.utils.DownloadError as e:
                 return e
 
-        return {'source': info['formats'][0]['url'], 'title': info['title'], 'url': info['webpage_url']}
+        return {'source': info['formats'][0]['url'], 'title': info['title'],
+                'url': info['webpage_url']}  # Return required details
 
-    # The play_next function is used when the player is already playing, this function is invoked when the player is done playing one of the songs in the queue
+    # The play_next function is used when the player is already playing, this function is invoked when the player is done playing one of the tracks in the queue
     def play_next(self, ctx):
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-        if self.sql.select(['title'], 'queue', f"guild_id = '{ctx.guild.id}'"):
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
+        if self.sql.select(['title'], 'queue',
+                           f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks in the queue
             self._play_next(ctx, vc)
-        elif self.sql.select(['title'], 'loop', f"guild_id = '{ctx.guild.id}'"):
+        elif self.sql.select(['title'], 'loop', f"guild_id = '{ctx.guild.id}'"):  # Check if there are any loops
             self._play_next(ctx, vc)
         else:
+            # If no track is present to play, all the variables store None
             self.now_playing[ctx.guild.id] = None
             self.now_playing_url[ctx.guild.id] = None
             self.start_time[ctx.guild.id] = None
             self.source[ctx.guild.id] = None
 
     def _play_next(self, ctx, vc):
-        # Get the url to be played
-        if self.sql.select(['source', 'title', 'url'], 'loop', f"guild_id = '{ctx.guild.id}'"):
-            track = self.sql.select(['source', 'title', 'url'], 'loop', f"guild_id = '{ctx.guild.id}'")
-            self.start_time[ctx.guild.id] = datetime.datetime.now()
-        else:
-            track = \
-                self.sql.select(elements=['source', 'title', 'url'], table='queue',
-                                where=f"guild_id = '{ctx.guild.id}'")
+        # Get the url to be played from the loop or queue table
+        track = self.sql.select(['source', 'title', 'url'], 'loop', f"guild_id = '{ctx.guild.id}'") or self.sql.select(
+            elements=['source', 'title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
+
         m_url = track[0][0]
         self.now_playing[ctx.guild.id] = track[0][1]
         self.now_playing_url[ctx.guild.id] = track[0][2]
@@ -98,6 +96,7 @@ class Music(commands.Cog):
         self.source[ctx.guild.id] = track[0][0]
         # Play the track
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
+        vc.source = discord.PCMVolumeTransformer(vc.source, volume=self.volume[ctx.guild.id] / 100)
         # Delete the track from the queue
         if not self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             title = track[0][1]
@@ -106,8 +105,8 @@ class Music(commands.Cog):
 
     # The play_music function is used to play music when the player is not connected or nothing is being played
     async def play_music(self, ctx):
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-        voice_channel = ctx.author.voice.channel
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
+        voice_channel = ctx.author.voice.channel  # Get the voice channel
         if track := self.sql.select(['source', 'title', 'url'], 'loop', f"guild_id = '{ctx.guild.id}'"):
             self.start_time[ctx.guild.id] = datetime.datetime.now()
         else:
@@ -124,9 +123,10 @@ class Music(commands.Cog):
             vc = await voice_channel.connect()
         except discord.ClientException:
             await vc.move_to(voice_channel)
-        print(track)
+        print(track)  # Print the track that is being played
 
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
+        vc.source = discord.PCMVolumeTransformer(vc.source, volume=self.volume[ctx.guild.id] / 100)
         # Delete the track as it is being played
         if not self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             title = track[0][1]
@@ -135,14 +135,14 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in')
     async def join(self, ctx):
-        voice_channel = ctx.author.voice.channel
+        voice_channel = ctx.author.voice.channel  # Get the voice channel
         if voice_channel is None:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
             return
         try:
             await voice_channel.connect()
         except discord.ClientException:
-            await send_error_embed(ctx, description='Already connected to the voice channel')
+            await send_error_embed(ctx, description='Already connected to the voice channel')  # If already connected
 
     @join.error
     async def join_error(self, ctx, error):
@@ -150,18 +150,19 @@ class Music(commands.Cog):
 
     # The play or add command is just used for searching the internet, as well as appending the necessary information to the queue variables
     @commands.command(aliases=['p', 'add'], description='Plays the searched song from YouTube or adds it to the queue')
-    async def play(self, ctx, *, query=None):
+    async def play(self, ctx, *, query: str = None):
         if query is None:
             await send_error_embed(ctx, description='No query provided')
             return
 
-        voice_client = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        voice_client = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
         if ctx.author.voice is None:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
             return
-        voice_channel = ctx.author.voice.channel
+        voice_channel = ctx.author.voice.channel  # Get the voice channel
 
         if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
+            # Do not let adding of new tracks if looping is enabled
             await send_error_embed(ctx, description='Looping is enabled')
             return
 
@@ -170,11 +171,13 @@ class Music(commands.Cog):
         except discord.ClientException:
             await voice_client.move_to(voice_channel)
 
-        song = self.search_yt(query)
-        if isinstance(song, Exception):
+        song = self.search_yt(query)  # Get the track details
+        if isinstance(song, youtube_dl.utils.DownloadError):
             await send_error_embed(ctx, description=f'Error: {song}')
             return
-        song["title"] = song["title"].replace("'", "''")
+        if ctx.guild.id not in self.volume.keys():
+            self.volume[ctx.guild.id] = 100
+        song["title"] = song["title"].replace("'", "''")  # Single quotes cause problems
 
         self.sql.insert(
             table='queue',
@@ -186,9 +189,9 @@ class Music(commands.Cog):
                 f"'{song['url']}'"
             ]
         )
-        song["title"] = song["title"].replace("''", "'")
+        song["title"] = song["title"].replace("''", "'")  # Replace the single quotes back for the response
 
-        video = get_video_stats(song['url'])
+        video = get_video_stats(song['url'])  # Get the video stats for the embed
         embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
             url=video['snippet']['thumbnails']['high']['url'])
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
@@ -214,7 +217,7 @@ class Music(commands.Cog):
         await send_error_embed(ctx, description=f'Error: {error}')
 
     @commands.command(aliases=['q'], description='Shows the music queue')
-    async def queue(self, ctx):  # self.music_queue is not used since it is multidimensional
+    async def queue(self, ctx):
         # This command does not stop users outside the voice channel from accessing the command since it is a view-only command
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
@@ -225,6 +228,7 @@ class Music(commands.Cog):
         if vc.is_playing():
 
             if track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
+                # If looping is enabled, show the looping track
                 embed = discord.Embed(colour=discord.Colour.blue())
                 embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
                 embed.add_field(
@@ -242,7 +246,7 @@ class Music(commands.Cog):
             embed = discord.Embed(title='Music Queue', color=discord.Colour.dark_teal())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             queue = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
-            embed.add_field(name='Track Number 0:',
+            embed.add_field(name='Now Playing:',
                             value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
                             inline=False)
             for index, item in enumerate(queue):
@@ -260,8 +264,8 @@ class Music(commands.Cog):
     # Self-explanatory
     @commands.command(name='pause', description='Pauses the current track')
     async def pause(self, ctx):
-        if ctx.author.voice:
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if ctx.author.voice:  # Checks if the user is in a voice channel
+            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Gets the voice client
             if vc.is_playing():
                 # Response embed
                 embed = discord.Embed(
@@ -270,7 +274,7 @@ class Music(commands.Cog):
                 await ctx.send(embed=embed)
                 vc.pause()
             else:
-                await send_error_embed(ctx, description='No audio is being played')
+                await send_error_embed(ctx, description='No audio is being played')  # Error embed
         else:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
 
@@ -281,8 +285,8 @@ class Music(commands.Cog):
     # Self-explanatory
     @commands.command(aliases=['unpause', 'up'], description='Resumes the paused track')
     async def resume(self, ctx):
-        if ctx.author.voice:
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if ctx.author.voice:  # Checks if the user is connected to the voice channel
+            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Gets the voice client
             if vc.is_paused():
                 # Response embed
                 embed = discord.Embed(
@@ -291,7 +295,7 @@ class Music(commands.Cog):
                 await ctx.send(embed=embed)
                 vc.resume()
             else:
-                await send_error_embed(ctx, description='Audio is being paused')
+                await send_error_embed(ctx, description='Audio is being played')  # If the audio is not paused
         else:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
 
@@ -320,7 +324,7 @@ class Music(commands.Cog):
                     description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
                     colour=discord.Colour.green())
                 await ctx.send(embed=embed)
-                vc.stop()  # Stopping the player
+                vc.stop()  # Stopping the player (play_next will be called instantly after stopping)
         else:
             await send_error_embed(ctx, description='You are not connected to the voice channel')
 
@@ -330,7 +334,6 @@ class Music(commands.Cog):
 
     # Stop command
     @commands.command(name='stop', description='Stops the current track and clears the queue')
-    @commands.has_permissions(move_members=True)
     async def stop(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -365,7 +368,6 @@ class Music(commands.Cog):
 
     # Disconnect command
     @commands.command(aliases=['dc', 'leave'], description="Disconnecting bot from VC")
-    @commands.has_permissions(move_members=True)
     async def disconnect(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -381,6 +383,7 @@ class Music(commands.Cog):
                     # Clearing the queue variables
                     self.now_playing.pop(ctx.guild.id)
                     self.now_playing_url.pop(ctx.guild.id)
+                    self.volume.pop(ctx.guild.id)
 
                 # Clearing the queue for the guild
                 self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
@@ -466,10 +469,10 @@ class Music(commands.Cog):
         await send_error_embed(ctx, description=f'Error: {error}')
 
     # Remove command
-    @commands.command(aliases=['rm', 'del', 'delete'], description='Removed a certain track from the queue')
+    @commands.command(aliases=['rm', 'del', 'delete'], description='Removes a certain track from the queue')
     async def remove(self, ctx, track_number: int):
-        if ctx.author.voice:
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if ctx.author.voice:  # Checking if the user is in a voice channel
+            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Getting the voice client
 
             # Basic responses to false calls
             if vc is None:
@@ -477,16 +480,24 @@ class Music(commands.Cog):
                 return
 
             queue_len = len(self.sql.select(elements=['title'], table='queue', where=f"guild_id = '{ctx.guild.id}'"))
+            if queue_len == 0:
+                await send_error_embed(ctx, description='There is no track in the queue')
+                return
             if track_number < 1 or track_number > queue_len:
                 await send_error_embed(ctx,
                                        description=f'Enter a number between 1 and {queue_len}')
                 return
 
             # Removing the track from the queue
-            remove = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
-            remove_title = remove[track_number-1][0]
-            remove_url = remove[track_number-1][1]
-            self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{remove_title}'")
+            remove = self.sql.select(elements=['title', 'url', 'source'], table='queue',
+                                     where=f"guild_id = '{ctx.guild.id}'")
+            remove_title = remove[track_number - 1][0]
+            remove_url = remove[track_number - 1][1]
+            if len(remove) > 1:
+                self.sql.delete(table='queue',
+                                where=f"guild_id = '{ctx.guild.id}' AND source = '{remove[track_number - 1][2]}' AND title = '{remove_title}'")
+            else:
+                self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{remove_title}'")
 
             # Response embed
             embed = discord.Embed(description=f'Removed **[{remove_title}]({remove_url})** from the queue',
@@ -526,7 +537,7 @@ class Music(commands.Cog):
 
             # Response embed
             embed = discord.Embed(title=f'Lyrics for {query}', description=lyrics,
-                                    colour=discord.Colour.blue())
+                                  colour=discord.Colour.blue())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(text='Powered by genius.com and google custom search engine')
             embed.timestamp = datetime.datetime.now()
@@ -535,7 +546,7 @@ class Music(commands.Cog):
         # Lyrics not found exception
         except lyrics_extractor.lyrics.LyricScraperException:
             await send_error_embed(ctx,
-                                    description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found')
+                                   description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found')
 
         # Some songs' lyrics are too long to be sent, in that case, a text file is sent
         except discord.HTTPException:
@@ -588,6 +599,30 @@ class Music(commands.Cog):
     # Error in the loop command
     @loop.error
     async def loop_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: {error}')
+
+    # Volume command
+    @commands.command(aliases=['vol'], description='Set the volume of the bot')
+    async def volume(self, ctx, volume: int):
+        if volume < 0 or volume > 200:  # Checks if the volume argument is outside the range
+            await send_error_embed(ctx, description='The volume must be between 0 and 150')
+            return
+
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if not vc.is_playing():
+            await send_error_embed(ctx, description='Nothing is playing')
+            return
+
+        # volume_value = (volume / self.volume[ctx.guild.id]) * 100
+        await ctx.send(self.volume[ctx.guild.id])
+        await ctx.send(volume)
+        self.volume[ctx.guild.id] = volume
+        vc.source.volume = volume / 100
+        await ctx.send(embed=discord.Embed(description=f'Volume set to {volume}%', colour=discord.Colour.blue()))
+
+    # Error in the volume command
+    @volume.error
+    async def volume_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
 
 

@@ -250,12 +250,13 @@ class Fun(commands.Cog):
 
     # Message Response Command
     @commands.command(name='messageresponse', aliases=['message', 'msg', 'response', 'mr'],
-                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse 1(True) to add and 0(False) to remove a response\nExample: `-messageresponse 1 hello | Hello there! `\nRemoving does not require a response parameter')
+                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse `add(True)` to add, `remove(False)` to remove, and `view` to view a response\nAdd: `-messageresponse add hello | Hello there! `\nRemove: `-messageresponse remove hello`\nView: `-messageresponse view`')
     @commands.has_permissions(manage_guild=True)
-    async def message_response(self, ctx, mode: int, *, message_response: str = None):
+    async def message_response(self, ctx, mode: str, *, message_response: str = None):
         # sourcery no-metrics
         sql = SQL('b0ssbot')
-        if mode == 0:
+        mode = mode.lower()
+        if mode == 'remove':
             if message_response is None:
                 await ctx.send(embed=discord.Embed(description='Please provide a message', colour=discord.Colour.red()))
                 return
@@ -263,7 +264,7 @@ class Fun(commands.Cog):
                 await ctx.send(embed=discord.Embed(description='Please provide a message', colour=discord.Colour.red()))
                 return
             if ' | ' in message_response:
-                await ctx.send(embed=discord.Embed(description='Use mode 1 instead to add a response',
+                await ctx.send(embed=discord.Embed(description='Use mode `add` instead to add a response',
                                                    colour=discord.Colour.red()))
                 return
             message_response = message_response.replace("'", "''").lower()
@@ -278,22 +279,22 @@ class Fun(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f'Removed the response for **{message_response}**',
                                                colour=discord.Colour.green()))
 
-        elif mode == 1:
+        elif mode == 'add':
             if message_response is None:
                 await ctx.send(
                     embed=discord.Embed(description='Please provide a message response', colour=discord.Colour.red()))
                 return
 
-            if '|' not in message_response:
+            if ' | ' not in message_response:
                 await ctx.send(
-                    embed=discord.Embed(description='Please separate the message from the response using `|`',
+                    embed=discord.Embed(description='Please separate the message from the response using ` | `',
                                         colour=discord.Colour.red()))
                 return
 
             message, response = message_response.split(' | ')
             if message.strip() == '' or response.strip() == '':
                 await ctx.send(
-                    embed=discord.Embed(description='Please provide a message and response',
+                    embed=discord.Embed(description='Please provide both, a message and a response',
                                         colour=discord.Colour.red()))
                 return
 
@@ -314,9 +315,20 @@ class Fun(commands.Cog):
                     embed=discord.Embed(description=f'Added the response for **{message}**',
                                         colour=discord.Colour.green()))
 
+        elif mode == 'view':
+            if not sql.select(elements=['message', 'response'], table='message_responses',
+                              where=f"guild_id = '{ctx.guild.id}'"):
+                await send_error_embed(ctx, description='No responses found')
+                return
+            embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}', colour=discord.Colour.green())
+            for row in sql.select(elements=['message', 'response'], table='message_responses',
+                                  where=f"guild_id = '{ctx.guild.id}'"):
+                embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+            await ctx.send(embed=embed)
+
         else:
             await ctx.send(embed=discord.Embed(
-                description='Please provide a valid mode\n1(True) adds a response\n0(False) removes a response',
+                description='Please provide a valid mode\n`add` adds a response\n`remove` removes a response\n`view` returns an embed with all the responses',
                 colour=discord.Colour.red()))
 
     @message_response.error

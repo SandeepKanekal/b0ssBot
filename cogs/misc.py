@@ -1,6 +1,5 @@
 # All misc commands stored here
 import datetime
-import json
 import discord
 import requests
 import os
@@ -9,8 +8,7 @@ from discord.ext import commands
 
 # Gets quote from https://zenquotes.io api
 def get_quote() -> list:
-    response = requests.get('https://zenquotes.io/api/random')
-    return json.loads(response.text)
+    return requests.get('https://zenquotes.io/api/random').json()
 
 
 # A function to send embeds when there are false calls or errors
@@ -28,12 +26,11 @@ class Misc(commands.Cog):
     @commands.command(aliases=['qu'], description='Replies with an inspirational quote')
     async def quote(self, ctx):
         quote = get_quote()
-        embed = discord.Embed(colour=discord.Colour.orange())
-        embed.add_field(name=quote[0]['q'], value=quote[0]['a'], inline=True)
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}',
-                         icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
-        embed.timestamp = datetime.datetime.now()
+        embed = discord.Embed(
+            description=f'**{quote[0]["q"]}**',
+            colour=discord.Colour.blue()
+        )
+        embed.set_author(name=quote[0]['a'])
         await ctx.send(embed=embed)
 
     @quote.error

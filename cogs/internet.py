@@ -1,3 +1,5 @@
+import contextlib
+
 import discord
 import os
 import datetime
@@ -39,9 +41,13 @@ class Internet(commands.Cog):
                       description='Searches YouTube and responds with the top result')
     async def youtubesearch(self, ctx, *, query):
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        req = youtube.search().list(q=query, part='snippet', type='video', maxResults=100)
-        res = req.execute()
+        res = youtube.search().list(q=query, part='snippet', type='video', maxResults=100).execute()
 
+        if not res['items']:
+            await send_error_embed(ctx, description='No results found')
+            return
+
+        index = 0
         video_ids = []
         thumbnails = []
         titles = []
@@ -69,33 +75,82 @@ class Internet(commands.Cog):
             publish_date = f'<t:{int(time.mktime(publish_date.timetuple()))}:R>'
             publish_dates.append(publish_date)
 
+        # Creating the embed
+        stats = youtube.videos().list(id=video_ids[0], part='statistics,contentDetails').execute()
+        embed = discord.Embed(colour=discord.Colour.red())
+        embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
+        embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
+        embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
+        embed.set_image(url=thumbnails[0])
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_footer(
+            text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
+        next_video = Button(emoji='⏭️', style=discord.ButtonStyle.green)
+        previous_video = Button(emoji='⏮️', style=discord.ButtonStyle.green)
+        end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
+        watch_video = Button(label='Watch Video', url=f'https://www.youtube.com/watch?v={video_ids[0]}')
+        view = View()
+        view.add_item(previous_video)
+        view.add_item(next_video)
+        view.add_item(end_interaction)
+        view.add_item(watch_video)
+        await ctx.send(embed=embed, view=view)
+
         # Gets the next video
         async def next_video_trigger(interaction):
+            nonlocal index
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
                 return
 
             embed.clear_fields()
-            video_ids.pop(0)
-            thumbnails.pop(0)
-            titles.pop(0)
-            publish_dates.pop(0)
-            channel_ids.pop(0)
-            authors.pop(0)
-            if not video_ids:
-                await interaction.response.edit_message('No more results available', embed=None)
-                return
+            index += 1
+            if index == len(video_ids) - 1:
+                index = 0  # Resetting the index
 
-            statistics = youtube.videos().list(part='statistics,contentDetails', id=video_ids[0]).execute()
+            statistics = youtube.videos().list(part='statistics, contentDetails', id=video_ids[index]).execute()
 
-            embed.add_field(name='Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
-            embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
-            embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
-            embed.set_image(url=thumbnails[0])
+            embed.add_field(name='Result:',
+                            value=f'[{titles[index]}](https://www.youtube.com/watch?v={video_ids[index]})')
+            embed.add_field(name='Video Author:',
+                            value=f'[{authors[index]}](https://youtube.com/channel/{channel_ids[index]})')
+            embed.add_field(name='Publish Date:', value=f'{publish_dates[index]}')
+            embed.set_image(url=thumbnails[index])
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(
                 text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}')
             watch_video.url = f'https://www.youtube.com/watch?v={video_ids[0]}'
+            view.remove_item(watch_video)
+            view.add_item(watch_video)
+            await interaction.response.edit_message(embed=embed, view=view)
+
+        # Gets the previous video
+        async def previous_video_trigger(interaction):
+            nonlocal index
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            embed.clear_fields()
+
+            if index == 0:
+                await interaction.response.send_message('This is the first video!', ephemeral=True)
+                return
+
+            index -= 1
+
+            statistics = youtube.videos().list(part='statistics, contentDetails', id=video_ids[index]).execute()
+
+            embed.add_field(name='Result:',
+                            value=f'[{titles[index]}](https://www.youtube.com/watch?v={video_ids[index]})')
+            embed.add_field(name='Video Author:',
+                            value=f'[{authors[index]}](https://youtube.com/channel/{channel_ids[index]})')
+            embed.add_field(name='Publish Date:', value=f'{publish_dates[index]}')
+            embed.set_image(url=thumbnails[index])
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_footer(
+                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}')
+            watch_video.url = f'https://www.youtube.com/watch?v={video_ids[index]}'
             view.remove_item(watch_video)
             view.add_item(watch_video)
             await interaction.response.edit_message(embed=embed, view=view)
@@ -107,27 +162,11 @@ class Internet(commands.Cog):
                 return
             view.remove_item(next_video)
             view.remove_item(end_interaction)
+            view.remove_item(previous_video)
             await interaction.response.edit_message(view=view)
 
-        stats = youtube.videos().list(id=video_ids[0], part='statistics,contentDetails').execute()
-        # Response embed
-        embed = discord.Embed(colour=discord.Colour.red())
-        embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
-        embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
-        embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
-        embed.set_image(url=thumbnails[0])
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(
-            text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
-        next_video = Button(label='Next Video ⏭️', style=discord.ButtonStyle.green)
-        end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-        watch_video = Button(label='Watch Video', url=f'https://www.youtube.com/watch?v={video_ids[0]}')
-        view = View()
-        view.add_item(next_video)
-        view.add_item(end_interaction)
-        view.add_item(watch_video)
-        await ctx.send(embed=embed, view=view)
         next_video.callback = next_video_trigger
+        previous_video.callback = previous_video_trigger
         end_interaction.callback = end_interaction_trigger
 
     @youtubesearch.error
@@ -182,11 +221,12 @@ class Internet(commands.Cog):
             latest_video_id = youtube.playlistItems().list(
                 playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
                 part='contentDetails').execute()['items'][0]['contentDetails']['videoId']
+            channel_name = channel['items'][0]['snippet']['title'].replace("'", "''")
 
             sql.insert(table='youtube',
                        columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
                        values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
-                               f"'{channel['items'][0]['snippet']['title']}'", f"'{latest_video_id}'"])
+                               f"'{channel_name}'", f"'{latest_video_id}'"])
             await ctx.send(embed=discord.Embed(
                 colour=discord.Colour.green(),
                 description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
@@ -213,7 +253,7 @@ class Internet(commands.Cog):
                 url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
 
         else:
-            channels = sql.select(elements=['channel_name', 'channel_id'], table='youtube',
+            channels = sql.select(elements=['channel_name', 'channel_id', 'text_channel_id'], table='youtube',
                                   where=f'guild_id = \'{ctx.guild.id}\'')
             if not channels:
                 await send_error_embed(ctx, description='No channels are currently set up for notifications')
@@ -223,7 +263,8 @@ class Internet(commands.Cog):
                 colour=discord.Colour.dark_red()
             )
             for index, channel in enumerate(channels):
-                embed.description += f'{index + 1}. **[{channel[0]}](https://youtube.com/channel/{channel[1]})**\n'
+                text_channel = discord.utils.get(ctx.guild.text_channels, id=int(channel[2]))
+                embed.description += f'{index + 1}. **[{channel[0]}](https://youtube.com/channel/{channel[1]})** in {text_channel.mention}\n'
             if ctx.guild.icon:
                 embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
             else:
@@ -402,6 +443,78 @@ class Internet(commands.Cog):
     @redditpost.error
     async def post_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: {error}')
+
+    # Hourlyweather command
+    @commands.command(name='hourlyweather', aliases=['hw'],
+                      description='Get the hourly weather of a location. b0ssB0t will send the current weather periodically.\nmode can be `add`, `remove`, or `view`\nAdd: `-hourlyweather add #weather <location>`\nRemove: `-hourlyweather remove #weather <location>`\nView: `-hourlyweather view`\nIf a location has already been added, the channel will be updated on using the `add` mode')
+    @commands.has_permissions(manage_guild=True)
+    async def hourlyweather(self, ctx, mode: str, channel: discord.TextChannel = None, *, location: str = None):
+        # sourcery no-metrics
+        sql = SQL('b0ssbot')
+        original_location = ''
+        if location:
+            original_location = location
+            location = location.lower().replace("'", "''")  # Make sure the location is lowercase
+
+        if mode == 'add':
+            if channel is None or location is None:  # If the channel or location is not specified
+                await send_error_embed(ctx, description='Please provide a channel and location')
+                return
+
+            with contextlib.suppress(IndexError):
+                if location == \
+                        sql.select(elements=['location'], table='hourlyweather', where=f"guild_id = '{ctx.guild.id}'")[
+                            0][0]:  # If the location is already in the database
+                    sql.update(table='hourlyweather', column='channel_id', value=f'{channel.id}',
+                               where=f"guild_id = '{ctx.guild.id}'")  # Update the channel
+                    await ctx.send(
+                        embed=discord.Embed(description=f'Updated the hourly weather channel to {channel.mention}',
+                                            colour=discord.Colour.green()))  # Send a success embed
+                    return
+
+            sql.insert(table='hourlyweather', columns=['guild_id', 'channel_id', 'location'],
+                       values=[f"'{ctx.guild.id}'", f"'{channel.id}'", f"'{location}'"])  # Insert the location
+            await ctx.send(embed=discord.Embed(description=f'Added hourly weather for {original_location}',
+                                               colour=discord.Colour.green()))  # Send a success embed
+
+        elif mode == 'remove':
+
+            if channel is None or location is None:  # If the channel or location is not specified
+                await send_error_embed(ctx, description='Please provide a channel and location')
+                return
+
+            with contextlib.suppress(IndexError):
+                if location == \
+                        sql.select(elements=['location'], table='hourlyweather',
+                                   where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")[0][0]:  # If the location is in the database
+                    sql.delete(table='hourlyweather', where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")  # Delete the location
+                    await ctx.send(
+                        embed=discord.Embed(description=f'Removed hourly weather for {original_location}',
+                                            colour=discord.Colour.green()))  # Send a success embed
+                else:
+                    await send_error_embed(ctx, description='This location not found')
+
+        elif mode == 'view':
+            response = sql.select(elements=['location', 'channel_id'], table='hourlyweather', where=f"guild_id = '{ctx.guild.id}'")  # Get the locations and channels
+            if not response:
+                await send_error_embed(ctx, description='No locations are monitored')
+                return
+
+            embed = discord.Embed(title=f'Hourly Weather Locations for {ctx.guild.name}', description='',
+                                  colour=discord.Colour.blue())
+            for item in response:  # Append each location to embed.description along with the text channel
+                channel = discord.utils.get(ctx.guild.text_channels, id=int(item[1]))
+                location = item[0].replace("''", "'")
+                embed.description += f'{location} in {channel.mention}\n'
+
+            await ctx.send(embed=embed)
+
+        else:
+            await send_error_embed(ctx, description='Please provide a valid mode')
+
+    @hourlyweather.error
+    async def hourlyweather_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'{error}')
 
 
 def setup(bot):
