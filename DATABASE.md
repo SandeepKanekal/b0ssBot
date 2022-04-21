@@ -18,6 +18,7 @@ Stores deleted messages for a minute
 + message: Deleted message (Not Null, VARCHAR(2000))
 + channel_id: Channel ID of the deleted message (Not Null, VARCHAR(18))
 + time: Time of the deleted message (Not Null, VARCHAR(26))
++ guild_id: Guild ID of the deleted message (Not Null, VARCHAR(18))
 
 # prefixes
 Stores custom prefixes for guilds

@@ -22,7 +22,7 @@ PostgreSQL is used. You can change the database details (username, host, databas
 
 Currently, there are 9 tables:
 + afks (columns: SN, member, member_id, guild_id, reason)
-+ snipes (columns: SN, author_id, message, channel_id, time)
++ snipes (columns: SN, author_id, message, channel_id, time, 'guild_id')
 + prefixes (columns: SN, guild_id, prefix)
 + modlogs (columns: SN, guild_id, mode, channel_id)
 + warns (columns: SN, guild_id, member_id, reason, warns)
@@ -32,7 +32,7 @@ Currently, there are 9 tables:
 + youtube(columns: SN, guild_id, text_channel_id, channel_id, channel_name, latest_video_id)
 + hourlyweather(columns: SN, guild_id, channel_id, location)
 
-More details in DATABASE.md
+More details in [DATABASE.md](https://github.com/SandeepKanekal/b0ssBot/blob/main/DATABASE.md)
 
 # Invite
 Please contact Dose#7204 through discord for the invite link.

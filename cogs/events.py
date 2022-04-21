@@ -94,6 +94,13 @@ class Events(commands.Cog):
         sql.insert(table='prefixes', columns=['guild_id', 'prefix'], values=[f'\'{guild.id}\'', '\'-\''])
         sql.insert(table='modlogs', columns=['guild_id', 'mode', 'channel_id'],
                    values=[f"'{guild.id}'", '\'0\'', '\'None\''])
+        if guild.system_channel:
+            command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{guild.id}'")
+            embed = discord.Embed(
+                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**',
+                colour=self.bot.user.colour)
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            await guild.system_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):

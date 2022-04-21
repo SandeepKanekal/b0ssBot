@@ -227,11 +227,13 @@ class Internet(commands.Cog):
                        columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
                        values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
                                f"'{channel_name}'", f"'{latest_video_id}'"])
-            await ctx.send(embed=discord.Embed(
-                colour=discord.Colour.green(),
-                description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
-                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]).set_footer(
-                text='Use the command again to update the channel')
+            await ctx.send(
+                f'NOTE: This command requires **Send Webhooks** to be enabled in {text_channel.mention}',
+                embed=discord.Embed(
+                    colour=discord.Colour.green(),
+                    description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
+                    url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]).set_footer(
+                    text='Use the command again to update the channel')
             )
 
         elif mode == 'remove':
@@ -486,8 +488,10 @@ class Internet(commands.Cog):
             with contextlib.suppress(IndexError):
                 if location == \
                         sql.select(elements=['location'], table='hourlyweather',
-                                   where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")[0][0]:  # If the location is in the database
-                    sql.delete(table='hourlyweather', where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")  # Delete the location
+                                   where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")[0][
+                            0]:  # If the location is in the database
+                    sql.delete(table='hourlyweather',
+                               where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")  # Delete the location
                     await ctx.send(
                         embed=discord.Embed(description=f'Removed hourly weather for {original_location}',
                                             colour=discord.Colour.green()))  # Send a success embed
@@ -495,7 +499,8 @@ class Internet(commands.Cog):
                     await send_error_embed(ctx, description='This location not found')
 
         elif mode == 'view':
-            response = sql.select(elements=['location', 'channel_id'], table='hourlyweather', where=f"guild_id = '{ctx.guild.id}'")  # Get the locations and channels
+            response = sql.select(elements=['location', 'channel_id'], table='hourlyweather',
+                                  where=f"guild_id = '{ctx.guild.id}'")  # Get the locations and channels
             if not response:
                 await send_error_embed(ctx, description='No locations are monitored')
                 return

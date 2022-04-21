@@ -37,18 +37,20 @@ class Util(commands.Cog):
     async def on_message_delete(self, message: discord.Message) -> None:
         sql = SQL('b0ssbot')
         values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
-                  f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'']
-        if sql.select(elements=['*'], table='snipes', where=f'channel_id = \'{message.channel.id}\''):
-            sql.update(table='snipes', column='author_id', value=values[0],
-                       where=f'channel_id = \'{message.channel.id}\'')
-            sql.update(table='snipes', column='message', value=values[1],
-                       where=f'channel_id = \'{message.channel.id}\'')
-            sql.update(table='snipes', column='time', value=values[3], where=f'channel_id = \'{message.channel.id}\'')
+                  f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'"]
+        if sql.select(elements=['*'], table='snipes', where=f'guild_id = \'{message.guild.id}\''):
+            sql.update(table='snipes', column='message', value=f'\'{message.content}\'',
+                       where=f"guild_id = '{message.guild.id}'")
+            sql.update(table='snipes', column='author_id', value=f'\'{message.author.id}\'',
+                       where=f"guild_id = '{message.guild.id}'")
+            sql.update(table='snipes', column='channel_id', value=f'\'{message.channel.id}\'',
+                       where=f"guild_id = '{message.guild.id}'")
+            sql.update(table='snipes', column='time',
+                       value=f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'',
+                       where=f"guild_id = '{message.guild.id}'")
         else:
-            sql.insert(table='snipes', columns=['author_id', 'message', 'channel_id', 'time'], values=values)
-
-        await asyncio.sleep(60)
-        sql.delete(table='snipes', where=f'channel_id = \'{message.channel.id}\'')
+            sql.insert(table='snipes', columns=['author_id', 'message', 'channel_id', 'time', 'guild_id'],
+                       values=values)
 
     # Snipe command
     @commands.command(name='snipe', description='Snipes the most recently deleted message')
@@ -57,19 +59,27 @@ class Util(commands.Cog):
         if message := sql.select(
                 elements=['author_id', 'message', 'channel_id', 'time'],
                 table='snipes',
-                where=f'channel_id = \'{ctx.channel.id}\'',
+                where=f'guild_id = \'{ctx.guild.id}\''
         ):
             # Get the time of deletion and convert to unix time
             del_time = message[0][3]
             del_time = convert_to_unix_time(del_time)
             channel = discord.utils.get(ctx.guild.channels, id=int(message[0][2]))
             member = discord.utils.get(ctx.guild.members, id=int(message[0][0]))
+
+            # Get the prefix
+            command_prefix = sql.select(elements=["prefix"], table="prefixes", where=f"guild_id = '{ctx.guild.id}'")[0][
+                0]
+
             # Response embed
             embed = discord.Embed(
                 title='Sniped a message!',
                 description=f'Author: {member.mention}\nDeleted message: {message[0][1]}\nChannel: {channel.mention}\nTime: {del_time}',
                 colour=discord.Colour.green()
-            ).set_thumbnail(url=str(ctx.guild.icon) if ctx.guild.icon else None)
+            ).set_footer(
+                text=f'Enable modlogs for more information. Type {command_prefix}help modlogs for more information')
+            if ctx.guild.icon:
+                embed.set_thumbnail(url=ctx.guild.icon)
             await ctx.send(embed=embed)
         else:
             await send_error_embed(ctx, 'There are no messages to snipe')
@@ -89,7 +99,8 @@ class Util(commands.Cog):
             await member.edit(nick=f'[AFK] {member.display_name}')  # Changing the nickname
         # Adds member details to the database
         sql.insert(table='afks', columns=['member', 'member_id', 'guild_id', 'reason'],
-                   values=[f'\'{member_details}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'', f'\'{reason}\''])
+                   values=[f'\'{member_details}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'',
+                           f'\'{reason}\''])
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour)
         embed.set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
@@ -158,13 +169,14 @@ class Util(commands.Cog):
 
             if message.embeds:  # Send the embeds in the original message
                 for index, embed in enumerate(message.embeds):
-                    await ctx.send(f'Embed no. {index+1}', embed=embed)
+                    await ctx.send(f'Embed no. {index + 1}', embed=embed)
 
             embed = discord.Embed(colour=message.author.colour)
             embed.set_author(name=message.author,
                              icon_url=str(message.author.avatar) if message.author.avatar else str(
                                  message.author.default_avatar))
-            embed.add_field(name=message.content or "Message does not contain content", value=f'\n[Jump to message]({message_link})')
+            embed.add_field(name=message.content or "Message does not contain content",
+                            value=f'\n[Jump to message]({message_link})')
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
                                  ctx.author.default_avatar))

@@ -3,7 +3,6 @@ import discord
 import keep_alive
 import os
 from discord.ext import commands
-
 from sql_tools import SQL
 
 

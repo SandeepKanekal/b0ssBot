@@ -26,6 +26,11 @@ class Misc(commands.Cog):
     @commands.command(aliases=['qu'], description='Replies with an inspirational quote')
     async def quote(self, ctx):
         quote = get_quote()
+
+        if quote[0]['a'] == 'zenquotes.io':
+            await send_error_embed(ctx, description='Please wait for a few seconds before using this command again')
+            return
+
         embed = discord.Embed(
             description=f'**{quote[0]["q"]}**',
             colour=discord.Colour.blue()

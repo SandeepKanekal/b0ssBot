@@ -11,11 +11,7 @@ from discord.ui import Button, View
 async def get_post(subreddit: str) -> list:
     reddit = asyncpraw.Reddit('bot', user_agent='bot user agent')
     subreddit = await reddit.subreddit(subreddit)
-    sub = []
-    submissions = subreddit.hot()
-    async for submission in submissions:
-        sub.append(submission)
-    return sub
+    return [post async for post in subreddit.hot()]
 
 
 # A function to send embeds when there are false calls or errors
@@ -105,10 +101,19 @@ class Fun(commands.Cog):
         end_interaction.callback = end_interaction_trigger
 
     # Meme command
-    @commands.command(aliases=['m'], description='Posts memes from the most famous meme subreddits')
-    async def meme(self, ctx):
+    @commands.command(aliases=['m'],
+                      description='Posts memes from the most famous meme subreddits\nSubreddit can be mentioned\nValid subreddits include: `dankmemes` `memes` `meme` `me_irl` `wholesomememes`')
+    async def meme(self, ctx, subreddit: str = None):
         index = 0
-        subreddit = random.choice(['memes', 'dankmemes', 'meme'])
+
+        if subreddit is None:
+            subreddit = random.choice(['memes', 'dankmemes', 'meme'])
+        elif subreddit.lower() in ['dankmemes', 'memes', 'meme', 'me_irl', 'wholesomememes']:
+            subreddit = subreddit.lower()
+        else:
+            await send_error_embed(ctx, description='Invalid subreddit')
+            return
+
         submissions = await get_post(subreddit)
         submissions.pop(0)  # Pops the pinned post
         if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
@@ -320,7 +325,8 @@ class Fun(commands.Cog):
                               where=f"guild_id = '{ctx.guild.id}'"):
                 await send_error_embed(ctx, description='No responses found')
                 return
-            embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}', colour=discord.Colour.green())
+            embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                  colour=discord.Colour.green())
             for row in sql.select(elements=['message', 'response'], table='message_responses',
                                   where=f"guild_id = '{ctx.guild.id}'"):
                 embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
