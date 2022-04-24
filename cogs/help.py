@@ -11,6 +11,7 @@ class Help(commands.Cog):
 
     @commands.command(name='help',
                       description='Shows the list of all commands or the information about one command if specified',
+                      usage='help <command>',
                       hidden=True)
     async def help(self, ctx, command: str = None):  # sourcery no-metrics
         sql = SQL('b0ssbot')
@@ -23,28 +24,18 @@ class Help(commands.Cog):
                         aliases += f'{alias}, '
                     aliases = aliases[:-2]
                     param_string = ""  # Parameter string
-                    param_string_embed = ''  # Parameter string for the command usage field
                     if len(cmd.clean_params) == 0:
                         param_string = 'None'
                     else:
                         for param in cmd.clean_params:
-                            param_string += f'{param}, '
-                            param_string_embed += f'<{param}> '
+                            param_string += f'`{param}`, '
                         param_string = param_string[:-2]
-                        param_string_embed = param_string_embed[:-1]
-
-                    # Response embed
-                    embed = discord.Embed(title=f'Help - {cmd.name}', description=cmd.description,
+                    embed = discord.Embed(title=f'Help - {cmd.name}',
+                                          description=cmd.description,
                                           colour=discord.Colour.blue())
                     embed.add_field(name='Aliases', value=f'`{aliases}`', inline=False)
-                    embed.add_field(name='Parameters', value=f'`{param_string}`', inline=False)
-                    if param_string != 'None':
-                        embed.add_field(name='Command Usage',
-                                        value=f'`{command_prefix}{cmd.name} {param_string_embed}`',
-                                        inline=False)
-                    else:
-                        embed.add_field(name='Command Usage', value=f'`{command_prefix}{cmd.name}`',
-                                        inline=False)
+                    embed.add_field(name='Parameters', value=param_string, inline=False)
+                    embed.add_field(name='Usage', value=f'`{command_prefix}{cmd.usage}`', inline=False)
                     await ctx.reply(embed=embed)
         else:
             # Command string

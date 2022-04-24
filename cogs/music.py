@@ -21,6 +21,7 @@ async def send_error_embed(ctx, description: str) -> None:
     await ctx.send(embed=embed)
 
 
+# Get the video stats for the required track
 def get_video_stats(url: str) -> dict:
     """
     Gets the video stats from the url
@@ -71,15 +72,22 @@ class Music(commands.Cog):
                 'url': info['webpage_url']}  # Return required details
 
     async def send_embed_after_track(self, ctx):
+        """
+        Sends an embed after the track has finished playing
+        """
         if self.sql.select(elements=['*'], table='queue', where=f"guild_id = '{ctx.guild.id}'"):
             track = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")[0]
-            embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})", colour=discord.Colour.green())
+            embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
+                                  colour=discord.Colour.green())
+        elif self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
+            track = self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'")[0]
+            embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
+                                  colour=discord.Colour.green())
         else:
             embed = discord.Embed(description='Queue is over', colour=discord.Colour.red())
             embed.set_footer(text='Use the play command to add tracks')
 
         await ctx.send(embed=embed)
-              
 
     # The play_next function is used when the player is already playing, this function is invoked when the player is done playing one of the tracks in the queue
     def play_next(self, ctx):
@@ -146,7 +154,7 @@ class Music(commands.Cog):
             title = title.replace("'", "''")
             self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
 
-    @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in')
+    @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in', usage='join')
     async def join(self, ctx):
         voice_channel = ctx.author.voice.channel  # Get the voice channel
         if voice_channel is None:
@@ -159,14 +167,13 @@ class Music(commands.Cog):
 
     @join.error
     async def join_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # The play or add command is just used for searching the internet, as well as appending the necessary information to the queue variables
-    @commands.command(aliases=['p', 'add'], description='Plays the searched song from YouTube or adds it to the queue')
-    async def play(self, ctx, *, query: str = None):
-        if query is None:
-            await send_error_embed(ctx, description='No query provided')
-            return
+    @commands.command(aliases=['p', 'add'],
+                      description='Plays the searched song from YouTube or adds it to the queue, query can be a link or a search term',
+                      usage='play <query>')
+    async def play(self, ctx, *, query: str):
 
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
 
@@ -183,7 +190,7 @@ class Music(commands.Cog):
         if vc is None:
             await voice_channel.connect()
         elif vc.is_connected() and vc.channel != voice_channel:
-            await send_error_embed(ctx, description='You are in the same voice channel as the player')
+            await send_error_embed(ctx, description='You are not in the same voice channel as the player')
             return
 
         if vc and vc.is_paused():
@@ -218,7 +225,7 @@ class Music(commands.Cog):
             value=f'[{song["title"]}]({song["url"]}) BY [{video["snippet"]["channelTitle"]}](https://youtube.com/channel/{video["snippet"]["channelId"]})'
         )
         embed.set_footer(
-            text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"]}'
+            text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}'
         )
         await ctx.send(
             'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
@@ -232,9 +239,13 @@ class Music(commands.Cog):
     # Sometimes, videos are not available, a response is required to inform the user
     @play.error
     async def play_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a query\n\nProper Usage: `{self.bot.get_command("play").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
-    @commands.command(aliases=['q'], description='Shows the music queue')
+    @commands.command(aliases=['q'], description='Shows the music queue', usage='queue')
     async def queue(self, ctx):
         # This command does not stop users outside the voice channel from accessing the command since it is a view-only command
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -255,7 +266,7 @@ class Music(commands.Cog):
                 )
                 video = get_video_stats(track[0][1])
                 embed.set_footer(
-                    text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"]}'
+                    text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}'
                 )
                 await ctx.send(embed=embed)
                 return
@@ -277,10 +288,10 @@ class Music(commands.Cog):
 
     @queue.error
     async def queue_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Self-explanatory
-    @commands.command(name='pause', description='Pauses the current track')
+    @commands.command(name='pause', description='Pauses the current track', usage='pause')
     async def pause(self, ctx):
         if ctx.author.voice:  # Checks if the user is in a voice channel
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Gets the voice client
@@ -303,10 +314,10 @@ class Music(commands.Cog):
 
     @pause.error
     async def pause_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Self-explanatory
-    @commands.command(aliases=['unpause', 'up'], description='Resumes the paused track')
+    @commands.command(aliases=['unpause', 'up'], description='Resumes the paused track', usage='resume')
     async def resume(self, ctx):
         if ctx.author.voice:  # Checks if the user is connected to the voice channel
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Gets the voice client
@@ -329,10 +340,10 @@ class Music(commands.Cog):
 
     @resume.error
     async def resume_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Skips the current track
-    @commands.command(name="skip", description="Skips the current track")
+    @commands.command(name="skip", description="Skips the current track", usage="skip")
     async def skip(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -361,10 +372,10 @@ class Music(commands.Cog):
 
     @skip.error
     async def skip_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Stop command
-    @commands.command(name='stop', description='Stops the current track and clears the queue')
+    @commands.command(name='stop', description='Stops the current track and clears the queue', usage='stop')
     async def stop(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -399,10 +410,11 @@ class Music(commands.Cog):
 
     @stop.error
     async def stop_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Disconnect command
-    @commands.command(aliases=['dc', 'leave'], description="Disconnecting bot from VC")
+    @commands.command(aliases=['dc', 'leave'], description="Disconnects the player from the voice channel",
+                      usage='disconnect')
     async def disconnect(self, ctx):
         if ctx.author.voice:
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -432,10 +444,10 @@ class Music(commands.Cog):
 
     @disconnect.error
     async def disconnect_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Nowplaying command
-    @commands.command(aliases=['np', 'now'], description='Shows the current track being played')
+    @commands.command(aliases=['np', 'now'], description='Shows the current track being played', usage='nowplaying')
     async def nowplaying(self, ctx):
         # This command does not prevent users from outside the voice channel from accessing the command since it is view-only
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
@@ -499,16 +511,17 @@ class Music(commands.Cog):
         )
         embed.add_field(name='Progress:', value=progress_string, inline=False)
         embed.set_footer(
-            text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 🎥: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"]}')
+            text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 🎥: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}')
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         await ctx.send(embed=embed)
 
     @nowplaying.error
     async def nowplaying_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Remove command
-    @commands.command(aliases=['rm', 'del', 'delete'], description='Removes a certain track from the queue')
+    @commands.command(aliases=['rm', 'del', 'delete'], description='Removes a certain track from the queue',
+                      usage='remove <track_number>')
     async def remove(self, ctx, track_number: int):
         if ctx.author.voice:  # Checking if the user is in a voice channel
             vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Getting the voice client
@@ -553,14 +566,23 @@ class Music(commands.Cog):
     # Error in removing a track
     @remove.error
     async def remove_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Specify the track to be removed\n\nProper Usage: {self.bot.get_command("remove").usage}.')
+        elif isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Enter a valid number\n\nProper Usage: {self.bot.get_command("remove").usage}.')
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Lyrics command
     @commands.command(aliases=['ly'],
-                      description='Gets the lyrics of the current track\nUse `-lyrics <song name>` to get the lyrics of a specific song\nAnd -lyrics to get the lyrics of the current playing track')
-    async def lyrics(self, ctx, *, query=None):
+                      description='Gets the lyrics of the current track\nUse `-lyrics <song name>` to get the lyrics of a specific song\nAnd -lyrics to get the lyrics of the current playing track',
+                      usage='-lyrics <query>')
+    async def lyrics(self, ctx, *, query: str = None):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         lyrics = ''
+        title = ''
 
         # If the query is of type None, this means the user wants the lyrics of the current playing track
         if query is None:
@@ -577,33 +599,35 @@ class Music(commands.Cog):
         try:
             # Gets the lyrics of the current track
             extract_lyrics = lyrics_extractor.SongLyrics(os.getenv('json_api_key'), os.getenv('engine_id'))
-            lyrics = extract_lyrics.get_lyrics(query)['lyrics']
+            song = extract_lyrics.get_lyrics(query)
+            title, lyrics = song['title'], song['lyrics']
 
             # Response embed
-            embed = discord.Embed(title=f'Lyrics for {query}', description=lyrics,
+            embed = discord.Embed(title=f'Lyrics for {title}', description=lyrics,
                                   colour=discord.Colour.blue())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_footer(text='Powered by genius.com and google custom search engine')
+            embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
             embed.timestamp = datetime.datetime.now()
             await ctx.send(embed=embed)
 
         # Lyrics not found exception
         except lyrics_extractor.lyrics.LyricScraperException:
             await send_error_embed(ctx,
-                                   description=f'Lyrics for the song {self.now_playing[ctx.guild.id]} could not be found')
+                                   description=f'Lyrics for the song {query} could not be found')
 
         # Some songs' lyrics are too long to be sent, in that case, a text file is sent
         except discord.HTTPException:
             with open('lyrics.txt', 'w') as f:
+                f.write(f'Lyrics for the song {title}\n\n')
                 f.write(lyrics)
-                f.write('\n\nPowered by genius.com and google custom search engine')
+                f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
             await ctx.send(file=discord.File('lyrics.txt'))
             os.remove('lyrics.txt')
 
     # Error in lyrics command
     @lyrics.error
     async def lyrics_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Repeat/Loop command
     @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode')
@@ -647,7 +671,14 @@ class Music(commands.Cog):
     # Error in the loop command
     @loop.error
     async def loop_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify the mode\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
+        elif isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Mode can be either `0` or `1`\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Volume command
     @commands.command(aliases=['vol'], description='Set the volume of the bot')
@@ -672,7 +703,14 @@ class Music(commands.Cog):
     # Error in the volume command
     @volume.error
     async def volume_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify the volume\n\nProper Usage: `{self.bot.get_command("volume").usage}`')
+        elif isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Volume must be a whole number between 0 and 200\n\nProper Usage: `{self.bot.get_command("volume").usage}`')
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 # Setup

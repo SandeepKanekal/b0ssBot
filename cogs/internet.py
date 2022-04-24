@@ -1,5 +1,4 @@
 import contextlib
-
 import discord
 import os
 import datetime
@@ -38,8 +37,9 @@ class Internet(commands.Cog):
 
     # YouTubeSearch command
     @commands.command(aliases=['yt', 'youtube', 'ytsearch'],
-                      description='Searches YouTube and responds with the top result')
+                      description='Searches YouTube and responds with the top result', usage='youtubesearch <query>')
     async def youtubesearch(self, ctx, *, query):
+        # sourcery no-metrics
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
         res = youtube.search().list(q=query, part='snippet', type='video', maxResults=100).execute()
 
@@ -76,7 +76,7 @@ class Internet(commands.Cog):
             publish_dates.append(publish_date)
 
         # Creating the embed
-        stats = youtube.videos().list(id=video_ids[0], part='statistics,contentDetails').execute()
+        stats = youtube.videos().list(id=video_ids[0], part='statistics, contentDetails').execute()
         embed = discord.Embed(colour=discord.Colour.red())
         embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
         embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
@@ -84,11 +84,11 @@ class Internet(commands.Cog):
         embed.set_image(url=thumbnails[0])
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.set_footer(
-            text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"]}')
+            text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"] if "likeCount" in stats["items"][0]["statistics"].keys() else "Could not fetch likes"}')
         next_video = Button(emoji='⏭️', style=discord.ButtonStyle.green)
         previous_video = Button(emoji='⏮️', style=discord.ButtonStyle.green)
         end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-        watch_video = Button(label='Watch Video', url=f'https://www.youtube.com/watch?v={video_ids[0]}')
+        watch_video = Button(label='Watch Video', style=discord.ButtonStyle.green)
         view = View()
         view.add_item(previous_video)
         view.add_item(next_video)
@@ -118,11 +118,8 @@ class Internet(commands.Cog):
             embed.set_image(url=thumbnails[index])
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(
-                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}')
-            watch_video.url = f'https://www.youtube.com/watch?v={video_ids[0]}'
-            view.remove_item(watch_video)
-            view.add_item(watch_video)
-            await interaction.response.edit_message(embed=embed, view=view)
+                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"] if "likeCount" in statistics["items"][0]["statistics"].keys() else "Could not fetch likes"}')
+            await interaction.response.edit_message(embed=embed)
 
         # Gets the previous video
         async def previous_video_trigger(interaction):
@@ -150,31 +147,40 @@ class Internet(commands.Cog):
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(
                 text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}')
-            watch_video.url = f'https://www.youtube.com/watch?v={video_ids[index]}'
-            view.remove_item(watch_video)
-            view.add_item(watch_video)
-            await interaction.response.edit_message(embed=embed, view=view)
+            await interaction.response.edit_message(embed=embed)
+
+        # Replies with the link of the video
+        async def watch_video_trigger(interaction):
+            nonlocal index
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            await interaction.response.send_message(f'https://youtube.com/watch?v={video_ids[index]}')
 
         # Ends the interaction
         async def end_interaction_trigger(interaction):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
                 return
-            view.remove_item(next_video)
-            view.remove_item(end_interaction)
-            view.remove_item(previous_video)
-            await interaction.response.edit_message(view=view)
+            await interaction.response.edit_message(view=None)
 
         next_video.callback = next_video_trigger
         previous_video.callback = previous_video_trigger
         end_interaction.callback = end_interaction_trigger
+        watch_video.callback = watch_video_trigger
 
     @youtubesearch.error
     async def search_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("youtubesearch").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Wikipedia command
-    @commands.command(aliases=['wiki'], description='Gets a summary of the query from wikipedia')
+    @commands.command(aliases=['wiki', 'wikisearch'], description='Gets a summary of the query from wikipedia',
+                      usage='wikipedia <query>')
     async def wikipedia(self, ctx, *, query):
         # Gets the data from wikipedia
         try:
@@ -193,6 +199,10 @@ class Internet(commands.Cog):
 
     @wikipedia.error
     async def wikipedia_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("wikipedia").usage}`')
+            return
         await send_error_embed(ctx, description=f'Error: {error}')
 
     # YouTube notify command
@@ -231,7 +241,7 @@ class Internet(commands.Cog):
                 f'NOTE: This command requires **Send Webhooks** to be enabled in {text_channel.mention}',
                 embed=discord.Embed(
                     colour=discord.Colour.green(),
-                    description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
+                    description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel/{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
                     url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]).set_footer(
                     text='Use the command again to update the channel')
             )
@@ -277,10 +287,14 @@ class Internet(commands.Cog):
 
     @youtubenotification.error
     async def youtubenotification_error(self, ctx, error):
+        if isinstance(error, (commands.BadArgument, commands.MissingRequiredArgument)):
+            await send_error_embed(ctx,
+                                   description=f'Please use the command properly\n\nProper Usage: `{self.bot.get_command("youtubenotification").usage}`')
+            return
         await send_error_embed(ctx, description=f'Error: {error}')
 
     # Weather command
-    @commands.command(name='weather', description='Get the weather for a location')
+    @commands.command(name='weather', description='Get the weather for a location', usage='weather <location>')
     async def weather(self, ctx, *, location: str = None):
         if not location:
             await send_error_embed(ctx, description='Please enter a location')
@@ -317,10 +331,11 @@ class Internet(commands.Cog):
 
     @weather.error
     async def weather_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Post command
-    @commands.command(aliases=['reddit', 'post', 'rp'], description='Gets a post from the specified subreddit')
+    @commands.command(aliases=['reddit', 'post', 'rp'], description='Gets a post from the specified subreddit',
+                      usage='redditpost <subreddit>')
     async def redditpost(self, ctx, subreddit):  # sourcery no-metrics
         index = 0
 
@@ -444,11 +459,16 @@ class Internet(commands.Cog):
 
     @redditpost.error
     async def post_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a subreddit\n\nProper Usage: `{self.bot.get_command("redditpost").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Hourlyweather command
     @commands.command(name='hourlyweather', aliases=['hw'],
-                      description='Get the hourly weather of a location. b0ssB0t will send the current weather periodically.\nmode can be `add`, `remove`, or `view`\nAdd: `-hourlyweather add #weather <location>`\nRemove: `-hourlyweather remove #weather <location>`\nView: `-hourlyweather view`\nIf a location has already been added, the channel will be updated on using the `add` mode')
+                      description='Get the hourly weather of a location. b0ssB0t will send the current weather periodically.\nmode can be `add`, `remove`, or `view`\nAdd: `-hourlyweather add #weather <location>`\nRemove: `-hourlyweather remove #weather <location>`\nView: `-hourlyweather view`\nIf a location has already been added, the channel will be updated on using the `add` mode',
+                      usage='-hourlyweather <mode> <channel> <location>')
     @commands.has_permissions(manage_guild=True)
     async def hourlyweather(self, ctx, mode: str, channel: discord.TextChannel = None, *, location: str = None):
         # sourcery no-metrics
@@ -519,7 +539,11 @@ class Internet(commands.Cog):
 
     @hourlyweather.error
     async def hourlyweather_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'{error}')
+        if isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument)):
+            await send_error_embed(ctx,
+                                   description=f'Please use the command properly\n\nProper Usage: `{self.bot.get_command("hourlyweather").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 def setup(bot):

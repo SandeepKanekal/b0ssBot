@@ -3,6 +3,7 @@ import contextlib
 import discord
 import datetime
 import asyncio
+from typing import List
 from sql_tools import SQL
 from discord.ext import commands
 
@@ -87,28 +88,30 @@ class Moderation(commands.Cog):
                 0]  # Get modlog channel id
         channel = discord.utils.get(message.guild.channels, id=int(channel_id))  # Get modlog channel
 
-        if not message.embeds:  # Embeds cannot contain embeds
-            # Make embed
-            embed = discord.Embed(
-                title=f'Message Deleted in #{message.channel}',
-                description=message.content,
-                colour=discord.Colour.green()
-            )
-            embed.set_author(name=message.author.name,
-                             icon_url=str(message.author.avatar) if message.author.avatar else str(
-                                 message.author.default_avatar))
-            if message.attachments:  # If message has attachments
-                embed.add_field(name='Attachments',
-                                value='\n'.join([attachment.url for attachment in message.attachments]))
-            embed.set_footer(text=f'ID: {message.id}')
-            embed.timestamp = datetime.datetime.now()
+        # Make embed
+        embed = discord.Embed(
+            title=f'Message Deleted in #{message.channel}',
+            description=message.content.replace("''", "'") or 'No content',
+            colour=discord.Colour.green()
+        )
+        embed.set_author(name=message.author.name,
+                         icon_url=str(message.author.avatar) if message.author.avatar else str(
+                             message.author.default_avatar))
+        if message.attachments:  # If message has attachments
+            embed.add_field(name='Attachments',
+                            value='\n'.join([attachment.url for attachment in message.attachments]))
+        embed.set_footer(text=f'ID: {message.id}')
+        embed.timestamp = datetime.datetime.now()
 
-            # Send webhook
-            webhooks = await channel.guild.webhooks()
-            webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
-            if webhook is None:
-                webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+        # Send webhook
+        webhooks = await channel.guild.webhooks()
+        webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+        if webhook is None:
+            webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+        await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+
+        if message.embeds:
+            await webhook.send('Message contained embeds', embeds=message.embeds)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
@@ -127,10 +130,11 @@ class Moderation(commands.Cog):
         if before.embeds or after.embeds:
             return
 
+        before_content, after_content = before.content.replace("''", "'"), after.content.replace("''", "'")
         # Make embed
         embed = discord.Embed(
             title=f'Message Edited in #{before.channel}',
-            description=f'{before.author.mention} has edited a message\n**Before**: {before.content}\n**After**: {after.content}',
+            description=f'{before.author.mention} has edited a message\n**Before**: {before_content}\n**After**: {after_content}',
             colour=discord.Colour.green()
         )
         embed.set_author(name=before.author.name,
@@ -398,6 +402,94 @@ class Moderation(commands.Cog):
                                    avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
+    async def on_guild_emojis_update(self, guild: discord.Guild, before: List[discord.Emoji],
+                                     after: List[discord.Emoji]) -> None:
+        if not modlog_enabled(guild.id):
+            return
+        sql = SQL('b0ssbot')
+        channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][
+            0]  # Get channel id
+        channel = discord.utils.get(guild.channels, id=int(channel_id))  # Get channel
+
+        # Make the description string
+        description = ''
+        if len(before) != len(after):
+            removed_emojis = [emoji for emoji in before if emoji not in after]
+            added_emojis = [emoji for emoji in after if emoji not in before]
+            if removed_emojis:
+                description += f'{len(removed_emojis)} emoji(s) were removed:\n'
+                for emoji in removed_emojis:
+                    description += f'{emoji} '
+                description += '\n'
+            if added_emojis:
+                description += f'{len(added_emojis)} emoji(s) were added:\n'
+                for emoji in added_emojis:
+                    description += f'{emoji} '
+                description += '\n'
+        else:
+            for index, emoji in enumerate(before):
+                if emoji.name != after[index].name:
+                    description += f'`{emoji.name}`{emoji} has been updated to `{after[index].name}`{after[index]}\n'
+
+        # Make embed
+        embed = discord.Embed(
+            title='Emojis Updated',
+            description=description,
+            colour=discord.Colour.green()
+        )
+        if guild.icon:
+            embed.set_author(name=guild.name, icon_url=guild.icon)
+        else:
+            embed.set_author(name=guild.name)
+        embed.set_footer(text=f'ID: {guild.id}')
+        embed.timestamp = datetime.datetime.now()
+
+        # Send webhook
+        webhooks = await channel.guild.webhooks()
+        webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+        if webhook is None:
+            webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+        await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState,
+                                    after: discord.VoiceState) -> None:
+        if not modlog_enabled(member.guild.id):
+            return
+        sql = SQL('b0ssbot')
+        channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
+            0]  # Get channel id
+        channel = discord.utils.get(member.guild.channels, id=int(channel_id))  # Get channel
+
+        # Make embed
+        embed = discord.Embed(
+            title=f'Voice State Updated in {member.guild.name}',
+            colour=discord.Colour.green()
+        )
+
+        if before.channel is None and after.channel:
+            embed.description = f'{member.mention} has joined {after.channel.mention}'
+        elif before.channel and after.channel is None:  # noinspection PyUnresolvedReferences
+            embed.description = f'{member.mention} has left {before.channel.mention}'
+        elif before.channel != after.channel:  # noinspection PyUnresolvedReferences
+            embed.description = f'{member.mention} has moved from {before.channel.mention} to {after.channel.mention}'
+
+        if member.guild.icon:
+            embed.set_author(name=member.guild.name, icon_url=member.guild.icon)
+        else:
+            embed.set_author(name=member.guild.name)
+        embed.set_footer(text=f'ID: {member.id}')
+        embed.timestamp = datetime.datetime.now()
+
+        if embed.description:
+            # Send webhook
+            webhooks = await channel.guild.webhooks()
+            webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+            if webhook is None:
+                webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+
+    @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         # sourcery no-metrics
         if not modlog_enabled(before.guild.id):  # Check if modlog is enabled
@@ -468,12 +560,100 @@ class Moderation(commands.Cog):
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
             await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
+    @commands.Cog.listener()
+    async def on_user_update(self, before: discord.User, after: discord.User) -> None:
+        embeds = []
+        # Make embed
+        if before.name != after.name:
+            embed = discord.Embed(
+                title='Username update',
+                description=f'{before.mention} changed their username to {after.name}',
+                colour=discord.Colour.green()
+            )
+            embeds.append(embed)
+
+        if before.avatar != after.avatar:
+            embed = discord.Embed(
+                title='Avatar update',
+                description=before.mention,
+                colour=discord.Colour.green()
+            )
+            embed.set_thumbnail(url=after.display_avatar)
+            embeds.append(embed)
+
+        if before.discriminator != after.discriminator:
+            embed = discord.Embed(
+                title='Discriminator update',
+                description=f'{before.discriminator} -> {after.discriminator}',
+                colour=discord.Colour.green()
+            )
+            embeds.append(embed)
+
+        for guild in self.bot.guilds:
+            if before in guild.members and modlog_enabled(guild.id):
+                sql = SQL('b0ssbot')
+                channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][
+                    0]  # Get channel id
+                channel = discord.utils.get(guild.channels, id=int(channel_id))  # Get channel
+
+                for embed in embeds:
+                    if before.avatar:
+                        embed.set_author(name=after.name, icon_url=before.avatar)
+                    else:
+                        embed.set_author(name=after.name)
+                    embed.set_footer(text=f'ID: {before.id}')
+                    embed.timestamp = datetime.datetime.now()
+
+                    # Send webhook
+                    webhooks = await guild.webhooks()
+                    webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+                    if webhook is None:
+                        webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+                    await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging',
+                                       avatar_url=self.bot.user.avatar)
+
+    @commands.Cog.listener()
+    async def on_bulk_message_delete(self, messages: List[discord.Message]) -> None:
+        if not modlog_enabled(messages[0].guild.id):
+            return
+        sql = SQL('b0ssbot')
+        channel_id = \
+            sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{messages[0].guild.id}'")[0][
+                0]  # Get channel id
+        channel = discord.utils.get(messages[0].guild.channels, id=int(channel_id))  # Get channel
+
+        # Make embed
+        embed = discord.Embed(
+            title=f'{len(messages)} messages purged in #{messages[0].channel}',
+            description='',
+            colour=discord.Colour.red()
+        )
+        for message in messages:
+            content = message.content.replace("''", "'")
+            embed.description += f'{message.author.mention}: {content}\n'
+
+        if messages[0].guild.icon:
+            embed.set_author(name=messages[0].guild.name, icon_url=messages[0].guild.icon)
+        else:
+            embed.set_author(name=messages[0].guild.name)
+        embed.timestamp = datetime.datetime.now()
+
+        # Send webhook
+        webhooks = await channel.guild.webhooks()
+        webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+        if webhook is None:
+            webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+        await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+
     # Ban command
-    @commands.command(name='ban', description='Bans the mentioned user from the server')
+    @commands.command(name='ban', description='Bans the mentioned user from the server', usage='ban <user> <reason>')
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot ban yourself', colour=discord.Colour.red())
+            return
+        if member.permissions >= ctx.author.permissions:
+            await send_embed(ctx, description='You cannot ban this user', colour=discord.Colour.red())
             return
         try:
             await send_embed(ctx, description=f'{member} was banned for {reason}', colour=discord.Colour.red())
@@ -486,14 +666,21 @@ class Moderation(commands.Cog):
     # Ban error response
     @ban.error
     async def ban_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("ban").usage}`')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Kick command
-    @commands.command(name='kick', description='Kicks the mentioned user from the server')
+    @commands.command(name='kick', description='Kicks the mentioned user from the server', usage='kick <user> <reason>')
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot kick yourself', colour=discord.Colour.red())
+            return
+        if member.permissions >= ctx.author.permissions:
+            await send_embed(ctx, description='You cannot kick this user', colour=discord.Colour.red())
             return
         try:
             await send_embed(ctx, description=f'{member} was kicked for {reason}', colour=discord.Colour.red())
@@ -506,14 +693,21 @@ class Moderation(commands.Cog):
     # Kick error response
     @kick.error
     async def kick_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("kick").usage}`')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Unban command
-    @commands.command(aliases=['ub'], description='Unbans the mentioned member from the server')
+    @commands.command(aliases=['ub'], description='Unbans the mentioned member from the server', usage='unban <user>')
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, *, member):
         if member == f'{ctx.author}#{ctx.author.discriminator}':
             await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
+            return
+        if member.permissions >= ctx.author.permissions:
+            await send_embed(ctx, description='You cannot unban this user', colour=discord.Colour.red())
             return
         banned_users = ctx.guild.bans()
         if '#' not in member:
@@ -538,14 +732,21 @@ class Moderation(commands.Cog):
     # Unban error response
     @unban.error
     async def unban_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("unban").usage}`')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Mute command
-    @commands.command(name='mute', description='Mutes the specified user')
+    @commands.command(name='mute', description='Mutes the specified user', usage='mute <user> <reason>')
     @commands.has_permissions(manage_messages=True)
     async def mute(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
+            return
+        if member.permissions >= ctx.author.permissions:
+            await send_embed(ctx, description='You cannot mute this user', colour=discord.Colour.red())
             return
         guild = ctx.guild
         muted_role = discord.utils.get(guild.roles, name='Muted')  # Get the muted role
@@ -565,15 +766,23 @@ class Moderation(commands.Cog):
     # Mute error response
     @mute.error
     async def mute_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("mute").usage}`')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Tempmute command
     @commands.command(aliases=['tm'],
-                      description='Temporarily mutes the specified user\nDuration must be mentioned in minutes')
+                      description='Temporarily mutes the specified user\nDuration must be mentioned in minutes',
+                      usage='tempmute <user> <duration> <reason>')
     @commands.has_permissions(manage_messages=True)
     async def tempmute(self, ctx, member: discord.Member, duration: int, *, reason: str = 'No reason provided'):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
+            return
+        if member.permissions >= ctx.author.permissions:
+            await send_embed(ctx, description='You cannot mute this user', colour=discord.Colour.red())
             return
         guild = ctx.guild
         muted_role = discord.utils.get(guild.roles, name='Muted')  # Get the muted role
@@ -598,14 +807,21 @@ class Moderation(commands.Cog):
     # Tempmute error response
     @tempmute.error
     async def tempmute_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("tempmute").usage}`')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Unmute command
-    @commands.command(aliases=['um'], description='Unmutes the specified user')
+    @commands.command(aliases=['um'], description='Unmutes the specified user', usage='unmute <user>')
     @commands.has_permissions(manage_messages=True)
     async def unmute(self, ctx, member: discord.Member):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot unmute yourself', colour=discord.Colour.red())
+            return
+        if member.permissions >= ctx.author.permissions:
+            await send_embed(ctx, description='You cannot unmute this user', colour=discord.Colour.red())
             return
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get muted role
         try:
@@ -619,10 +835,14 @@ class Moderation(commands.Cog):
     # Unmute error response
     @unmute.error
     async def unmute_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("unmute").usage}`')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Nuke command
-    @commands.command(aliases=['nk'], description='Nukes the mentioned text channel')
+    @commands.command(aliases=['nk'], description='Nukes the mentioned text channel', usage='nuke <channel>')
     @commands.has_permissions(manage_channels=True)
     async def nuke(self, ctx, channel: discord.TextChannel = None):
         nuke_channel = None
@@ -630,7 +850,7 @@ class Moderation(commands.Cog):
             await ctx.send('Please mention the text channel to be nuked')
             return
         try:
-            nuke_channel = discord.utils.get(ctx.guild.channels, name=channel.name)  # Get the channel to be nuked
+            nuke_channel = discord.utils.get(ctx.guild.channels, id=channel.id)  # Get the channel to be nuked
         except commands.errors.ChannelNotFound:
             await ctx.send('Channel not found')
         if nuke_channel is not None:
@@ -648,10 +868,14 @@ class Moderation(commands.Cog):
     # Nuke error response
     @nuke.error
     async def nuke_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: {self.bot.get_command("nuke").usage}')
+            return
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Lock command
-    @commands.command(name='lock', description='Locks the current channel')
+    @commands.command(name='lock', description='Locks the current channel', usage='lock')
     @commands.has_permissions(manage_channels=True)
     async def lock(self, ctx):
         try:
@@ -664,10 +888,10 @@ class Moderation(commands.Cog):
     # Lock error response
     @lock.error
     async def lock_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Unlock command
-    @commands.command(name='unlock', description='Unlocks te current channel')
+    @commands.command(name='unlock', description='Unlocks te current channel', usage='unlock')
     @commands.has_permissions(manage_channels=True)
     async def unlock(self, ctx):
         try:
@@ -680,11 +904,12 @@ class Moderation(commands.Cog):
     # Unlock error response
     @unlock.error
     async def unlock_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        await send_embed(ctx, description=f'Error: `{error}`')
 
     # Timeout commands
     @commands.command(name='timeout',
-                      description='Timeout management command.\nmode can be `add` or `remove`\nAdd: `-timeout add @user <time> <reason>`\nRemove: `-timeout remove @user`')
+                      description='Timeout management command.\nmode can be `add` or `remove`\nAdd: `-timeout add @user <time> <reason>`\nRemove: `-timeout remove @user`',
+                      usage='timeout <mode> <user> <time> <reason>')
     @commands.has_permissions(moderate_members=True)
     async def timeout(self, ctx, mode: str, member: discord.Member, minutes: int = 0, *,
                       reason: str = 'No reason provided'):
@@ -699,6 +924,10 @@ class Moderation(commands.Cog):
 
             if not minutes:
                 await send_embed(ctx, description='Mention a value in minutes above 0')
+                return
+
+            if member.permissions >= ctx.author.permissions:
+                await send_embed(ctx, description='You cannot timeout this user')
                 return
 
             try:
@@ -721,6 +950,10 @@ class Moderation(commands.Cog):
                 await send_embed(ctx, description=f'{member} is not timed out')
                 return
 
+            if member.permissions >= ctx.author.permissions:
+                await send_embed(ctx, description='You cannot remove this user\'s timeout')
+                return
+
             try:
                 await member.remove_timeout()
                 await send_embed(ctx, description=f'{member} has been removed from timeout',
@@ -738,11 +971,21 @@ class Moderation(commands.Cog):
     # Timeout error response
     @timeout.error
     async def timeout_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx,
+                             description=f'Invalid user\n\nProper Usage: `{self.bot.get_command("timeout").usage}`')
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("timeout").usage}`')
+
+        else:
+            await send_embed(ctx, description=f'Error: `{error}`')
 
     # Modlogs command
     @commands.command(aliases=['modlog', 'ml'],
-                      description='Sets the modlog channel\nMention channel for setting or updating the channel\nDon\'t mention channel to disable modlogs')
+                      description='Sets the modlog channel\nMention channel for setting or updating the channel\nDon\'t mention channel to disable modlogs',
+                      usage='modlogs <channel>')
     @commands.has_permissions(manage_guild=True)
     async def modlogs(self, ctx, channel: discord.TextChannel = None):
         sql = SQL('b0ssbot')
@@ -764,11 +1007,21 @@ class Moderation(commands.Cog):
     # Modlogs error response
     @modlogs.error
     async def modlogs_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx,
+                             description=f'Invalid channel\n\nProper Usage: `{self.bot.get_command("modlogs").usage}`')
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx,
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("modlogs").usage}`')
+
+        else:
+            await send_embed(ctx, description=f'Error: `{error}`')
 
     # Warn command
     @commands.command(name='warn',
-                      description='View: `warn view <user>`\nWarn: `warn add <user> <reason>`\nUnwarn: `warn remove <user>`')
+                      description='View: `warn view <user>`\nWarn: `warn add <user> <reason>`\nUnwarn: `warn remove <user>`',
+                      usage='warn <subcommand> <user> <reason>')
     @commands.has_permissions(manage_guild=True)
     async def warn(self, ctx, subcommand: str, member: discord.Member, *, reason: str = 'No reason provided'):
         # sourcery no-metrics
@@ -861,7 +1114,12 @@ class Moderation(commands.Cog):
 
     @warn.error
     async def warn_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, (commands.BadArgument, commands.MissingRequiredArgument)):
+            await send_embed(ctx,
+                             description=f'Please mention all arguments properly\n\nProper Usage: `{self.bot.get_command("warn").usage}`')
+
+        else:
+            await send_embed(ctx, description=f'Error: `{error}`')
 
 
 # Setup

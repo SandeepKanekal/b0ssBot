@@ -23,7 +23,7 @@ class Misc(commands.Cog):
         self.bot = bot
 
     # Quote command
-    @commands.command(aliases=['qu'], description='Replies with an inspirational quote')
+    @commands.command(aliases=['qu'], description='Replies with an inspirational quote', usage='quote')
     async def quote(self, ctx):
         quote = get_quote()
 
@@ -40,21 +40,25 @@ class Misc(commands.Cog):
 
     @quote.error
     async def quote_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Spam command
-    @commands.command(aliases=['s'], description='Spams text or users')
+    @commands.command(aliases=['s'], description='Spams text or users', usage='spam <message>')
     async def spam(self, ctx, *, message):
         for _ in range(5):
             await ctx.send(message)
 
     @spam.error
     async def spam_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("spam").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Av command
-    @commands.command(aliases=['av', 'pfp'], description='Shows the specified user\'s avatar')
-    async def avatar(self, ctx, member: discord.Member = None):
+    @commands.command(aliases=['av', 'pfp'], description='Shows the specified user\'s avatar', usage='avatar <user>')
+    async def avatar(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
         # Getting the urls
@@ -70,10 +74,15 @@ class Misc(commands.Cog):
 
     @avatar.error
     async def avatar_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a valid user\n\nProper Usage: `{self.bot.get_command("avatar").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Servericon command
-    @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon')
+    @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon',
+                      usage='servericon')
     async def servericon(self, ctx):
         if ctx.guild.icon is None:
             await send_error_embed(ctx, description='This server has no icon')
@@ -94,10 +103,10 @@ class Misc(commands.Cog):
 
     @servericon.error
     async def servericon_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Megaspam command
-    @commands.command(aliases=['ms'], description='Spams a message 25 times')
+    @commands.command(aliases=['ms'], description='Spams a message 25 times', usage='megaspam <message>')
     @commands.has_permissions(manage_messages=True)
     async def megaspam(self, ctx, *, message):
         await ctx.message.delete()
@@ -106,11 +115,16 @@ class Misc(commands.Cog):
 
     @megaspam.error
     async def megaspam_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a message\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Code command
     @commands.command(name='code',
-                      description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, Internet, MISC, Moderation, Music, Util')
+                      description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, Internet, MISC, Moderation, Music, Util',
+                      usage='code <module>')
     async def code(self, ctx, module):
         module = module.lower()
         try:
@@ -128,7 +142,11 @@ class Misc(commands.Cog):
 
     @code.error
     async def code_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a module\n\nProper Usage: `{self.bot.get_command("code").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 # Setup

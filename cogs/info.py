@@ -24,8 +24,10 @@ class Info(commands.Cog):
         self.bot = bot
 
     # Userinfo command
-    @commands.command(aliases=['whois', 'user', 'ui'], description='Shows the mentioned user\'s information')
-    async def userinfo(self, ctx, member: discord.Member = None):
+    @commands.command(aliases=['whois', 'user', 'ui'],
+                      description='Shows the mentioned user\'s information. Leave it blank to get your information',
+                      usage='userinfo <member>')
+    async def userinfo(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
 
@@ -37,7 +39,8 @@ class Info(commands.Cog):
         registered_at = convert_to_unix_time(registered_at)
 
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=str(member), icon_url=str(member.avatar)) if member.avatar else embed.set_author(name=str(member), icon_url=str(member.default_avatar))
+        embed.set_author(name=str(member), icon_url=str(member.avatar)) if member.avatar else embed.set_author(
+            name=str(member), icon_url=str(member.default_avatar))
         embed.add_field(name='Display Name', value=member.mention, inline=True)
         embed.add_field(name='Top Role', value=member.top_role.mention, inline=True)
         if len(member.roles) > 1:
@@ -45,7 +48,8 @@ class Info(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
-        embed.set_thumbnail(url=str(member.avatar)) if member.avatar else embed.set_thumbnail(url=str(member.default_avatar))
+        embed.set_thumbnail(url=str(member.avatar)) if member.avatar else embed.set_thumbnail(
+            url=str(member.default_avatar))
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
         embed.set_footer(text=f'ID: {member.id}')
@@ -54,10 +58,14 @@ class Info(commands.Cog):
 
     @userinfo.error
     async def userinfo_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please mention a valid user\n\nProper Usage: `{self.bot.get_command("userinfo").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Serverinfo command
-    @commands.command(aliases=['si', 'server'], description='Shows the server information')
+    @commands.command(aliases=['si', 'server'], description='Shows the server information', usage='serverinfo')
     async def serverinfo(self, ctx):
         # User stats
         user_count = len(ctx.guild.members)  # includes bots
@@ -88,7 +96,8 @@ class Info(commands.Cog):
 
         embed = discord.Embed(color=discord.Color.blue())
         embed.set_thumbnail(url=ctx.guild.icon) if ctx.guild.icon else None
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon) if ctx.guild.icon else embed.set_author(name=ctx.guild.name)
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon) if ctx.guild.icon else embed.set_author(
+            name=ctx.guild.name)
         embed.add_field(name="Owner", value=str(ctx.guild.owner.mention))
         embed.add_field(name='Roles', value=str(len(ctx.guild.roles)))
         embed.add_field(name='Creation Date', value=created_at)
@@ -105,12 +114,8 @@ class Info(commands.Cog):
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
-    @serverinfo.error
-    async def serverinfo_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-
     # Botinfo command
-    @commands.command(aliases=['bi', 'bot'], description='Shows the bot\'s information')
+    @commands.command(aliases=['bi', 'bot'], description='Shows the bot\'s information', usage='botinfo')
     async def botinfo(self, ctx):
         # Getting the creation date of the server relative unix time
         created_at = self.bot.user.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')
@@ -129,18 +134,25 @@ class Info(commands.Cog):
         embed.add_field(name='Invite Link',
                         value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887'
                               '&permissions=8&scope=applications.commands%20bot)')
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
+        embed.set_footer(text=f'Requested by {ctx.author}',
+                         icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
-    @botinfo.error
-    async def botinfo_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-    
-    @commands.command(aliases=['cl'], description='Shows the changelog')
+    @commands.command(aliases=['cl'], description='Shows the changelog', usage='changelog')
     async def changelog(self, ctx):
-        changelog = ''''''
-        embed = discord.Embed(title='Changelog', url='https://github.com/SandeepKanekal/b0ssBot', description=changelog, colour=discord.Color.blue())
+        with open('CHANGELOG.md', 'r') as f:
+            changelog = f.read()
+        
+        changelog = changelog.replace('#', '**')
+        changelog = changelog.replace('+', '•')
+
+        embed = discord.Embed(
+            title='Changelog',
+            url='https://github.com/SandeepKanekal/b0ssBot/blob/main/CHANGELOG.md',
+            description=changelog,
+            colour=self.bot.user.colour
+        )
         embed.set_thumbnail(url=self.bot.user.avatar)
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)

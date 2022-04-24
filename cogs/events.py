@@ -88,6 +88,28 @@ class Events(commands.Cog):
                                       )[0][0]:
                 await message.reply(response)
 
+        with contextlib.suppress(discord.HTTPException):
+            if '[' in message.content and ']' in message.content and '(' in message.content and ')' in message.content \
+                    and (
+                    message.content.split('(')[1].startswith('https://') or message.content.split('(')[1].startswith(
+                'http://')) \
+                    and '.' in message.content \
+                    and (message.content.split('https://')[1] or message.content.split('http://')[1]):
+                content = '[' + message.content.split('[')[1].split(')')[0] + ')'
+                text, link = content.replace('[', '').replace(']', '').replace('(', '').replace(')', '').split(
+                    'https://')
+                before = message.content.split('[')[0]
+                after = message.content.split(')')[1]
+
+                webhooks = await message.channel.webhooks()
+                webhook = discord.utils.get(webhooks, name=message.author.display_name)
+                if webhook is None:
+                    webhook = await message.channel.create_webhook(name=message.author.display_name)
+                protocol = 'https://' if 'https://' in message.content else 'http://'
+                content = before.replace("''", "'") + '[' + text.replace("''", "'") + ']' + '(' + protocol + link.replace("''", "'") + ')' + after.replace("''", "'")
+                await webhook.send(content=content, username=message.author.display_name, avatar_url=message.author.avatar)
+                await message.delete()
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         sql = SQL('b0ssbot')
@@ -124,7 +146,7 @@ class Events(commands.Cog):
                 guild = discord.utils.get(self.bot.guilds, id=int(data[2]))
                 text_channel = discord.utils.get(guild.text_channels, id=int(data[3]))
 
-                webhooks = await guild.webhooks()
+                webhooks = await text_channel.webhooks()
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
                 if webhook is None:
                     webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')

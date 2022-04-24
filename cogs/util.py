@@ -3,7 +3,6 @@ import contextlib
 import os
 import discord
 import datetime
-import asyncio
 import time
 from sql_tools import SQL
 from discord.ext import commands
@@ -53,7 +52,7 @@ class Util(commands.Cog):
                        values=values)
 
     # Snipe command
-    @commands.command(name='snipe', description='Snipes the most recently deleted message')
+    @commands.command(name='snipe', description='Snipes the most recently deleted message', usage='snipe')
     async def snipe(self, ctx):
         sql = SQL('b0ssbot')
         if message := sql.select(
@@ -86,10 +85,10 @@ class Util(commands.Cog):
 
     @snipe.error
     async def snipe_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # AFK command
-    @commands.command(name='afk', description='Marks the user as AFK')
+    @commands.command(name='afk', description='Marks the user as AFK', usage='afk <reason>')
     async def afk(self, ctx, *, reason: str = 'No reason'):
         member = ctx.author
         reason = reason.replace("'", "''")
@@ -110,17 +109,18 @@ class Util(commands.Cog):
 
     @afk.error
     async def afk_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Ping command
-    @commands.command(name="ping", description='Replies with the latency of the bot')
+    @commands.command(name="ping", description='Replies with the latency of the bot', usage='ping')
     async def ping(self, ctx):
         latency = round(self.bot.latency * 1000)
         embed = discord.Embed(description=f'**Pong!!** Bot latency is {str(latency)}ms', colour=discord.Colour.yellow())
         await ctx.reply(embed=embed)
 
     # Clear command
-    @commands.command(aliases=['purge'], description='Purges the amount of messages specified by the user')
+    @commands.command(aliases=['purge'], description='Purges the amount of messages specified by the user',
+                      usage='clear <limit>')
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx, limit=0):
         if not limit:
@@ -135,10 +135,14 @@ class Util(commands.Cog):
     # Permission errors in the clear command is handled here
     @clear.error
     async def clear_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a limit\n\nProper Usage: `{self.bot.get_command("clear").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Poll command
-    @commands.command(name='poll', description='Make a poll!')
+    @commands.command(name='poll', description='Make a poll!', usage='poll <question>')
     async def poll(self, ctx, channel: discord.TextChannel = None, *, question):
         embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.yellow())
         embed.set_author(
@@ -154,10 +158,22 @@ class Util(commands.Cog):
 
     @poll.error
     async def poll_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a question\n\nProper Usage: `{self.bot.get_command("poll").usage}`')
+            return
+
+        elif isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a valid channel\n\nProper Usage: `{self.bot.get_command("poll").usage}`')
+            return
+
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Refer command
-    @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter')
+    @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter',
+                      usage='refer <message_reference>')
     async def refer(self, ctx, message_reference: str):
         message_id = message_reference
         if message_reference.startswith('https://discord.com/channels/'):  # Message ID
@@ -187,19 +203,23 @@ class Util(commands.Cog):
 
     @refer.error
     async def refer_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a message reference\n\nProper Usage: `{self.bot.get_command("refer").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
-    @commands.command(name='prefix', desrciption='Change the prefix of the bot')
+    @commands.command(name='prefix', desrciption='Change the prefix of the bot', usage='prefix <new_prefix>')
     @commands.has_permissions(administrator=True)
-    async def prefix(self, ctx, prefix):
-        if len(prefix) > 2:
+    async def prefix(self, ctx, new_prefix):
+        if len(new_prefix) > 2:
             await ctx.send('Prefix must be 2 characters or less')
             return
 
         sql = SQL('b0ssbot')
-        sql.update(table='prefixes', column='prefix', value=f'\'{prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
+        sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
         embed = discord.Embed(
-            description=f'Prefix changed to **{prefix}**',
+            description=f'Prefix changed to **{new_prefix}**',
             colour=discord.Colour.green()
         )
         if ctx.guild.icon:
@@ -208,7 +228,11 @@ class Util(commands.Cog):
 
     @prefix.error
     async def prefix_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a prefix\n\nProper Usage: `{self.bot.get_command("prefix").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     @commands.command(hidden=True)
     @commands.is_owner()

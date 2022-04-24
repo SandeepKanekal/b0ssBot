@@ -26,8 +26,14 @@ class Fun(commands.Cog):
         self.bot = bot
 
     # 8ball for fun
-    @commands.command(name='8ball', aliases=['8b'], description='Ask a question, and get a reply!')
-    async def eight_ball(self, ctx, *, question):
+    @commands.command(name='8ball', aliases=['8b'], description='Ask a question, and get a reply!', usage='<question>')
+    async def eight_ball(self, ctx, *, question: str):
+
+        if question.lower().startswith('what') or question.lower().startswith('how') or question.lower().startswith(
+                'why') or question.lower().startswith('who'):
+            await send_error_embed(ctx, description='Please ask a question that can be answered with `yes` or `no`')
+            return
+
         # Response list
         responses = [
             "As I see it, yes",
@@ -63,9 +69,13 @@ class Fun(commands.Cog):
 
     @eight_ball.error
     async def eight_ball_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please ask a question!\n\nProper Usage: `{self.bot.get_command("8ball").usage}`')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
-    @commands.command(aliases=['roll'], description='Rolls a dice')
+    @commands.command(aliases=['roll'], description='Rolls a dice', usage='dice')
     async def dice(self, ctx):
 
         async def callback(interaction):
@@ -102,7 +112,8 @@ class Fun(commands.Cog):
 
     # Meme command
     @commands.command(aliases=['m'],
-                      description='Posts memes from the most famous meme subreddits\nSubreddit can be mentioned\nValid subreddits include: `dankmemes` `memes` `meme` `me_irl` `wholesomememes`')
+                      description='Posts memes from the most famous meme subreddits\nSubreddit can be mentioned\nValid subreddits include: `dankmemes` `memes` `meme` `me_irl` `wholesomememes`',
+                      usage='meme <subreddit>')
     async def meme(self, ctx, subreddit: str = None):
         index = 0
 
@@ -198,10 +209,10 @@ class Fun(commands.Cog):
 
     @meme.error
     async def meme_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Dankvideo command
-    @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos')
+    @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos', usage='dankvideo')
     async def dankvideo(self, ctx):
         submission = await get_post(random.choice(['dankvideos', 'cursed_videomemes']))
         if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
@@ -211,10 +222,10 @@ class Fun(commands.Cog):
 
     @dankvideo.error
     async def dankvideo_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Coinflip command
-    @commands.command(aliases=['cf'], description='Heads or Tails?')
+    @commands.command(aliases=['cf'], description='Heads or Tails?', usage='coinflip')
     async def coinflip(self, ctx):
         async def callback(interaction):
             if interaction.user != ctx.author:
@@ -249,13 +260,10 @@ class Fun(commands.Cog):
         flip.callback = callback
         end_interaction.callback = end_interaction_trigger
 
-    @coinflip.error
-    async def coinflip_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
-
     # Message Response Command
     @commands.command(name='messageresponse', aliases=['message', 'msg', 'response', 'mr'],
-                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse `add(True)` to add, `remove(False)` to remove, and `view` to view a response\nAdd: `-messageresponse add hello | Hello there! `\nRemove: `-messageresponse remove hello`\nView: `-messageresponse view`')
+                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse `add(True)` to add, `remove(False)` to remove, and `view` to view a response\nAdd: `-messageresponse add hello | Hello there! `\nRemove: `-messageresponse remove hello`\nView: `-messageresponse view`',
+                      usage='messageresponse <mode> <response>')
     @commands.has_permissions(manage_guild=True)
     async def message_response(self, ctx, mode: str, *, message_response: str = None):
         # sourcery no-metrics
@@ -342,8 +350,13 @@ class Fun(commands.Cog):
         if isinstance(error, commands.CommandInvokeError):
             await send_error_embed(ctx,
                                    description='Please separate the message and the response using ` | ` (with a space in front and back)')
-            return
-        await send_error_embed(ctx, description=f'Error: {error}')
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please provide a mode\n\nProper Usage: `{self.bot.get_command("message_response").usage}`')
+
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 def setup(bot):
