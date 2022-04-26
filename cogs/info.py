@@ -1,22 +1,8 @@
 # Information commands defined here
 import discord
 import datetime
-import time
+from tools import send_error_embed, convert_to_unix_time
 from discord.ext import commands
-
-
-# A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description: str) -> None:
-    # Response embed
-    embed = discord.Embed(description=description, colour=discord.Colour.red())
-    await ctx.send(embed=embed)
-
-
-# A function to convert datetime to unix time for dynamic date-time displays
-def convert_to_unix_time(date_time: str, fmt: str = 'R') -> str:
-    datetime_tuple = tuple(int(x) for x in date_time[:10].split('-')) + tuple(int(x) for x in date_time[11:].split(':'))
-    date_time = datetime.datetime(*datetime_tuple)
-    return f'<t:{int(time.mktime(date_time.timetuple()))}:{fmt}>'
 
 
 class Info(commands.Cog):
@@ -143,7 +129,7 @@ class Info(commands.Cog):
     async def changelog(self, ctx):
         with open('CHANGELOG.md', 'r') as f:
             changelog = f.read()
-        
+
         changelog = changelog.replace('#', '**')
         changelog = changelog.replace('+', '•')
 

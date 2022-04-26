@@ -45,7 +45,7 @@ class Help(commands.Cog):
                                   description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
                                   colour=discord.Colour.blue())
             for cog in self.bot.cogs:
-                if cog in ['Help', 'Events']:
+                if cog in ['Help', 'Events', 'Owner', 'Slash']:
                     continue
                 for cmd in self.bot.commands:
                     if cmd.cog and cmd.cog.qualified_name == cog and not cmd.hidden:

@@ -3,19 +3,13 @@ import datetime
 import discord
 import requests
 import os
+from tools import send_error_embed
 from discord.ext import commands
 
 
 # Gets quote from https://zenquotes.io api
 def get_quote() -> list:
     return requests.get('https://zenquotes.io/api/random').json()
-
-
-# A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description: str) -> None:
-    # Response embed
-    embed = discord.Embed(description=description, colour=discord.Colour.red())
-    await ctx.send(embed=embed)
 
 
 class Misc(commands.Cog):

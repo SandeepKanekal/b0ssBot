@@ -4,6 +4,7 @@ import asyncpraw
 import datetime
 from discord.ext import commands
 from sql_tools import SQL
+from tools import send_error_embed
 from discord.ui import Button, View
 
 
@@ -12,13 +13,6 @@ async def get_post(subreddit: str) -> list:
     reddit = asyncpraw.Reddit('bot', user_agent='bot user agent')
     subreddit = await reddit.subreddit(subreddit)
     return [post async for post in subreddit.hot()]
-
-
-# A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description: str) -> None:
-    # Response embed
-    embed = discord.Embed(description=description, colour=discord.Colour.red())
-    await ctx.send(embed=embed)
 
 
 class Fun(commands.Cog):
@@ -262,7 +256,7 @@ class Fun(commands.Cog):
 
     # Message Response Command
     @commands.command(name='messageresponse', aliases=['message', 'msg', 'response', 'mr'],
-                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse `add(True)` to add, `remove(False)` to remove, and `view` to view a response\nAdd: `-messageresponse add hello | Hello there! `\nRemove: `-messageresponse remove hello`\nView: `-messageresponse view`',
+                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse `add(True)` to add, `remove(False)` to remove, and `view` to view a response\nAdd: `-messageresponse add hello | Hello there! `\nRemove: `-messageresponse remove hello`\nView: `-messageresponse view optional(<message or response>)`',
                       usage='messageresponse <mode> <response>')
     @commands.has_permissions(manage_guild=True)
     async def message_response(self, ctx, mode: str, *, message_response: str = None):
@@ -333,11 +327,28 @@ class Fun(commands.Cog):
                               where=f"guild_id = '{ctx.guild.id}'"):
                 await send_error_embed(ctx, description='No responses found')
                 return
-            embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
-                                  colour=discord.Colour.green())
-            for row in sql.select(elements=['message', 'response'], table='message_responses',
-                                  where=f"guild_id = '{ctx.guild.id}'"):
-                embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+
+            if message_response is None:
+                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                      colour=discord.Colour.green())
+                for row in sql.select(elements=['message', 'response'], table='message_responses',
+                                      where=f"guild_id = '{ctx.guild.id}'"):
+                    embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+
+            else:
+                text = message_response.replace("'", "''").lower()
+                elements = sql.select(elements=['message', 'response'], table='message_responses',
+                                      where=f"guild_id = '{ctx.guild.id}' AND (message = '{text}' OR response = '{text}')")
+                if not elements:
+                    await send_error_embed(ctx, description='No chat triggers found')
+                    return
+                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                      colour=discord.Colour.green())
+                for row in elements:
+                    embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+                    await ctx.send(embed=embed)
+                    return
+
             await ctx.send(embed=embed)
 
         else:

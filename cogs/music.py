@@ -11,14 +11,49 @@ import lyrics_extractor
 from sql_tools import SQL
 from googleapiclient.discovery import build
 from discord.ext import commands
+from discord.ext.commands import CommandError
+from tools import send_error_embed
 from youtube_dl import YoutubeDL
 
 
-# A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description: str) -> None:
-    # Response embed
-    embed = discord.Embed(description=description, colour=discord.Colour.red())
-    await ctx.send(embed=embed)
+class AuthorNotConnectedToVoiceChannel(CommandError):
+    pass
+
+
+class AlreadyConnectedToVoiceChannel(CommandError):
+    pass
+
+
+class LoopingEnabled(CommandError):
+    pass
+
+
+class AuthorInDifferentVoiceChannel(CommandError):
+    pass
+
+
+class PlayerNotConnectedToVoiceChannel(CommandError):
+    pass
+
+
+class NoAudioPlaying(CommandError):
+    pass
+
+
+class PlayerPaused(CommandError):
+    pass
+
+
+class PlayerPlaying(CommandError):
+    pass
+
+
+class NoTrack(CommandError):
+    pass
+
+
+class NotInRange(CommandError):
+    pass
 
 
 # Get the video stats for the required track
@@ -158,12 +193,11 @@ class Music(commands.Cog):
     async def join(self, ctx):
         voice_channel = ctx.author.voice.channel  # Get the voice channel
         if voice_channel is None:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
-            return
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
         try:
             await voice_channel.connect()
-        except discord.ClientException:
-            await send_error_embed(ctx, description='Already connected to the voice channel')  # If already connected
+        except discord.ClientException as e:
+            raise AlreadyConnectedToVoiceChannel('Already connected to a voice channel') from e
 
     @join.error
     async def join_error(self, ctx, error):
@@ -178,23 +212,20 @@ class Music(commands.Cog):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
 
         if ctx.author.voice is None:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
-            return
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
         voice_channel = ctx.author.voice.channel  # Get the voice channel
 
         if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             # Do not let adding of new tracks if looping is enabled
-            await send_error_embed(ctx, description='Looping is enabled')
-            return
+            raise LoopingEnabled('Looping is enabled')
 
         if vc is None:
             await voice_channel.connect()
         elif vc.is_connected() and vc.channel != voice_channel:
-            await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-            return
+            raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
 
         if vc and vc.is_paused():
-            vc.resume()  # Resume the voice client if it is paused
+            raise PlayerPaused('The player is paused')
 
         song = self.search_yt(query)  # Get the track details
         if isinstance(song, youtube_dl.utils.DownloadError):
@@ -251,40 +282,37 @@ class Music(commands.Cog):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
         if vc is None:  # Player is not connected
-            await send_error_embed(ctx, description='The Player is not connected to the voice channel')
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+
+        if not vc.is_playing():
+            raise NoAudioPlaying('No audio is playing')
+
+        if track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
+            # If looping is enabled, show the looping track
+            embed = discord.Embed(colour=discord.Colour.blue())
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.add_field(
+                name='Looping',
+                value=f'[{track[0][0]}]({track[0][1]})'
+            )
+            video = get_video_stats(track[0][1])
+            embed.set_footer(
+                text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}'
+            )
+            await ctx.send(embed=embed)
             return
 
-        if vc.is_playing():
-
-            if track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-                # If looping is enabled, show the looping track
-                embed = discord.Embed(colour=discord.Colour.blue())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-                embed.add_field(
-                    name='Looping',
-                    value=f'[{track[0][0]}]({track[0][1]})'
-                )
-                video = get_video_stats(track[0][1])
-                embed.set_footer(
-                    text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}'
-                )
-                await ctx.send(embed=embed)
-                return
-
-            # Response embed
-            embed = discord.Embed(title='Music Queue', color=discord.Colour.dark_teal())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            queue = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
-            embed.add_field(name='Now Playing:',
-                            value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
-                            inline=False)
-            for index, item in enumerate(queue):
-                embed.add_field(name=f'Track Number {index + 1}', value=f'[{item[0]}]({item[1]})', inline=False)
-            embed.timestamp = datetime.datetime.now()
-            await ctx.send(embed=embed)
-
-        else:
-            await send_error_embed(ctx, description='No audio is being played')
+        # Response embed
+        embed = discord.Embed(title='Music Queue', color=discord.Colour.dark_teal())
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        queue = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
+        embed.add_field(name='Now Playing:',
+                        value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+                        inline=False)
+        for index, item in enumerate(queue):
+            embed.add_field(name=f'Track Number {index + 1}', value=f'[{item[0]}]({item[1]})', inline=False)
+        embed.timestamp = datetime.datetime.now()
+        await ctx.send(embed=embed)
 
     @queue.error
     async def queue_error(self, ctx, error):
@@ -293,24 +321,26 @@ class Music(commands.Cog):
     # Self-explanatory
     @commands.command(name='pause', description='Pauses the current track', usage='pause')
     async def pause(self, ctx):
-        if ctx.author.voice:  # Checks if the user is in a voice channel
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Gets the voice client
+        if not ctx.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-            if ctx.author.voice.channel != vc.channel:
-                await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-                return
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
-            if vc.is_playing():
-                # Response embed
-                embed = discord.Embed(
-                    description=f'Paused [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
-                    colour=discord.Colour.green())
-                await ctx.send(embed=embed)
-                vc.pause()
-            else:
-                await send_error_embed(ctx, description='No audio is being played')  # Error embed
-        else:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
+        if vc.is_paused():
+            raise PlayerPaused('Player is already paused')
+
+        if not vc.is_playing():
+            raise NoAudioPlaying('No audio is playing')
+
+        if ctx.author.voice.channel != vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+        vc.pause()
+        # Response embed
+        embed = discord.Embed(
+            description=f'Paused [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+            colour=discord.Colour.green())
+        await ctx.send(embed=embed)
 
     @pause.error
     async def pause_error(self, ctx, error):
@@ -319,24 +349,23 @@ class Music(commands.Cog):
     # Self-explanatory
     @commands.command(aliases=['unpause', 'up'], description='Resumes the paused track', usage='resume')
     async def resume(self, ctx):
-        if ctx.author.voice:  # Checks if the user is connected to the voice channel
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Gets the voice client
+        if not ctx.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-            if ctx.author.voice.channel != vc.channel:
-                await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-                return
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
-            if vc.is_paused():
-                # Response embed
-                embed = discord.Embed(
-                    description=f'Resumed [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
-                    colour=discord.Colour.green())
-                await ctx.send(embed=embed)
-                vc.resume()
-            else:
-                await send_error_embed(ctx, description='Audio is being played')  # If the audio is not paused
-        else:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
+        if vc.is_playing():
+            raise PlayerPlaying('Player is already playing')
+
+        if ctx.author.voice.channel != vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+        vc.resume()
+        # Response embed
+        embed = discord.Embed(
+            description=f'Resumed [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+            colour=discord.Colour.green())
+        await ctx.send(embed=embed)
 
     @resume.error
     async def resume_error(self, ctx, error):
@@ -345,30 +374,26 @@ class Music(commands.Cog):
     # Skips the current track
     @commands.command(name="skip", description="Skips the current track", usage="skip")
     async def skip(self, ctx):
-        if ctx.author.voice:
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if not ctx.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-            # Basic responses to false calls
-            if vc is None:
-                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
-                return
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
-            if not vc.is_playing():
-                await send_error_embed(ctx, description='No audio is being played')
-                return
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
-            if ctx.author.voice.channel != vc.channel:
-                await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-                return
+        if not vc.is_playing():
+            raise NoAudioPlaying('No audio is playing')
 
-            # Response embed
-            embed = discord.Embed(
-                description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
-                colour=discord.Colour.green())
-            await ctx.send(embed=embed)
-            vc.stop()  # Stopping the player (play_next will be called instantly after stopping)
-        else:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
+        if ctx.author.voice.channel != vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+        vc.stop()  # Stopping the player (play_next will be called instantly after stopping)
+        # Response embed
+        embed = discord.Embed(
+            description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+            colour=discord.Colour.green())
+        await ctx.send(embed=embed)
 
     @skip.error
     async def skip_error(self, ctx, error):
@@ -377,36 +402,31 @@ class Music(commands.Cog):
     # Stop command
     @commands.command(name='stop', description='Stops the current track and clears the queue', usage='stop')
     async def stop(self, ctx):
-        if ctx.author.voice:
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if not ctx.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-            # Basic response to false calls
-            if vc is None:
-                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
-                return
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
-            if not vc.is_playing():
-                await send_error_embed(ctx, description='No audio is being played')
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
-            if ctx.author.voice.channel != vc.channel:
-                await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-                return
+        if not vc.is_playing():
+            raise NoAudioPlaying('No audio is playing')
 
-            else:
-                embed = discord.Embed(description='Stopped', colour=discord.Colour.green())
-                await ctx.send(embed=embed)
-                vc.stop()  # Stopping the player
+        if ctx.author.voice.channel != vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
 
-                # Clearing the queue variables
-                self.now_playing[ctx.guild.id] = None
-                self.now_playing_url[ctx.guild.id] = None
+        embed = discord.Embed(description='Stopped', colour=discord.Colour.green())
+        await ctx.send(embed=embed)
+        vc.stop()  # Stopping the player
 
-                # Clearing the queue for the guild
-                self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
-                self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
+        # Clearing the queue variables
+        self.now_playing[ctx.guild.id] = None
+        self.now_playing_url[ctx.guild.id] = None
 
-        else:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
+        # Clearing the queue for the guild
+        self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
+        self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
 
     @stop.error
     async def stop_error(self, ctx, error):
@@ -416,31 +436,30 @@ class Music(commands.Cog):
     @commands.command(aliases=['dc', 'leave'], description="Disconnects the player from the voice channel",
                       usage='disconnect')
     async def disconnect(self, ctx):
-        if ctx.author.voice:
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-            if vc is None:
-                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
+        if not ctx.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-            if ctx.author.voice.channel != vc.channel:
-                await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-                return
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
 
-            else:
-                embed = discord.Embed(description='Disconnected', colour=discord.Colour.green())
-                await ctx.send(embed=embed)
-                await vc.disconnect()  # Disconnecting the player
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
-                with contextlib.suppress(KeyError):
-                    # Clearing the queue variables
-                    self.now_playing.pop(ctx.guild.id)
-                    self.now_playing_url.pop(ctx.guild.id)
-                    self.volume.pop(ctx.guild.id)
+        if ctx.author.voice.channel != vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
 
-                # Clearing the queue for the guild
-                self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
-                self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
-        else:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
+        embed = discord.Embed(description='Disconnected', colour=discord.Colour.green())
+        await ctx.send(embed=embed)
+        await vc.disconnect()  # Disconnecting the player
+
+        with contextlib.suppress(KeyError):
+            # Clearing the queue variables
+            self.now_playing.pop(ctx.guild.id)
+            self.now_playing_url.pop(ctx.guild.id)
+            self.volume.pop(ctx.guild.id)
+
+        # Clearing the queue for the guild
+        self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
+        self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
 
     @disconnect.error
     async def disconnect_error(self, ctx, error):
@@ -454,12 +473,10 @@ class Music(commands.Cog):
 
         # Basic responses to false calls
         if vc is None:
-            await send_error_embed(ctx, description='The Player is not connected to the voice channel')
-            return
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
         if not vc.is_playing():
-            await send_error_embed(ctx, description='No audio is being played')
-            return
+            raise NoAudioPlaying('No audio is playing')
 
         # Getting the video details
         video = get_video_stats(self.now_playing_url[ctx.guild.id])
@@ -523,45 +540,38 @@ class Music(commands.Cog):
     @commands.command(aliases=['rm', 'del', 'delete'], description='Removes a certain track from the queue',
                       usage='remove <track_number>')
     async def remove(self, ctx, track_number: int):
-        if ctx.author.voice:  # Checking if the user is in a voice channel
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Getting the voice client
+        if not ctx.author.voice:  # Checking if the user is in a voice channel
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-            # Basic responses to false calls
-            if vc is None:
-                await send_error_embed(ctx, description='The Player is not connected to the voice channel')
-                return
+        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Getting the voice client
 
-            if vc.channel != ctx.author.voice.channel:
-                await send_error_embed(ctx, description='You are not in the same voice channel as the player')
-                return
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
-            queue_len = len(self.sql.select(elements=['title'], table='queue', where=f"guild_id = '{ctx.guild.id}'"))
-            if queue_len == 0:
-                await send_error_embed(ctx, description='There is no track in the queue')
-                return
-            if track_number < 1 or track_number > queue_len:
-                await send_error_embed(ctx,
-                                       description=f'Enter a number between 1 and {queue_len}')
-                return
+        if vc.channel != ctx.author.voice.channel:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to the same voice channel as the player')
 
-            # Removing the track from the queue
-            remove = self.sql.select(elements=['title', 'url', 'source'], table='queue',
-                                     where=f"guild_id = '{ctx.guild.id}'")
-            remove_title = remove[track_number - 1][0]
-            remove_url = remove[track_number - 1][1]
-            if len(remove) > 1:
-                self.sql.delete(table='queue',
-                                where=f"guild_id = '{ctx.guild.id}' AND source = '{remove[track_number - 1][2]}' AND title = '{remove_title}'")
-            else:
-                self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{remove_title}'")
+        queue_len = len(self.sql.select(elements=['title'], table='queue', where=f"guild_id = '{ctx.guild.id}'"))
+        if queue_len == 0:
+            raise NoTrack('There are no tracks in the queue')
+        if track_number < 1 or track_number > queue_len:
+            raise NotInRange('The track number is not in the range of the queue')
 
-            # Response embed
-            embed = discord.Embed(description=f'Removed **[{remove_title}]({remove_url})** from the queue',
-                                  colour=discord.Colour.random())
-            await ctx.send(embed=embed)
-
+        # Removing the track from the queue
+        remove = self.sql.select(elements=['title', 'url', 'source'], table='queue',
+                                 where=f"guild_id = '{ctx.guild.id}'")
+        remove_title = remove[track_number - 1][0]
+        remove_url = remove[track_number - 1][1]
+        if len(remove) > 1:
+            self.sql.delete(table='queue',
+                            where=f"guild_id = '{ctx.guild.id}' AND source = '{remove[track_number - 1][2]}' AND title = '{remove_title}'")
         else:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
+            self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{remove_title}'")
+
+        # Response embed
+        embed = discord.Embed(description=f'Removed **[{remove_title}]({remove_url})** from the queue',
+                              colour=discord.Colour.random())
+        await ctx.send(embed=embed)
 
     # Error in removing a track
     @remove.error
@@ -588,12 +598,10 @@ class Music(commands.Cog):
         if query is None:
             # Basic responses to false calls
             if vc is None:
-                await send_error_embed(ctx, description='The player is not connected to a voice channel')
-                return
+                raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
             if not vc.is_playing():
-                await send_error_embed(ctx, description='No audio is being played')
-                return
+                raise NoAudioPlaying('No audio is being played')
             query = self.now_playing[ctx.guild.id]
 
         try:
@@ -652,8 +660,7 @@ class Music(commands.Cog):
             return
 
         if ctx.author.voice.channel != vc.channel:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
-            return
+            raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
 
         title = self.now_playing[ctx.guild.id]
         title = title.replace("'", "''")
@@ -684,17 +691,12 @@ class Music(commands.Cog):
     @commands.command(aliases=['vol'], description='Set the volume of the bot')
     async def volume(self, ctx, volume: int):
         if volume < 0 or volume > 200:  # Checks if the volume argument is outside the range
-            await send_error_embed(ctx, description='The volume must be between 0 and 150')
-            return
+            raise NotInRange('The volume must be between 0 and 200')
 
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-        if not vc.is_playing():
-            await send_error_embed(ctx, description='Nothing is playing')
-            return
 
         if ctx.author.voice.channel != vc.channel:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
-            return
+            raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
 
         self.volume[ctx.guild.id] = volume
         vc.source.volume = volume / 100

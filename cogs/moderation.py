@@ -652,7 +652,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot ban yourself', colour=discord.Colour.red())
             return
-        if member.permissions >= ctx.author.permissions:
+        if member.guild_permissions >= ctx.author.guild_permissions:
             await send_embed(ctx, description='You cannot ban this user', colour=discord.Colour.red())
             return
         try:
@@ -679,7 +679,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot kick yourself', colour=discord.Colour.red())
             return
-        if member.permissions >= ctx.author.permissions:
+        if member.guild_permissions >= ctx.author.guild_permissions:
             await send_embed(ctx, description='You cannot kick this user', colour=discord.Colour.red())
             return
         try:
@@ -706,7 +706,7 @@ class Moderation(commands.Cog):
         if member == f'{ctx.author}#{ctx.author.discriminator}':
             await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
             return
-        if member.permissions >= ctx.author.permissions:
+        if member.guild_permissions >= ctx.author.guild_permissions:
             await send_embed(ctx, description='You cannot unban this user', colour=discord.Colour.red())
             return
         banned_users = ctx.guild.bans()
@@ -745,7 +745,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
             return
-        if member.permissions >= ctx.author.permissions:
+        if member.guild_permissions >= ctx.author.guild_permissions:
             await send_embed(ctx, description='You cannot mute this user', colour=discord.Colour.red())
             return
         guild = ctx.guild
@@ -781,7 +781,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
             return
-        if member.permissions >= ctx.author.permissions:
+        if member.guild_permissions >= ctx.author.guild_permissions:
             await send_embed(ctx, description='You cannot mute this user', colour=discord.Colour.red())
             return
         guild = ctx.guild
@@ -820,7 +820,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             await send_embed(ctx, description='You cannot unmute yourself', colour=discord.Colour.red())
             return
-        if member.permissions >= ctx.author.permissions:
+        if member.guild_permissions >= ctx.author.guild_permissions:
             await send_embed(ctx, description='You cannot unmute this user', colour=discord.Colour.red())
             return
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get muted role
@@ -926,7 +926,7 @@ class Moderation(commands.Cog):
                 await send_embed(ctx, description='Mention a value in minutes above 0')
                 return
 
-            if member.permissions >= ctx.author.permissions:
+            if member.guild_permissions >= ctx.author.guild_permissions:
                 await send_embed(ctx, description='You cannot timeout this user')
                 return
 
@@ -950,7 +950,7 @@ class Moderation(commands.Cog):
                 await send_embed(ctx, description=f'{member} is not timed out')
                 return
 
-            if member.permissions >= ctx.author.permissions:
+            if member.guild_permissions >= ctx.author.guild_permissions:
                 await send_embed(ctx, description='You cannot remove this user\'s timeout')
                 return
 

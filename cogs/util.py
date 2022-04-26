@@ -1,30 +1,10 @@
 # All Util commands stored here
 import contextlib
-import os
 import discord
 import datetime
-import time
+from tools import send_error_embed, convert_to_unix_time
 from sql_tools import SQL
 from discord.ext import commands
-
-
-# A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description: str) -> None:
-    # Response embed
-    embed = discord.Embed(description=description, colour=discord.Colour.red())
-    await ctx.send(embed=embed)
-
-
-# A function to convert datetime to unix time for dynamic date-time displays
-def convert_to_unix_time(date_time: str, fmt: str = 'R') -> str:
-    date_time = date_time.split(' ')
-    date_time1 = date_time[0].split('-')
-    date_time2 = date_time[1].split(':')
-    date_time1 = [int(x) for x in date_time1]
-    date_time2 = [int(x) for x in date_time2]
-    datetime_tuple = tuple(date_time1 + date_time2)
-    date_time = datetime.datetime(*datetime_tuple)
-    return f'<t:{int(time.mktime(date_time.timetuple()))}:{fmt}>'
 
 
 class Util(commands.Cog):
@@ -233,26 +213,6 @@ class Util(commands.Cog):
                                    description=f'Provide a prefix\n\nProper Usage: `{self.bot.get_command("prefix").usage}`')
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def query(self, ctx, *, query):
-        sql = SQL('b0ssbot')
-        results = sql.query(query)
-        try:
-            await ctx.send(results)
-        except discord.HTTPException:
-            if results:
-                with open('query.txt', 'w') as f:
-                    f.write(str(results))
-                await ctx.send(file=discord.File('query.txt'))
-                os.remove('query.txt')
-            else:
-                await ctx.send('Query provided returns None')
-
-    @query.error
-    async def query_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: {error}')
 
 
 def setup(bot):

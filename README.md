@@ -16,6 +16,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics
 + [Programmable Search Engine](https://cse.google.com/cse/create/new) Required for searching lyrics
 + [YouTube API access Key](https://console.developers.google.com) Create a new project and enable the YouTube API
++ [OpenWeatherMap API Key](https://openweathermap.org/api) Required for weather commands
 
 # Database 
 PostgreSQL is used. You can change the database details (username, host, database) to your convinience. 

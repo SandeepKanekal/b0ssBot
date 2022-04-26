@@ -7,7 +7,6 @@ import datetime
 from sql_tools import SQL
 from discord.ext import commands, tasks
 from googleapiclient.discovery import build
-from discord.utils import get
 
 
 def remove(nick_name: str) -> str:
@@ -65,7 +64,7 @@ class Events(commands.Cog):
                         table='afks',
                         where=f'member_id = \'{mention.id}\' and guild_id = \'{message.guild.id}\'',
                 ):
-                    member = get(message.guild.members, id=int(afk_user[0][0]))
+                    member = discord.utils.get(message.guild.members, id=int(afk_user[0][0]))
                     if member in message.mentions and message.guild.id == int(afk_user[0][1]):
                         await message.reply(
                             embed=discord.Embed(
@@ -102,12 +101,15 @@ class Events(commands.Cog):
                 after = message.content.split(')')[1]
 
                 webhooks = await message.channel.webhooks()
-                webhook = discord.utils.get(webhooks, name=message.author.display_name)
+                webhook = discord.utils.get(webhooks, name='Markdown webhook')
                 if webhook is None:
-                    webhook = await message.channel.create_webhook(name=message.author.display_name)
+                    webhook = await message.channel.create_webhook(name='Markdown webhook')
                 protocol = 'https://' if 'https://' in message.content else 'http://'
-                content = before.replace("''", "'") + '[' + text.replace("''", "'") + ']' + '(' + protocol + link.replace("''", "'") + ')' + after.replace("''", "'")
-                await webhook.send(content=content, username=message.author.display_name, avatar_url=message.author.avatar)
+                content = before.replace("''", "'") + '[' + text.replace("''",
+                                                                         "'") + ']' + '(' + protocol + link.replace(
+                    "''", "'") + ')' + after.replace("''", "'")
+                await webhook.send(content=content, username=message.author.display_name,
+                                   avatar_url=message.author.avatar)
                 await message.delete()
 
     @commands.Cog.listener()
@@ -132,6 +134,7 @@ class Events(commands.Cog):
 
     @tasks.loop(minutes=60)
     async def check_for_videos(self):
+        os.system('youtube-dl --rm-cache-dir')  # Clearing cache to prevent 403 errors
         sql = SQL('b0ssbot')
         print('Checking for videos...')
         channel = sql.select(elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name'],
