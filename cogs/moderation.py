@@ -127,9 +127,6 @@ class Moderation(commands.Cog):
         if before.content == after.content:
             return
 
-        if before.embeds or after.embeds:
-            return
-
         before_content, after_content = before.content.replace("''", "'"), after.content.replace("''", "'")
         # Make embed
         embed = discord.Embed(
@@ -138,8 +135,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.green()
         )
         embed.set_author(name=before.author.name,
-                         icon_url=str(before.author.avatar) if before.author.avatar else str(
-                             before.author.default_avatar))
+                         icon_url=after.avatar or after.default_avatar)
         embed.set_footer(text=f'ID: {before.id}')
         embed.timestamp = datetime.datetime.now()
 
@@ -149,6 +145,9 @@ class Moderation(commands.Cog):
         if webhook is None:
             webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
         await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+
+        if after.embeds:
+            await webhook.send('Edited message contains embeds', embeds=after.embeds)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User) -> None:
@@ -260,33 +259,43 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.TextChannel, after: discord.TextChannel) -> None:
-        if modlog_enabled(before.guild.id):  # Check if modlog is enabled
-            sql = SQL('b0ssbot')
-            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][
-                0]  # Get channel id
-            mod_channel = discord.utils.get(before.guild.channels, id=int(channel_id))  # Get channel
+        if not modlog_enabled(before.guild.id):
+            return
+        sql = SQL('b0ssbot')
+        channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.guild.id}'")[0][
+            0]  # Get channel id
+        mod_channel = discord.utils.get(before.guild.channels, id=int(channel_id))  # Get channel
 
-            # Make embed
-            if before.name != after.name:
-                embed = discord.Embed(
-                    title=f'Channel Updated in {before.guild.name}',
-                    description=f'#{before.name} has been updated to #{after.name}',
-                    colour=discord.Colour.green()
-                )
-                if before.guild.icon:
-                    embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
-                else:
-                    embed.set_author(name=before.guild.name)
-                embed.set_footer(text=f'ID: {before.id}')
-                embed.timestamp = datetime.datetime.now()
+        # Make embed
+        if before.name != after.name:
+            embed = discord.Embed(
+                title=f'Channel Updated in {before.guild.name}',
+                description=f'#{before.name} has been updated to #{after.name}',
+                colour=discord.Colour.green()
+            )
+        elif before.category != after.category:
+            embed = discord.Embed(
+                title=f'Channel Updated in {before.guild.name}',
+                description=f'#{before.name} moved from {before.category.name} to {after.category.name}',
+                colour=discord.Colour.green()
+            )
+        else:
+            return
 
-                # Send webhook
-                webhooks = await mod_channel.guild.webhooks()
-                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
-                if webhook is None:
-                    webhook = await mod_channel.create_webhook(name=f'{self.bot.user.name} Logging')
-                await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging',
-                                   avatar_url=self.bot.user.avatar)
+        if before.guild.icon:
+            embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
+        else:
+            embed.set_author(name=before.guild.name)
+        embed.set_footer(text=f'ID: {before.id}')
+        embed.timestamp = datetime.datetime.now()
+
+        # Send webhook
+        webhooks = await mod_channel.guild.webhooks()
+        webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+        if webhook is None:
+            webhook = await mod_channel.create_webhook(name=f'{self.bot.user.name} Logging')
+        await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging',
+                           avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
@@ -567,7 +576,7 @@ class Moderation(commands.Cog):
         if before.name != after.name:
             embed = discord.Embed(
                 title='Username update',
-                description=f'{before.mention} changed their username to {after.name}',
+                description=f'{before.name} -> {after.name}',
                 colour=discord.Colour.green()
             )
             embeds.append(embed)
@@ -575,10 +584,12 @@ class Moderation(commands.Cog):
         if before.avatar != after.avatar:
             embed = discord.Embed(
                 title='Avatar update',
-                description=before.mention,
+                description=f'{before.mention}\'s previous avatar -->',
                 colour=discord.Colour.green()
             )
-            embed.set_thumbnail(url=after.display_avatar)
+            embed.set_thumbnail(url=before.avatar or before.default_avatar)
+            embed.add_field(name='New Avatar', value=f'[Click here]({after.avatar})')
+            embed.set_image(url=after.avatar or after.default_avatar)
             embeds.append(embed)
 
         if before.discriminator != after.discriminator:
@@ -597,20 +608,17 @@ class Moderation(commands.Cog):
                 channel = discord.utils.get(guild.channels, id=int(channel_id))  # Get channel
 
                 for embed in embeds:
-                    if before.avatar:
-                        embed.set_author(name=after.name, icon_url=before.avatar)
-                    else:
-                        embed.set_author(name=after.name)
+                    embed.set_author(name=after.name, icon_url=after.avatar or after.default_avatar)
                     embed.set_footer(text=f'ID: {before.id}')
                     embed.timestamp = datetime.datetime.now()
 
-                    # Send webhook
-                    webhooks = await guild.webhooks()
-                    webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
-                    if webhook is None:
-                        webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-                    await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging',
-                                       avatar_url=self.bot.user.avatar)
+                # Send webhook
+                webhooks = await guild.webhooks()
+                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+                if webhook is None:
+                    webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+                await webhook.send(embeds=embeds, username=f'{self.bot.user.name} Logging',
+                                   avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: List[discord.Message]) -> None:

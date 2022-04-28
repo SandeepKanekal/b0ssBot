@@ -53,6 +53,9 @@ class Help(commands.Cog):
                 cmds = cmds[:-1]
                 embed.add_field(name=cog.upper(), value=cmds, inline=False)
                 cmds = ''
+            embed.add_field(name='Slash Commands',
+                            value='`avatar` `userinfo` `youtubenotification` `hourlyweather` `prefix` `warn` `mute` `unmute` `timeout` `code`',
+                            inline=False)
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
             embed.timestamp = datetime.datetime.now()

@@ -1,6 +1,5 @@
 import discord
 import os
-import contextlib
 from sql_tools import SQL
 from discord.ext import commands
 
@@ -85,17 +84,6 @@ class Owner(commands.Cog):
 
     @guildlist.error
     async def guildlist_error(self, ctx, e):
-        await ctx.send(embed=discord.Embed(description=str(e)))
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def eval(self, ctx, *, code: str):
-        """Evaluates code"""
-        with contextlib.suppress(discord.HTTPException):
-            await eval(code) if 'ctx' in code else await ctx.send(eval(code))
-
-    @eval.error
-    async def eval_error(self, ctx, e):
         await ctx.send(embed=discord.Embed(description=str(e)))
 
     @commands.command(hidden=True)

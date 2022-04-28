@@ -1,4 +1,3 @@
-import contextlib
 import discord
 import os
 import datetime
@@ -7,7 +6,6 @@ import requests
 import wikipedia
 import asyncpraw
 import asyncprawcore
-from sql_tools import SQL
 from googleapiclient.discovery import build
 from discord.ui import Button, View
 from discord.ext import commands
@@ -24,11 +22,7 @@ async def send_error_embed(ctx, description: str) -> None:
 async def get_post(subreddit: str) -> list:
     reddit = asyncpraw.Reddit('bot', user_agent='bot user agent')
     subreddit = await reddit.subreddit(subreddit)
-    sub = []
-    submissions = subreddit.hot()
-    async for submission in submissions:
-        sub.append(submission)
-    return sub
+    return [post async for post in subreddit.hot()]
 
 
 class Internet(commands.Cog):
@@ -205,94 +199,6 @@ class Internet(commands.Cog):
             return
         await send_error_embed(ctx, description=f'Error: {error}')
 
-    # YouTube notify command
-    @commands.command(name='youtubenotification', aliases=['ytnotification', 'ytnotify'],
-                      description='Configure YouTube notifications for the server\nMode can be add/remove/view\nAdd: `-youtubenotification add #new-videos https://www.youtube.com/c/MrBeast6000`\nRemove: `-youtubenotification remove #new-videos https://www.youtube.com/c/MrBeast6000`\nView: `-youtubenotification view`')
-    async def youtubenotification(self, ctx, mode: str, text_channel: discord.TextChannel = None, *,
-                                  youtube_channel: str = None):
-        # sourcery no-metrics
-        if mode not in ['add', 'remove', 'view']:
-            await send_error_embed(ctx, description='Mode must be add, remove or view')
-            return
-
-        sql = SQL('b0ssbot')
-        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        if mode == 'add':
-            channel_id = requests.get(
-                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
-                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
-
-            if sql.select(elements=['*'], table='youtube',
-                          where=f"guild_id='{ctx.guild.id}' and channel_id = '{channel_id}'"):
-                await send_error_embed(ctx, description='Channel already added')
-                return
-
-            channel = youtube.channels().list(id=channel_id, part='snippet, contentDetails').execute()
-            latest_video_id = youtube.playlistItems().list(
-                playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
-                part='contentDetails').execute()['items'][0]['contentDetails']['videoId']
-            channel_name = channel['items'][0]['snippet']['title'].replace("'", "''")
-
-            sql.insert(table='youtube',
-                       columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
-                       values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
-                               f"'{channel_name}'", f"'{latest_video_id}'"])
-            await ctx.send(
-                f'NOTE: This command requires **Send Webhooks** to be enabled in {text_channel.mention}',
-                embed=discord.Embed(
-                    colour=discord.Colour.green(),
-                    description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel/{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(
-                    url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]).set_footer(
-                    text='Use the command again to update the channel')
-            )
-
-        elif mode == 'remove':
-            channel_id = requests.get(
-                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
-                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
-            channel = youtube.channels().list(id=channel_id, part='snippet, contentDetails').execute()
-
-            if not sql.select(elements=['*'], table='youtube',
-                              where=f"guild_id='{ctx.guild.id}' and channel_id = '{channel_id}'"):
-                await send_error_embed(ctx, description='Channel not added')
-                return
-
-            sql.delete(table='youtube',
-                       where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{channel["items"][0]["id"]}\'')
-            await ctx.send(embed=discord.Embed(
-                colour=discord.Colour.green(),
-                description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will no longer be sent to {text_channel.mention}').set_thumbnail(
-                url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
-
-        else:
-            channels = sql.select(elements=['channel_name', 'channel_id', 'text_channel_id'], table='youtube',
-                                  where=f'guild_id = \'{ctx.guild.id}\'')
-            if not channels:
-                await send_error_embed(ctx, description='No channels are currently set up for notifications')
-                return
-            embed = discord.Embed(
-                description='',
-                colour=discord.Colour.dark_red()
-            )
-            for index, channel in enumerate(channels):
-                text_channel = discord.utils.get(ctx.guild.text_channels, id=int(channel[2]))
-                embed.description += f'{index + 1}. **[{channel[0]}](https://youtube.com/channel/{channel[1]})** in {text_channel.mention}\n'
-            if ctx.guild.icon:
-                embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
-            else:
-                embed.set_author(name=ctx.guild.name)
-            embed.set_thumbnail(
-                url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj')
-            await ctx.send(embed=embed)
-
-    @youtubenotification.error
-    async def youtubenotification_error(self, ctx, error):
-        if isinstance(error, (commands.BadArgument, commands.MissingRequiredArgument)):
-            await send_error_embed(ctx,
-                                   description=f'Please use the command properly\n\nProper Usage: `{self.bot.get_command("youtubenotification").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: {error}')
-
     # Weather command
     @commands.command(name='weather', description='Get the weather for a location', usage='weather <location>')
     async def weather(self, ctx, *, location: str = None):
@@ -462,86 +368,6 @@ class Internet(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a subreddit\n\nProper Usage: `{self.bot.get_command("redditpost").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
-
-    # Hourlyweather command
-    @commands.command(name='hourlyweather', aliases=['hw'],
-                      description='Get the hourly weather of a location. b0ssB0t will send the current weather periodically.\nmode can be `add`, `remove`, or `view`\nAdd: `-hourlyweather add #weather <location>`\nRemove: `-hourlyweather remove #weather <location>`\nView: `-hourlyweather view`\nIf a location has already been added, the channel will be updated on using the `add` mode',
-                      usage='-hourlyweather <mode> <channel> <location>')
-    @commands.has_permissions(manage_guild=True)
-    async def hourlyweather(self, ctx, mode: str, channel: discord.TextChannel = None, *, location: str = None):
-        # sourcery no-metrics
-        sql = SQL('b0ssbot')
-        original_location = ''
-        if location:
-            original_location = location
-            location = location.lower().replace("'", "''")  # Make sure the location is lowercase
-
-        if mode == 'add':
-            if channel is None or location is None:  # If the channel or location is not specified
-                await send_error_embed(ctx, description='Please provide a channel and location')
-                return
-
-            with contextlib.suppress(IndexError):
-                if location == \
-                        sql.select(elements=['location'], table='hourlyweather', where=f"guild_id = '{ctx.guild.id}'")[
-                            0][0]:  # If the location is already in the database
-                    sql.update(table='hourlyweather', column='channel_id', value=f'{channel.id}',
-                               where=f"guild_id = '{ctx.guild.id}'")  # Update the channel
-                    await ctx.send(
-                        embed=discord.Embed(description=f'Updated the hourly weather channel to {channel.mention}',
-                                            colour=discord.Colour.green()))  # Send a success embed
-                    return
-
-            sql.insert(table='hourlyweather', columns=['guild_id', 'channel_id', 'location'],
-                       values=[f"'{ctx.guild.id}'", f"'{channel.id}'", f"'{location}'"])  # Insert the location
-            await ctx.send(embed=discord.Embed(description=f'Added hourly weather for {original_location}',
-                                               colour=discord.Colour.green()))  # Send a success embed
-
-        elif mode == 'remove':
-
-            if channel is None or location is None:  # If the channel or location is not specified
-                await send_error_embed(ctx, description='Please provide a channel and location')
-                return
-
-            with contextlib.suppress(IndexError):
-                if location == \
-                        sql.select(elements=['location'], table='hourlyweather',
-                                   where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")[0][
-                            0]:  # If the location is in the database
-                    sql.delete(table='hourlyweather',
-                               where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")  # Delete the location
-                    await ctx.send(
-                        embed=discord.Embed(description=f'Removed hourly weather for {original_location}',
-                                            colour=discord.Colour.green()))  # Send a success embed
-                else:
-                    await send_error_embed(ctx, description='This location not found')
-
-        elif mode == 'view':
-            response = sql.select(elements=['location', 'channel_id'], table='hourlyweather',
-                                  where=f"guild_id = '{ctx.guild.id}'")  # Get the locations and channels
-            if not response:
-                await send_error_embed(ctx, description='No locations are monitored')
-                return
-
-            embed = discord.Embed(title=f'Hourly Weather Locations for {ctx.guild.name}', description='',
-                                  colour=discord.Colour.blue())
-            for item in response:  # Append each location to embed.description along with the text channel
-                channel = discord.utils.get(ctx.guild.text_channels, id=int(item[1]))
-                location = item[0].replace("''", "'")
-                embed.description += f'{location} in {channel.mention}\n'
-
-            await ctx.send(embed=embed)
-
-        else:
-            await send_error_embed(ctx, description='Please provide a valid mode')
-
-    @hourlyweather.error
-    async def hourlyweather_error(self, ctx, error):
-        if isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument)):
-            await send_error_embed(ctx,
-                                   description=f'Please use the command properly\n\nProper Usage: `{self.bot.get_command("hourlyweather").usage}`')
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 

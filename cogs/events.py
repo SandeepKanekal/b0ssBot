@@ -88,12 +88,10 @@ class Events(commands.Cog):
                 await message.reply(response)
 
         with contextlib.suppress(discord.HTTPException):
-            if '[' in message.content and ']' in message.content and '(' in message.content and ')' in message.content \
-                    and (
+            if '[' in message.content and ']' in message.content and '(' in message.content and ')' in message.content and (
                     message.content.split('(')[1].startswith('https://') or message.content.split('(')[1].startswith(
-                'http://')) \
-                    and '.' in message.content \
-                    and (message.content.split('https://')[1] or message.content.split('http://')[1]):
+                    'http://')) and '.' in message.content and (
+                    message.content.split('https://')[1] or message.content.split('http://')[1]):
                 content = '[' + message.content.split('[')[1].split(')')[0] + ')'
                 text, link = content.replace('[', '').replace(']', '').replace('(', '').replace(')', '').split(
                     'https://')

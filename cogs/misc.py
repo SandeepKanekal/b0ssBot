@@ -2,9 +2,8 @@
 import datetime
 import discord
 import requests
-import os
-from tools import send_error_embed
 from discord.ext import commands
+from tools import send_error_embed
 
 
 # Gets quote from https://zenquotes.io api
@@ -112,33 +111,6 @@ class Misc(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a message\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
-
-    # Code command
-    @commands.command(name='code',
-                      description='Shows the code of the module\nModules of the bot: Events, Fun, Help, Info, Internet, MISC, Moderation, Music, Util',
-                      usage='code <module>')
-    async def code(self, ctx, module):
-        module = module.lower()
-        try:
-            with open(f'cogs/{module}.py') as code_file:  # Open module
-                code = code_file.read()
-                with open(f'Code for {module}.txt', 'w+') as text_file:  # Write the file to be sent
-                    text_file.write(code)
-
-            await ctx.send(file=discord.File(f'Code for {module}.txt'))
-            os.remove(f'Code for {module}.txt')  # Remove file to avoid problems in version control
-
-        except FileNotFoundError:
-            await send_error_embed(ctx,
-                                   description=f'Module {module} not found\nModules of the bot: Events, Fun, Help, Info, Internet, MISC, Moderation, Music, Util')
-
-    @code.error
-    async def code_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx,
-                                   description=f'Please specify a module\n\nProper Usage: `{self.bot.get_command("code").usage}`')
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 

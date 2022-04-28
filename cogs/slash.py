@@ -3,6 +3,7 @@ import discord
 import datetime
 import requests
 import os
+import asyncio
 from discord.ext import commands
 from discord.commands import Option
 from tools import convert_to_unix_time
@@ -14,9 +15,9 @@ class Slash(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.slash_command(name='prefix', desrciption='Change the prefix of the bot', usage='prefix <new_prefix>')
+    @commands.slash_command(name='prefix', description='Change the prefix of the bot', usage='prefix <new_prefix>')
     @commands.has_permissions(administrator=True)
-    async def prefix_slash(self, ctx, new_prefix: Option(str, descrciption='The new prefix', required=True)):
+    async def prefix(self, ctx, new_prefix: Option(str, descrciption='The new prefix', required=True)):
         if len(new_prefix) > 2:
             await ctx.respond('Prefix must be 2 characters or less')
             return
@@ -25,16 +26,16 @@ class Slash(commands.Cog):
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
         await ctx.respond(f'Prefix changed to **{new_prefix}**')
 
-    @prefix_slash.error
-    async def prefix_slash_error(self, ctx, error):
+    @prefix.error
+    async def prefix_error(self, ctx, error):
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='userinfo',
                             description='Shows the mentioned user\'s information. Leave it blank to get your information',
                             usage='userinfo <member>')
-    async def userinfo_slash(self, ctx,
-                             member: Option(discord.Member, description='The user to get info on', required=False,
-                                            default=None)):
+    async def userinfo(self, ctx,
+                       member: Option(discord.Member, description='The user to get info on', required=False,
+                                      default=None)):
         if member is None:
             member = ctx.author
 
@@ -63,14 +64,14 @@ class Slash(commands.Cog):
         embed.timestamp = datetime.datetime.now()
         await ctx.respond(embed=embed)
 
-    @userinfo_slash.error
-    async def userinfo_slash_error(self, ctx, error):
+    @userinfo.error
+    async def userinfo_error(self, ctx, error):
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='avatar', description='Shows the specified user\'s avatar', usage='avatar <user>')
-    async def avatar_slash(self, ctx,
-                           member: Option(discord.Member, description='User to get the avatar of', required=False,
-                                          default=None)):
+    async def avatar(self, ctx,
+                     member: Option(discord.Member, description='User to get the avatar of', required=False,
+                                    default=None)):
         if member is None:
             member = ctx.author
         # Getting the urls
@@ -84,21 +85,20 @@ class Slash(commands.Cog):
         embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
         await ctx.respond(embed=embed)
 
-    @avatar_slash.error
-    async def avatar_slash_error(self, ctx, error):
+    @avatar.error
+    async def avatar_error(self, ctx, error):
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='youtubenotification', description='Configure youtube notifications for the server',
-                            usage='youtubenotification <mode> <text_channel_id> <youtube_channel_id>',
-                            guild_ids=[930715526441885696])
+                            usage='youtubenotification <mode> <text_channel_id> <youtube_channel_id>')
     @commands.has_permissions(manage_guild=True)
-    async def youtubenotification_slash(self, ctx,
-                                        mode: Option(str, description='Mode for configuration',
-                                                     choices=['add', 'remove', 'view'], required=True),
-                                        text_channel_id: Option(str, description='Text channel ID',
-                                                                required=False, default=None),
-                                        youtube_channel: Option(str, description='Youtube channel', required=False,
-                                                                default=None)):
+    async def youtubenotification(self, ctx,
+                                  mode: Option(str, description='Mode for configuration',
+                                               choices=['add', 'remove', 'view'], required=True),
+                                  text_channel_id: Option(str, description='Text channel ID',
+                                                          required=False, default=None),
+                                  youtube_channel: Option(str, description='Youtube channel', required=False,
+                                                          default=None)):
         # sourcery no-metrics
 
         sql = SQL('b0ssbot')
@@ -182,8 +182,8 @@ class Slash(commands.Cog):
                 url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj')
             await ctx.respond(embed=embed)
 
-    @youtubenotification_slash.error
-    async def youtubenotification_slash_error(self, ctx, error):
+    @youtubenotification.error
+    async def youtubenotification_error(self, ctx, error):
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     # Hourlyweather command
@@ -191,13 +191,13 @@ class Slash(commands.Cog):
                             description='Get the hourly weather for a location',
                             usage='hourlyweather <mode> <channel_id> <location>')
     @commands.has_permissions(manage_guild=True)
-    async def hourlyweather_slash(self, ctx,
-                                  mode: Option(str, description='The mode to use', choices=['add', 'remove', 'view'],
-                                               required=True),
-                                  channel_id: Option(str, description='The text channel to configure',
-                                                     required=False, default=None),
-                                  location: Option(str, description='The location to be monitored', required=False,
-                                                   default=None)):
+    async def hourlyweather(self, ctx,
+                            mode: Option(str, description='The mode to use', choices=['add', 'remove', 'view'],
+                                         required=True),
+                            channel_id: Option(str, description='The text channel to configure',
+                                               required=False, default=None),
+                            location: Option(str, description='The location to be monitored', required=False,
+                                             default=None)):
         # sourcery no-metrics
         sql = SQL('b0ssbot')
         channel = discord.utils.get(ctx.guild.text_channels, id=int(channel_id)) if channel_id else None
@@ -267,8 +267,8 @@ class Slash(commands.Cog):
 
             await ctx.respond(embed=embed)
 
-    @hourlyweather_slash.error
-    async def hourlyweather_slash_error(self, ctx, error):
+    @hourlyweather.error
+    async def hourlyweather_error(self, ctx, error):
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     # Warn command
@@ -349,6 +349,244 @@ class Slash(commands.Cog):
                        where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
             await ctx.respond(f'{member.mention}\'s oldest warn has been removed',
                               colour=discord.Colour.green())
+
+    @commands.slash_command(name='messageresponse', description='Configure chat triggers for the server',
+                            usage='messageresponse <mode> <message> <response>')
+    @commands.has_permissions(manage_guild=True)
+    async def message_response(self, ctx,
+                               mode: Option(str, description='Mode for the command', choices=['add', 'remove', 'view'],
+                                            required=True),
+                               message: Option(str, description='The message to trigger on', required=False,
+                                               default=None),
+                               response: Option(str, description='The response to be sent', required=False,
+                                                default=None)):
+        # sourcery no-metrics
+        sql = SQL('b0ssbot')
+        mode = mode.lower()
+        original_message = message
+        if mode == 'remove':
+            if not message:
+                await ctx.respond('You must specify a message to remove', ephemeral=True)
+                return
+
+            message = message.replace('\'', '\'\'')
+            if not sql.select(elements=['message'], table='message_responses',
+                              where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
+                await ctx.respond(embed=discord.Embed(description=f'No chat triggers found for **{original_message}**',
+                                                      colour=discord.Colour.red()))
+                return
+            sql.delete(table='message_responses',
+                       where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
+            await ctx.respond(embed=discord.Embed(description=f'Removed the response for **{original_message}**',
+                                                  colour=discord.Colour.green()))
+
+        elif mode == 'add':
+            if not message:
+                await ctx.respond('You must specify a message to add', ephemeral=True)
+                return
+
+            if not response:
+                await ctx.respond('You must specify a response to add', ephemeral=True)
+                return
+
+            if message.strip() == '' or response.strip() == '':
+                await ctx.respond(
+                    embed=discord.Embed(description='Please provide both, a message and a response',
+                                        colour=discord.Colour.red()))
+                return
+
+            message = message.replace("'", "''").lower()
+            response = response.replace("'", "''")
+            if sql.select(elements=['message', 'response'], table='message_responses',
+                          where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
+                sql.update(table='message_responses', column='response', value=f"'{response}'",
+                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
+                await ctx.respond(embed=discord.Embed(description=f'Updated the response for **{original_message}**',
+                                                      colour=discord.Colour.green()))
+            else:
+                sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
+                           values=[f"'{ctx.guild.id}'", f"'{message}'", f"'{response}'"])
+                await ctx.respond(
+                    embed=discord.Embed(description=f'Added the response for **{original_message}**',
+                                        colour=discord.Colour.green()))
+
+        else:
+            if not sql.select(elements=['message', 'response'], table='message_responses',
+                              where=f"guild_id = '{ctx.guild.id}'"):
+                await ctx.respond('No responses found', ephemeral=True)
+                return
+
+            if message is None or response is None:
+                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                      colour=discord.Colour.green())
+                for row in sql.select(elements=['message', 'response'], table='message_responses',
+                                      where=f"guild_id = '{ctx.guild.id}'"):
+                    embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+
+            else:
+                text = message.replace("'", "''").lower() or response.replace("'", "''")
+                elements = sql.select(elements=['message', 'response'], table='message_responses',
+                                      where=f"guild_id = '{ctx.guild.id}' AND (message = '{text}' OR response = '{text}')")
+                if not elements:
+                    await ctx.respond('No chat triggers found', ephemeral=True)
+                    return
+                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                      colour=discord.Colour.green())
+                for row in elements:
+                    embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+                    await ctx.respond(embed=embed)
+                    return
+
+            await ctx.respond(embed=embed)
+
+    @message_response.error
+    async def message_response_error(self, ctx, error):
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
+    @commands.slash_command(name='mute', description='Mutes the user specified', usage='mute <user> <duration>')
+    @commands.has_permissions(manage_messages=True)
+    async def mute(self, ctx, member: Option(discord.Member, description='The member to be muted', required=True),
+                   duration: Option(int,
+                                    description='The duration of the mute in minutes. Leave blank for permanent mute',
+                                    required=False,
+                                    default=None),
+                   reason: Option(str, description='The reason for the mute', required=False,
+                                  default='No reason provided')):
+
+        if member == ctx.author:
+            await ctx.respond('You cannot mute yourself', ephemeral=True)
+            return
+
+        if member == self.bot.user:
+            await ctx.respond('I cannot mute myself', ephemeral=True)
+            return
+
+        if member.guild_permissions >= ctx.author.guild_permissions:
+            await ctx.respond('You cannot mute a member with the same or higher permissions', ephemeral=True)
+            return
+
+        muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get the muted role
+        if not muted_role:
+            muted_role = await ctx.guild.create_role(name='Muted')  # Create a muted role if not present
+            for channel in ctx.guild.channels:
+                await channel.set_permissions(muted_role, speak=False,
+                                              respond_messages=False)  # Set permissions of the muted role
+
+        try:
+            await member.add_roles(muted_role, reason=reason)  # Add muted role
+            await ctx.respond(
+                embed=discord.Embed(description=f'{member} has been muted for {reason}', colour=discord.Colour.red()))
+            with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
+                await member.send(f'You were muted in {ctx.guild.name} for {reason}')
+                if duration:
+                    await asyncio.sleep(duration * 60)
+                    await member.remove_roles(muted_role, reason=reason)
+                    await ctx.respond(
+                        embed=discord.Embed(description=f'{member} has been unmuted', colour=discord.Colour.green()))
+                    with contextlib.suppress(discord.HTTPException):
+                        await member.send(f'You have been unmuted in {ctx.guild.name}')
+        except discord.Forbidden:  # Permission error
+            await ctx.respond('Permission error', ephemeral=True)
+
+    @mute.error
+    async def mute_error(self, ctx, error):
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
+    @commands.slash_command(name='unmute', description='Unmutes the user specified', usage='unmute <user>')
+    @commands.has_permissions(manage_messages=True)
+    async def unmute(self, ctx, member: Option(discord.Member, description='The member to be unmuted', required=True)):
+        muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get the muted role
+        if not muted_role:
+            await ctx.respond('There is no muted role', ephemeral=True)
+            return
+
+        try:
+            await member.remove_roles(muted_role, reason='Unmuted')  # Remove muted role
+            await ctx.respond(
+                embed=discord.Embed(description=f'{member} has been unmuted', colour=discord.Colour.green()))
+        except discord.Forbidden:  # Permission error
+            await ctx.respond('Permission error', ephemeral=True)
+
+    @unmute.error
+    async def unmute_error(self, ctx, error):
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
+    @commands.slash_command(name='timeout', description='Mutes the user specified for the specified duration',
+                            usage='timeout <user> <mode> <duration> <reason>')
+    @commands.has_permissions(moderate_members=True)
+    async def timeout(self, ctx,
+                      member: Option(discord.Member, description='The member to be timed out', required=True),
+                      mode: Option(str, description='The mode of the command', required=True,
+                                   choices=['add', 'remove']),
+                      minutes: Option(int, description='The duration of the timeout in seconds', required=False,
+                                      default=0),
+                      reason: Option(str, description='The reason for the timeout', required=False,
+                                     default='No reason')):
+
+        if mode == 'add':
+            if member.timed_out:
+                await ctx.respond(f'{member} is already timed out', ephemeral=True)
+                return
+
+            if not minutes:
+                await ctx.respond('Mention a value in minutes above 0', ephemeral=True)
+                return
+
+            if member.guild_permissions >= ctx.author.guild_permissions:
+                await ctx.respond('You cannot timeout this user', ephemeral=True)
+                return
+
+            try:
+                duration = datetime.timedelta(minutes=minutes)
+                await member.timeout_for(duration=duration, reason=reason)
+                embed = discord.Embed(
+                    description=f'{member.mention} has been timed out for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}',
+                    colour=discord.Colour.green()
+                )
+                await ctx.respond(embed=embed)
+                with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
+                    await member.send(
+                        f'You were timed out in {ctx.guild.name} for {minutes} {"minute" if minutes == 1 else "minutes"}. Reason: {reason}')
+
+            except discord.Forbidden:  # Permission error
+                await ctx.respond('Permission error', ephemeral=True)
+
+        elif mode == 'remove':
+            if not member.timed_out:
+                await ctx.respond(f'{member} is not timed out', ephemeral=True)
+                return
+
+            if member.guild_permissions >= ctx.author.guild_permissions:
+                await ctx.respond('You cannot remove this user\'s timeout', ephemeral=True)
+                return
+
+            try:
+                await member.remove_timeout()
+                await ctx.respond(f'{member} has been removed from timeout',
+                                  colour=discord.Colour.green())
+                with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
+                    await member.send(
+                        f'You were removed from timeout in {ctx.guild.name}.')
+
+            except discord.Forbidden:  # Permission error
+                await ctx.respond('Permission error', ephemeral=True)
+
+    @timeout.error
+    async def timeout_error(self, ctx, error):
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
+    # Code command
+    @commands.slash_command(name='code',
+                            description='Code for the modules of the bot', usage='code <module>')
+    async def code(self, ctx,
+                   module: Option(str, description='The module to get the code for', required=True,
+                                  choices=['events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'util',
+                                           'owner', 'slash'])):
+        await ctx.respond(file=discord.File(f'cogs/{module}.py', filename=f'{module}.py'))
+
+    @code.error
+    async def code_error(self, ctx, error):
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
 
 def setup(bot):

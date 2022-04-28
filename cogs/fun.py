@@ -3,7 +3,6 @@ import discord
 import asyncpraw
 import datetime
 from discord.ext import commands
-from sql_tools import SQL
 from tools import send_error_embed
 from discord.ui import Button, View
 
@@ -253,121 +252,6 @@ class Fun(commands.Cog):
         await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**', view=view)
         flip.callback = callback
         end_interaction.callback = end_interaction_trigger
-
-    # Message Response Command
-    @commands.command(name='messageresponse', aliases=['message', 'msg', 'response', 'mr'],
-                      description='Add a response to be sent when a word or sentence is typed\nSeparate the response from the message using ` | `\nPut a space before and after the `|`\nThis command is case insensitive\nUse `add(True)` to add, `remove(False)` to remove, and `view` to view a response\nAdd: `-messageresponse add hello | Hello there! `\nRemove: `-messageresponse remove hello`\nView: `-messageresponse view optional(<message or response>)`',
-                      usage='messageresponse <mode> <response>')
-    @commands.has_permissions(manage_guild=True)
-    async def message_response(self, ctx, mode: str, *, message_response: str = None):
-        # sourcery no-metrics
-        sql = SQL('b0ssbot')
-        mode = mode.lower()
-        if mode == 'remove':
-            if message_response is None:
-                await ctx.send(embed=discord.Embed(description='Please provide a message', colour=discord.Colour.red()))
-                return
-            if not message_response.strip():
-                await ctx.send(embed=discord.Embed(description='Please provide a message', colour=discord.Colour.red()))
-                return
-            if ' | ' in message_response:
-                await ctx.send(embed=discord.Embed(description='Use mode `add` instead to add a response',
-                                                   colour=discord.Colour.red()))
-                return
-            message_response = message_response.replace("'", "''").lower()
-            if not sql.select(elements=['message'], table='message_responses',
-                              where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'"):
-                await ctx.send(embed=discord.Embed(description=f'No response found for **{message_response}**',
-                                                   colour=discord.Colour.red()))
-                return
-            sql.delete(table='message_responses',
-                       where=f"guild_id = '{ctx.guild.id}' AND message = '{message_response}'")
-            message_response = message_response.replace("''", "'")
-            await ctx.send(embed=discord.Embed(description=f'Removed the response for **{message_response}**',
-                                               colour=discord.Colour.green()))
-
-        elif mode == 'add':
-            if message_response is None:
-                await ctx.send(
-                    embed=discord.Embed(description='Please provide a message response', colour=discord.Colour.red()))
-                return
-
-            if ' | ' not in message_response:
-                await ctx.send(
-                    embed=discord.Embed(description='Please separate the message from the response using ` | `',
-                                        colour=discord.Colour.red()))
-                return
-
-            message, response = message_response.split(' | ')
-            if message.strip() == '' or response.strip() == '':
-                await ctx.send(
-                    embed=discord.Embed(description='Please provide both, a message and a response',
-                                        colour=discord.Colour.red()))
-                return
-
-            message = message.replace("'", "''").lower()
-            response = response.replace("'", "''")
-            if sql.select(elements=['message', 'response'], table='message_responses',
-                          where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
-                sql.update(table='message_responses', column='response', value=f"'{response}'",
-                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
-                message = message.replace("'", "''")
-                await ctx.send(embed=discord.Embed(description=f'Updated the response for **{message}**',
-                                                   colour=discord.Colour.green()))
-            else:
-                sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
-                           values=[f"'{ctx.guild.id}'", f"'{message}'", f"'{response}'"])
-                message = message.replace("''", "'")
-                await ctx.send(
-                    embed=discord.Embed(description=f'Added the response for **{message}**',
-                                        colour=discord.Colour.green()))
-
-        elif mode == 'view':
-            if not sql.select(elements=['message', 'response'], table='message_responses',
-                              where=f"guild_id = '{ctx.guild.id}'"):
-                await send_error_embed(ctx, description='No responses found')
-                return
-
-            if message_response is None:
-                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
-                                      colour=discord.Colour.green())
-                for row in sql.select(elements=['message', 'response'], table='message_responses',
-                                      where=f"guild_id = '{ctx.guild.id}'"):
-                    embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
-
-            else:
-                text = message_response.replace("'", "''").lower()
-                elements = sql.select(elements=['message', 'response'], table='message_responses',
-                                      where=f"guild_id = '{ctx.guild.id}' AND (message = '{text}' OR response = '{text}')")
-                if not elements:
-                    await send_error_embed(ctx, description='No chat triggers found')
-                    return
-                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
-                                      colour=discord.Colour.green())
-                for row in elements:
-                    embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
-                    await ctx.send(embed=embed)
-                    return
-
-            await ctx.send(embed=embed)
-
-        else:
-            await ctx.send(embed=discord.Embed(
-                description='Please provide a valid mode\n`add` adds a response\n`remove` removes a response\n`view` returns an embed with all the responses',
-                colour=discord.Colour.red()))
-
-    @message_response.error
-    async def message_response_error(self, ctx, error):
-        if isinstance(error, commands.CommandInvokeError):
-            await send_error_embed(ctx,
-                                   description='Please separate the message and the response using ` | ` (with a space in front and back)')
-
-        elif isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx,
-                                   description=f'Please provide a mode\n\nProper Usage: `{self.bot.get_command("message_response").usage}`')
-
-        else:
-            await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 def setup(bot):
