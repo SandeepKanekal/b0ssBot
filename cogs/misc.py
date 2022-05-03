@@ -1,14 +1,8 @@
 # All misc commands stored here
 import datetime
 import discord
-import requests
+from tools import send_error_embed, get_quote
 from discord.ext import commands
-from tools import send_error_embed
-
-
-# Gets quote from https://zenquotes.io api
-def get_quote() -> list:
-    return requests.get('https://zenquotes.io/api/random').json()
 
 
 class Misc(commands.Cog):

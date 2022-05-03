@@ -1,17 +1,9 @@
 import random
 import discord
-import asyncpraw
 import datetime
 from discord.ext import commands
-from tools import send_error_embed
+from tools import send_error_embed, get_post, get_random_post
 from discord.ui import Button, View
-
-
-# Gets post from the specified subreddit
-async def get_post(subreddit: str) -> list:
-    reddit = asyncpraw.Reddit('bot', user_agent='bot user agent')
-    subreddit = await reddit.subreddit(subreddit)
-    return [post async for post in subreddit.hot()]
 
 
 class Fun(commands.Cog):
@@ -19,7 +11,7 @@ class Fun(commands.Cog):
         self.bot = bot
 
     # 8ball for fun
-    @commands.command(name='8ball', aliases=['8b'], description='Ask a question, and get a reply!', usage='<question>')
+    @commands.command(name='8ball', aliases=['8b'], description='Ask a question, and get a reply!', usage='8ball <question>')
     async def eight_ball(self, ctx, *, question: str):
 
         if question.lower().startswith('what') or question.lower().startswith('how') or question.lower().startswith(
@@ -88,7 +80,10 @@ class Fun(commands.Cog):
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
                                                         ephemeral=True)
                 return
-            await interaction.response.edit_message(view=None)
+            
+            roll.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
 
         msg = await ctx.send('**Rolling**')
         await msg.edit('**Rolling.**')
@@ -190,10 +185,10 @@ class Fun(commands.Cog):
                                                         ephemeral=True)
                 return
 
-            view.remove_item(next_meme)
-            view.remove_item(end_interaction)
-            view.remove_item(previous_meme)
-            await interaction.response.edit_message(view=None)
+            next_meme.disabled = True
+            previous_meme.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
 
         # Callbacks
         next_meme.callback = next_meme_trigger
@@ -207,10 +202,12 @@ class Fun(commands.Cog):
     # Dankvideo command
     @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos', usage='dankvideo')
     async def dankvideo(self, ctx):
-        submission = await get_post(random.choice(['dankvideos', 'cursed_videomemes']))
-        if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
-            submission = list(filter(lambda s: not s.over_18, submission))
-        submission = random.choice(submission)
+        submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes']))
+
+        if submission.over_18 and not ctx.channel.is_nsfw():
+            await send_error_embed(ctx, description='This post is NSFW. Please use this command in an NSFW channel.')
+            return
+
         await ctx.send(f'https://reddit.com{submission.permalink}')
 
     @dankvideo.error
@@ -238,7 +235,10 @@ class Fun(commands.Cog):
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
                                                         ephemeral=True)
                 return
-            await interaction.response.edit_message(view=None)
+
+            flip.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
 
         msg = await ctx.send('**Flipping**')
         await msg.edit('**Flipping.**')

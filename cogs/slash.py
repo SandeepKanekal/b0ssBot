@@ -162,8 +162,16 @@ class Slash(commands.Cog):
                 url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
 
         else:
+            if youtube_channel:
+                channel_id = requests.get(
+                    f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
+                    'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[
+                    1]
+            else:
+                channel_id = None
+            where = f"guild_id = '{ctx.guild.id}' AND channel_id = '{channel_id}'" if channel_id else f"guild_id = '{ctx.guild.id}'"
             channels = sql.select(elements=['channel_name', 'channel_id', 'text_channel_id'], table='youtube',
-                                  where=f'guild_id = \'{ctx.guild.id}\'')
+                                  where=where)
             if not channels:
                 await ctx.respond('No channels are currently set up for notifications', ephemeral=True)
                 return
@@ -188,7 +196,7 @@ class Slash(commands.Cog):
 
     # Hourlyweather command
     @commands.slash_command(name='hourlyweather', aliases=['hw'],
-                            description='Get the hourly weather for a location',
+                            description='Configure monitored weather locations for the server',
                             usage='hourlyweather <mode> <channel_id> <location>')
     @commands.has_permissions(manage_guild=True)
     async def hourlyweather(self, ctx,
@@ -273,7 +281,7 @@ class Slash(commands.Cog):
 
     # Warn command
     @commands.slash_command(name='warn',
-                            description='Configure warns for the server',
+                            description='Configure warns for the user',
                             usage='warn <subcommand> <user> <reason>')
     @commands.has_permissions(manage_guild=True)
     async def warn(self, ctx,
@@ -317,7 +325,7 @@ class Slash(commands.Cog):
             warn = sql.select(elements=['member_id', 'warns', 'reason'], table='warns',
                               where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
             if not warn:
-                await ctx.respond(f'{member.mention} has no warns')
+                await ctx.respond(f'{member.mention} has no warns', ephemeral=True)
                 return
 
             embed = discord.Embed(
@@ -362,7 +370,6 @@ class Slash(commands.Cog):
                                                 default=None)):
         # sourcery no-metrics
         sql = SQL('b0ssbot')
-        mode = mode.lower()
         original_message = message
         if mode == 'remove':
             if not message:
@@ -416,15 +423,25 @@ class Slash(commands.Cog):
                 await ctx.respond('No responses found', ephemeral=True)
                 return
 
-            if message is None or response is None:
+            if message is None and response is None:
                 embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
                                       colour=discord.Colour.green())
-                for row in sql.select(elements=['message', 'response'], table='message_responses',
-                                      where=f"guild_id = '{ctx.guild.id}'"):
+                responses = sql.select(elements=['message', 'response'], table='message_responses',
+                                       where=f"guild_id = '{ctx.guild.id}'")
+                for row in responses:
                     embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
 
+                try:
+                    await ctx.respond(embed=embed)
+                except discord.HTTPException:
+                    with open('responses.txt', 'w') as f:
+                        for row in responses:
+                            f.write(f'Message: {row[0]}\nResponse: {row[1]}\n\n')
+                    await ctx.respond(file=discord.File('responses.txt'))
+                    os.remove('responses.txt')
+
             else:
-                text = message.replace("'", "''").lower() or response.replace("'", "''")
+                text = message.replace("'", "''").lower() if message else response.replace("'", "''")
                 elements = sql.select(elements=['message', 'response'], table='message_responses',
                                       where=f"guild_id = '{ctx.guild.id}' AND (message = '{text}' OR response = '{text}')")
                 if not elements:
@@ -435,9 +452,6 @@ class Slash(commands.Cog):
                 for row in elements:
                     embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
                     await ctx.respond(embed=embed)
-                    return
-
-            await ctx.respond(embed=embed)
 
     @message_response.error
     async def message_response_error(self, ctx, error):
@@ -511,7 +525,7 @@ class Slash(commands.Cog):
     async def unmute_error(self, ctx, error):
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
-    @commands.slash_command(name='timeout', description='Mutes the user specified for the specified duration',
+    @commands.slash_command(name='timeout', description='Manage timeouts for the user',
                             usage='timeout <user> <mode> <duration> <reason>')
     @commands.has_permissions(moderate_members=True)
     async def timeout(self, ctx,
@@ -580,9 +594,15 @@ class Slash(commands.Cog):
                             description='Code for the modules of the bot', usage='code <module>')
     async def code(self, ctx,
                    module: Option(str, description='The module to get the code for', required=True,
-                                  choices=['events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'util',
-                                           'owner', 'slash'])):
-        await ctx.respond(file=discord.File(f'cogs/{module}.py', filename=f'{module}.py'))
+                                  choices=['events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'moderation',
+                                           'util',
+                                           'owner', 'slash', 'main', 'keep_alive', 'sql_tools', 'tools'])):
+        try:
+            await ctx.respond('https://github.com/SandeepKanekal/b0ssBot -> Source Code',
+                              file=discord.File(f'{module}.py', filename=f'{module}.py'))
+        except FileNotFoundError:
+            await ctx.respond('https://github.com/SandeepKanekal/b0ssBot -> Source Code',
+                              file=discord.File(f'cogs/{module}.py', filename=f'{module}.py'))
 
     @code.error
     async def code_error(self, ctx, error):

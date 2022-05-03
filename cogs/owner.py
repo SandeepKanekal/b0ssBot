@@ -8,7 +8,7 @@ class Owner(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(hidden=True)
+    @commands.command(aliases=['loadcog'], hidden=True)
     @commands.is_owner()
     async def load(self, ctx, cog: str):
         """Loads a cog"""
@@ -23,7 +23,7 @@ class Owner(commands.Cog):
     async def load_error(self, ctx, e):
         await ctx.send(embed=discord.Embed(description=str(e)))
 
-    @commands.command(hidden=True)
+    @commands.command(aliases=['unloadcog'], hidden=True)
     @commands.is_owner()
     async def unload(self, ctx, cog: str):
         """Unloads a cog"""
@@ -38,7 +38,7 @@ class Owner(commands.Cog):
     async def unload_error(self, ctx, e):
         await ctx.send(embed=discord.Embed(description=str(e)))
 
-    @commands.command(hidden=True)
+    @commands.command(aliases=['reloadcog'], hidden=True)
     @commands.is_owner()
     async def reload(self, ctx, cog: str):
         """Reloads a cog"""
@@ -84,18 +84,6 @@ class Owner(commands.Cog):
 
     @guildlist.error
     async def guildlist_error(self, ctx, e):
-        await ctx.send(embed=discord.Embed(description=str(e)))
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def shutdown(self, ctx):
-        """Restarts the bot"""
-        await ctx.send('Shutting down...')
-        await self.bot.close()
-        self.bot.run(os.getenv('TOKEN'))
-
-    @shutdown.error
-    async def shutdown_error(self, ctx, e):
         await ctx.send(embed=discord.Embed(description=str(e)))
 
 

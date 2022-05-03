@@ -1,4 +1,5 @@
 # All Util commands stored here
+import asyncio
 import contextlib
 import discord
 import datetime
@@ -17,34 +18,36 @@ class Util(commands.Cog):
         sql = SQL('b0ssbot')
         values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
                   f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'"]
-        if sql.select(elements=['*'], table='snipes', where=f'guild_id = \'{message.guild.id}\''):
+        if sql.select(elements=['*'], table='snipes',
+                      where=f'guild_id = \'{message.guild.id}\' AND channel_id = \'{message.channel.id}\''):
             sql.update(table='snipes', column='message', value=f'\'{message.content}\'',
-                       where=f"guild_id = '{message.guild.id}'")
+                       where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
             sql.update(table='snipes', column='author_id', value=f'\'{message.author.id}\'',
-                       where=f"guild_id = '{message.guild.id}'")
-            sql.update(table='snipes', column='channel_id', value=f'\'{message.channel.id}\'',
-                       where=f"guild_id = '{message.guild.id}'")
+                       where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
             sql.update(table='snipes', column='time',
                        value=f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'',
-                       where=f"guild_id = '{message.guild.id}'")
+                       where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
         else:
             sql.insert(table='snipes', columns=['author_id', 'message', 'channel_id', 'time', 'guild_id'],
                        values=values)
 
     # Snipe command
     @commands.command(name='snipe', description='Snipes the most recently deleted message', usage='snipe')
+    @commands.has_permissions(manage_messages=True)
     async def snipe(self, ctx):
         sql = SQL('b0ssbot')
         if message := sql.select(
                 elements=['author_id', 'message', 'channel_id', 'time'],
                 table='snipes',
-                where=f'guild_id = \'{ctx.guild.id}\''
+                where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{ctx.channel.id}\''
         ):
             # Get the time of deletion and convert to unix time
             del_time = message[0][3]
             del_time = convert_to_unix_time(del_time)
             channel = discord.utils.get(ctx.guild.channels, id=int(message[0][2]))
             member = discord.utils.get(ctx.guild.members, id=int(message[0][0]))
+            if member is None:
+                member = 'Unknown'
 
             # Get the prefix
             command_prefix = sql.select(elements=["prefix"], table="prefixes", where=f"guild_id = '{ctx.guild.id}'")[0][
@@ -53,7 +56,7 @@ class Util(commands.Cog):
             # Response embed
             embed = discord.Embed(
                 title='Sniped a message!',
-                description=f'Author: {member.mention}\nDeleted message: {message[0][1]}\nChannel: {channel.mention}\nTime: {del_time}',
+                description=f'Author: {member.mention if isinstance(member, discord.Member) else member}\nDeleted message: {message[0][1]}\nChannel: {channel.mention}\nTime: {del_time}',
                 colour=discord.Colour.green()
             ).set_footer(
                 text=f'Enable modlogs for more information. Type {command_prefix}help modlogs for more information')
@@ -99,7 +102,8 @@ class Util(commands.Cog):
         await ctx.reply(embed=embed)
 
     # Clear command
-    @commands.command(aliases=['purge'], description='Purges the amount of messages specified by the user',
+    @commands.command(aliases=['purge'],
+                      description='Purges the amount of messages specified by the user\nPinned messages are not cleared',
                       usage='clear <limit>')
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx, limit=0):
@@ -110,7 +114,10 @@ class Util(commands.Cog):
             await ctx.send('Limit must be lesser than 100')
             return
         await ctx.message.delete()
-        await ctx.channel.purge(limit=limit)
+        await ctx.channel.purge(limit=limit, check=lambda m: not m.pinned)
+        msg = await ctx.send(f'Cleared {limit} messages')
+        await asyncio.sleep(5)
+        await msg.delete()
 
     # Permission errors in the clear command is handled here
     @clear.error
@@ -153,7 +160,7 @@ class Util(commands.Cog):
 
     # Refer command
     @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter',
-                      usage='refer <message_reference>')
+                      usage='refer <message_id or message_link>')
     async def refer(self, ctx, message_reference: str):
         message_id = message_reference
         if message_reference.startswith('https://discord.com/channels/'):  # Message ID

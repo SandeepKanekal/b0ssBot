@@ -8,6 +8,11 @@ from discord.ext import commands
 class Info(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.uptime: str = None
+    
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.uptime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
 
     # Userinfo command
     @commands.command(aliases=['whois', 'user', 'ui'],
@@ -142,6 +147,12 @@ class Info(commands.Cog):
         embed.set_thumbnail(url=self.bot.user.avatar)
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
+    
+    @commands.command(name='uptime', description='Shows the bot\'s uptime', usage='uptime')
+    async def uptime(self, ctx):
+        await ctx.send(
+            embed=discord.Embed(description=f'The bot was started {convert_to_unix_time(self.uptime)}', colour=self.bot.user.colour)
+        )
 
 
 # Setup

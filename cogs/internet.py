@@ -9,20 +9,7 @@ import asyncprawcore
 from googleapiclient.discovery import build
 from discord.ui import Button, View
 from discord.ext import commands
-
-
-# A function to send embeds when there are false calls or errors
-async def send_error_embed(ctx, description: str) -> None:
-    # Response embed
-    embed = discord.Embed(description=description, colour=discord.Colour.red())
-    await ctx.send(embed=embed)
-
-
-# Gets post from the specified subreddit
-async def get_post(subreddit: str) -> list:
-    reddit = asyncpraw.Reddit('bot', user_agent='bot user agent')
-    subreddit = await reddit.subreddit(subreddit)
-    return [post async for post in subreddit.hot()]
+from tools import send_error_embed, get_post
 
 
 class Internet(commands.Cog):
@@ -157,7 +144,12 @@ class Internet(commands.Cog):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
                 return
-            await interaction.response.edit_message(view=None)
+            
+            next_video.disabled = True
+            previous_video.disabled = True
+            end_interaction.disabled = True
+            watch_video.disabled = True
+            await interaction.response.edit_message(view=view)
 
         next_video.callback = next_video_trigger
         previous_video.callback = previous_video_trigger
@@ -316,7 +308,11 @@ class Internet(commands.Cog):
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
                                                         ephemeral=True)
                 return
-            await interaction.response.edit_message(view=None)
+            
+            next_post.disabled = True
+            previous_post.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
 
         try:
             submissions = await get_post(subreddit)

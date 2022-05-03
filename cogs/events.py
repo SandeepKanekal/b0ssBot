@@ -92,22 +92,11 @@ class Events(commands.Cog):
                     message.content.split('(')[1].startswith('https://') or message.content.split('(')[1].startswith(
                     'http://')) and '.' in message.content and (
                     message.content.split('https://')[1] or message.content.split('http://')[1]):
-                content = '[' + message.content.split('[')[1].split(')')[0] + ')'
-                text, link = content.replace('[', '').replace(']', '').replace('(', '').replace(')', '').split(
-                    'https://')
-                before = message.content.split('[')[0]
-                after = message.content.split(')')[1]
-
                 webhooks = await message.channel.webhooks()
                 webhook = discord.utils.get(webhooks, name='Markdown webhook')
                 if webhook is None:
                     webhook = await message.channel.create_webhook(name='Markdown webhook')
-                protocol = 'https://' if 'https://' in message.content else 'http://'
-                content = before.replace("''", "'") + '[' + text.replace("''",
-                                                                         "'") + ']' + '(' + protocol + link.replace(
-                    "''", "'") + ')' + after.replace("''", "'")
-                await webhook.send(content=content, username=message.author.display_name,
-                                   avatar_url=message.author.avatar)
+                await webhook.send(message.content.replace("''", "'"), username=message.author.display_name, avatar_url=message.author.avatar)
                 await message.delete()
 
     @commands.Cog.listener()

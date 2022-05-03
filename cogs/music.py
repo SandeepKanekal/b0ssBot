@@ -9,10 +9,9 @@ import asyncio
 import datetime
 import lyrics_extractor
 from sql_tools import SQL
-from googleapiclient.discovery import build
 from discord.ext import commands
 from discord.ext.commands import CommandError
-from tools import send_error_embed
+from tools import send_error_embed, get_video_stats, format_time
 from youtube_dl import YoutubeDL
 
 
@@ -56,17 +55,6 @@ class NotInRange(CommandError):
     pass
 
 
-# Get the video stats for the required track
-def get_video_stats(url: str) -> dict:
-    """
-    Gets the video stats from the url
-    """
-    youtube = build('youtube', 'v3', developerKey=os.environ.get('youtube_api_key'))
-    video_id = url.split('v=')[1]
-    response = youtube.videos().list(id=video_id, part='snippet,statistics,contentDetails').execute()
-    return response['items'][0]
-
-
 class Music(commands.Cog):
 
     def __init__(self, bot):
@@ -104,9 +92,11 @@ class Music(commands.Cog):
                 return e
 
         return {'source': info['formats'][0]['url'], 'title': info['title'],
-                'url': info['webpage_url']}  # Return required details
+                'url': info['webpage_url'], 'channel_title': info['channel'], 'channel_id': info['channel_id'],
+                'view_count': info['view_count'], 'like_count': info['like_count'], 'thumbnail': info['thumbnail'],
+                'duration': info['duration']}  # Return required details
 
-    async def send_embed_after_track(self, ctx):
+    async def _send_embed_after_track(self, ctx):
         """
         Sends an embed after the track has finished playing
         """
@@ -127,7 +117,7 @@ class Music(commands.Cog):
     # The play_next function is used when the player is already playing, this function is invoked when the player is done playing one of the tracks in the queue
     def play_next(self, ctx):
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
-        asyncio.run_coroutine_threadsafe(self.send_embed_after_track(ctx), self.bot.loop)  # Send the embed
+        asyncio.run_coroutine_threadsafe(self._send_embed_after_track(ctx), self.bot.loop)  # Send the embed
         if self.sql.select(['title'], 'queue',
                            f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks in the queue
             self._play_next(ctx, vc)
@@ -191,9 +181,9 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in', usage='join')
     async def join(self, ctx):
-        voice_channel = ctx.author.voice.channel  # Get the voice channel
-        if voice_channel is None:
+        if ctx.author.voice is None:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+        voice_channel = ctx.author.voice.channel  # Get the voice channel
         try:
             await voice_channel.connect()
         except discord.ClientException as e:
@@ -246,17 +236,15 @@ class Music(commands.Cog):
             ]
         )
         song["title"] = song["title"].replace("''", "'")  # Replace the single quotes back for the response
-
-        video = get_video_stats(song['url'])  # Get the video stats for the embed
         embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
-            url=video['snippet']['thumbnails']['high']['url'])
+            url=song['thumbnail'])
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(
             name='Song added to queue',
-            value=f'[{song["title"]}]({song["url"]}) BY [{video["snippet"]["channelTitle"]}](https://youtube.com/channel/{video["snippet"]["channelId"]})'
+            value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
         )
         embed.set_footer(
-            text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}'
+            text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
         )
         await ctx.send(
             'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
@@ -486,9 +474,9 @@ class Music(commands.Cog):
         seconds_between = (time_now - self.start_time[ctx.guild.id]).seconds  # Calculating the time elapsed
         minutes_between = seconds_between // 60  # Calculating the minutes elapsed
         hours_between = minutes_between // 60  # Calculating the hours elapsed
-
         seconds_between = seconds_between % 60  # Seconds cannot exceed 60
         minutes_between = minutes_between % 60  # Minutes cannot exceed 60
+
         # Concatenate 0 if the number is less than 10
         if seconds_between < 10:
             seconds_between = f'0{str(seconds_between)}'
@@ -521,6 +509,7 @@ class Music(commands.Cog):
         progress_string = f'{hours_between}:{minutes_between}:{seconds_between}/{":".join(dur)}'
         # Response embed
         embed = discord.Embed(description='Now Playing', colour=discord.Colour.dark_teal())
+        embed.set_thumbnail(url=video["snippet"]["thumbnails"]["high"]["url"])
         embed.add_field(
             name='Track Name:',
             value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]}) BY [{video["snippet"]["channelTitle"]}](https://youtube.com/channel/{video["snippet"]["channelId"]})',
@@ -611,7 +600,7 @@ class Music(commands.Cog):
             title, lyrics = song['title'], song['lyrics']
 
             # Response embed
-            embed = discord.Embed(title=f'Lyrics for {title}', description=lyrics,
+            embed = discord.Embed(title=title, description=lyrics,
                                   colour=discord.Colour.blue())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
@@ -638,7 +627,7 @@ class Music(commands.Cog):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Repeat/Loop command
-    @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode')
+    @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode', usage='loop <0/1>')
     async def loop(self, ctx, mode: int):
         # Basic responses to false calls
         if mode not in [0, 1]:  # Checks if the mode argument is valid
@@ -651,13 +640,11 @@ class Music(commands.Cog):
             return
 
         if not ctx.author.voice:
-            await send_error_embed(ctx, description='You are not connected to the voice channel')
-            return
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         if not vc.is_playing():
-            await send_error_embed(ctx, description='Nothing is playing')
-            return
+            raise NoAudioPlaying('No audio is being played')
 
         if ctx.author.voice.channel != vc.channel:
             raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
@@ -688,12 +675,18 @@ class Music(commands.Cog):
             await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Volume command
-    @commands.command(aliases=['vol'], description='Set the volume of the bot')
+    @commands.command(aliases=['vol'], description='Set the volume of the bot', usage='volume <0-200>')
     async def volume(self, ctx, volume: int):
         if volume < 0 or volume > 200:  # Checks if the volume argument is outside the range
             raise NotInRange('The volume must be between 0 and 200')
 
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+
+        if not vc:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to the voice channel')
+
+        if not vc.is_playing():
+            raise NoAudioPlaying('No audio is being playing')
 
         if ctx.author.voice.channel != vc.channel:
             raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
