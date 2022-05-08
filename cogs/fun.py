@@ -61,6 +61,7 @@ class Fun(commands.Cog):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     @commands.command(aliases=['roll'], description='Rolls a dice', usage='dice')
+    @commands.guild_only()
     async def dice(self, ctx):
 
         async def callback(interaction):
@@ -102,7 +103,9 @@ class Fun(commands.Cog):
     @commands.command(aliases=['m'],
                       description='Posts memes from the most famous meme subreddits\nSubreddit can be mentioned\nValid subreddits include: `dankmemes` `memes` `meme` `me_irl` `wholesomememes`',
                       usage='meme <subreddit>')
-    async def meme(self, ctx, subreddit: str = None):
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.guild_only()
+    async def meme(self, ctx, subreddit: str = None):  # sourcery no-metrics
         index = 0
 
         if subreddit is None:
@@ -129,7 +132,13 @@ class Fun(commands.Cog):
         view.add_item(end_interaction)
         embed = discord.Embed(title=submissions[0].title, url=f'https://reddit.com{submissions[0].permalink}',
                               colour=discord.Colour.random())
-        embed.set_image(url=submissions[0].url)
+
+        if submissions[0].is_video:
+            embed.set_image(url=submissions[0].thumbnail)
+            embed.description = f'[Video link]({submissions[0].url})'
+        else:
+            embed.set_image(url=submissions[0].url)
+
         embed.set_footer(
             text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
         embed.timestamp = datetime.datetime.now()
@@ -150,7 +159,13 @@ class Fun(commands.Cog):
 
             embed.title = submissions[index].title
             embed.url = f'https://reddit.com{submissions[index].permalink}'
-            embed.set_image(url=submissions[index].url)
+
+            if submissions[index].is_video:
+                embed.set_image(url=submissions[index].thumbnail)
+                embed.description = f'[Video link]({submissions[index].url})'
+            else:
+                embed.set_image(url=submissions[index].url)
+
             embed.set_footer(
                 text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
             embed.timestamp = datetime.datetime.now()
@@ -172,7 +187,13 @@ class Fun(commands.Cog):
             index -= 1
             embed.title = submissions[index].title
             embed.url = f'https://reddit.com{submissions[index].permalink}'
-            embed.set_image(url=submissions[index].url)
+
+            if submissions[index].is_video:
+                embed.set_image(url=submissions[index].thumbnail)
+                embed.description = f'[Video link]({submissions[index].url})'
+            else:
+                embed.set_image(url=submissions[index].url)
+
             embed.set_footer(
                 text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
             embed.timestamp = datetime.datetime.now()
@@ -202,7 +223,7 @@ class Fun(commands.Cog):
     # Dankvideo command
     @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos', usage='dankvideo')
     async def dankvideo(self, ctx):
-        submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes']))
+        submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes', 'MemeVideos']))
 
         if submission.over_18 and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='This post is NSFW. Please use this command in an NSFW channel.')
@@ -216,6 +237,7 @@ class Fun(commands.Cog):
 
     # Coinflip command
     @commands.command(aliases=['cf'], description='Heads or Tails?', usage='coinflip')
+    @commands.guild_only()
     async def coinflip(self, ctx):
         async def callback(interaction):
             if interaction.user != ctx.author:

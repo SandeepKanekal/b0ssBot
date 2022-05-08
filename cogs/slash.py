@@ -75,7 +75,7 @@ class Slash(commands.Cog):
         if member is None:
             member = ctx.author
         # Getting the urls
-        png_url = str(member.avatar) if member.avatar else str(member.default_avatar)
+        png_url = member.avatar or member.default_avatar
         webp_url = png_url.replace('png', 'webp')
         jpg_url = png_url.replace('png', 'jpg')
         # Response embed

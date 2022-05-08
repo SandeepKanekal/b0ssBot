@@ -8,7 +8,7 @@ from discord.ext import commands
 class Info(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.uptime: str = None
+        self.uptime: str | None = None
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -123,8 +123,7 @@ class Info(commands.Cog):
         embed.add_field(name='Bot Tag', value=f'{self.bot.user.name}#{self.bot.user.discriminator}')
         embed.add_field(name='Source Code', value='[Click here](https://github.com/SandeepKanekal/b0ssBot)')
         embed.add_field(name='Invite Link',
-                        value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887'
-                              '&permissions=8&scope=applications.commands%20bot)')
+                        value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887&permissions=1377609837942&scope=bot%20applications.commands)')
         embed.set_footer(text=f'Requested by {ctx.author}',
                          icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()

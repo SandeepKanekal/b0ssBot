@@ -593,8 +593,8 @@ class Moderation(commands.Cog):
             )
             embeds.append(embed)
 
-        for guild in self.bot.guilds:
-            if before in guild.members and modlog_enabled(guild.id):
+        for guild in list(filter(lambda g: before in g.members, self.bot.guilds)):
+            if modlog_enabled(guild.id):
                 sql = SQL('b0ssbot')
                 channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][
                     0]  # Get channel id

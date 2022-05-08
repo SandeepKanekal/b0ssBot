@@ -4,12 +4,11 @@ import datetime
 import time
 import requests
 import wikipedia
-import asyncpraw
 import asyncprawcore
 from googleapiclient.discovery import build
 from discord.ui import Button, View
 from discord.ext import commands
-from tools import send_error_embed, get_post
+from tools import send_error_embed, get_post, get_quote
 
 
 class Internet(commands.Cog):
@@ -18,11 +17,13 @@ class Internet(commands.Cog):
 
     # YouTubeSearch command
     @commands.command(aliases=['yt', 'youtube', 'ytsearch'],
-                      description='Searches YouTube and responds with the top result', usage='youtubesearch <query>')
+                      description='Searches YouTube and responds with the top 50 results', usage='youtubesearch <query>')
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.guild_only()
     async def youtubesearch(self, ctx, *, query):
         # sourcery no-metrics
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        res = youtube.search().list(q=query, part='snippet', type='video', maxResults=100).execute()
+        res = youtube.search().list(q=query, part='snippet', type='video', maxResults=50).execute()
 
         if not res['items']:
             await send_error_embed(ctx, description='No results found')
@@ -144,7 +145,7 @@ class Internet(commands.Cog):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
                 return
-            
+
             next_video.disabled = True
             previous_video.disabled = True
             end_interaction.disabled = True
@@ -167,6 +168,7 @@ class Internet(commands.Cog):
     # Wikipedia command
     @commands.command(aliases=['wiki', 'wikisearch'], description='Gets a summary of the query from wikipedia',
                       usage='wikipedia <query>')
+    @commands.cooldown(1, 2, commands.BucketType.user)
     async def wikipedia(self, ctx, *, query):
         # Gets the data from wikipedia
         try:
@@ -234,6 +236,8 @@ class Internet(commands.Cog):
     # Post command
     @commands.command(aliases=['reddit', 'post', 'rp'], description='Gets a post from the specified subreddit',
                       usage='redditpost <subreddit>')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.guild_only()
     async def redditpost(self, ctx, subreddit):  # sourcery no-metrics
         index = 0
 
@@ -250,24 +254,26 @@ class Internet(commands.Cog):
             else:
                 index += 1  # Increment index
 
-            embed_next = discord.Embed(colour=discord.Colour.orange())
-            embed_next.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed_next.title = submissions[index].title
-            embed_next.description = submissions[index].selftext
-            embed_next.url = f'https://reddit.com{submissions[index].permalink}'
-            embed_next.set_footer(
+            embed.title = submissions[index].title
+            embed.description = submissions[index].selftext
+            embed.url = f'https://reddit.com{submissions[index].permalink}'
+            embed.set_footer(
                 text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
-            embed_next.timestamp = datetime.datetime.now()
+            embed.timestamp = datetime.datetime.now()
 
             # Checking if the submission is text-only
             if not submissions[index].is_self:
-                embed_next.set_image(url=submissions[index].url)
+                if submissions[index].is_video:
+                    embed.description += f'\n[Video Link]({submissions[index].url})'
+                    embed.set_image(url=submissions[index].thumbnail)
+                else:
+                    embed.set_image(url=submissions[index].url)
 
             try:
-                await interaction.response.edit_message(embed=embed_next)
+                await interaction.response.edit_message(embed=embed)
             except discord.HTTPException:
-                embed_next.description = 'The post content was too long to be sent'
-                await ctx.send(embed=embed_next)
+                embed.description = 'The post content was too long to be sent'
+                await ctx.send(embed=embed)
 
         async def previous_post_trigger(interaction):
             nonlocal index
@@ -283,24 +289,26 @@ class Internet(commands.Cog):
 
             index -= 1  # Decrement index
 
-            embed_previous = discord.Embed(colour=discord.Colour.orange())
-            embed_previous.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed_previous.title = submissions[index].title
-            embed_previous.description = submissions[index].selftext
-            embed_previous.url = f'https://reddit.com{submissions[index].permalink}'
-            embed_previous.set_footer(
+            embed.title = submissions[index].title
+            embed.description = submissions[index].selftext
+            embed.url = f'https://reddit.com{submissions[index].permalink}'
+            embed.set_footer(
                 text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
-            embed_previous.timestamp = datetime.datetime.now()
+            embed.timestamp = datetime.datetime.now()
 
             # Checking if the submission is text-only
             if not submissions[index].is_self:
-                embed_previous.set_image(url=submissions[index].url)
+                if submissions[index].is_video:
+                    embed.description += f'\n[Video Link]({submissions[index].url})'
+                    embed.set_image(url=submissions[index].thumbnail)
+                else:
+                    embed.set_image(url=submissions[index].url)
 
             try:
-                await interaction.response.edit_message(embed=embed_previous)
+                await interaction.response.edit_message(embed=embed)
             except discord.HTTPException:
-                embed_previous.description = 'The post content was too long to be sent'
-                await ctx.send(embed=embed_previous)
+                embed.description = 'The post content was too long to be sent'
+                await ctx.send(embed=embed)
 
         async def end_interaction_trigger(interaction):
             # Callback to end_interaction triggers this function
@@ -308,7 +316,7 @@ class Internet(commands.Cog):
                 await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
                                                         ephemeral=True)
                 return
-            
+
             next_post.disabled = True
             previous_post.disabled = True
             end_interaction.disabled = True
@@ -336,14 +344,17 @@ class Internet(commands.Cog):
 
             embed.title = submissions[0].title
             embed.description = submissions[0].selftext
-            embed.url = submissions[0].url
+            embed.url = f'https://reddit.com{submissions[0].permalink}'
             embed.set_footer(
                 text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
             embed.timestamp = datetime.datetime.now()
 
             # Checking if the submission is text-only
             if not submissions[0].is_self:
-                embed.set_image(url=submissions[0].url)
+                if submissions[0].is_video:
+                    embed.description += f'\n[Video Link]({submissions[0].url})'
+                else:
+                    embed.set_image(url=submissions[0].url)
 
             try:
                 await ctx.send(embed=embed, view=view)
@@ -365,6 +376,141 @@ class Internet(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please specify a subreddit\n\nProper Usage: `{self.bot.get_command("redditpost").usage}`')
             return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
+
+    @commands.command(name='trivia', aliases=['fact'], description='Get random trivia', usage='trivia')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.guild_only()
+    async def trivia(self, ctx):
+
+        async def next_trivia_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            nonlocal index
+            index += 1
+            if index >= len(trivia['results']):
+                index = 0
+
+            embed.title = trivia['results'][index]['question']
+            embed.description = f'**Answer: {trivia["results"][index]["correct_answer"]}**'
+            await interaction.response.edit_message(embed=embed)
+
+        async def previous_trivia_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            nonlocal index
+            index -= 1
+            if index < 0:
+                index = len(trivia['results']) - 1
+
+            embed.title = trivia['results'][index]['question']
+            embed.description = f'**Answer: {trivia["results"][index]["correct_answer"]}**'
+            await interaction.response.edit_message(embed=embed)
+
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            next_trivia.disabled = True
+            previous_trivia.disabled = True
+            end_interaction.disabled = True
+
+            await interaction.response.edit_message(view=view)
+
+        trivia = requests.get('https://opentdb.com/api.php?amount=100').json()
+        if not trivia['results']:
+            await send_error_embed(ctx, description='Could not retrieve a trivia question')
+            return
+
+        for item in trivia['results']:
+            item['question'] = item['question'].replace('&quot;', '"').replace('&#039;', "'")
+            item['correct_answer'] = item['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
+
+        index = 0
+
+        next_trivia = Button(emoji='⏭️', style=discord.ButtonStyle.green)
+        previous_trivia = Button(emoji='⏮️', style=discord.ButtonStyle.green)
+        end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
+
+        question = trivia['results'][index]['question'].replace('&quot;', '"').replace('&#039;', "'")
+        answer = trivia['results'][index]['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
+
+        embed = discord.Embed(title=question, description=f'**Answer: {answer}**', colour=discord.Colour.orange())
+
+        view = View()
+        view.add_item(previous_trivia)
+        view.add_item(next_trivia)
+        view.add_item(end_interaction)
+
+        await ctx.send(embed=embed, view=view)
+
+        next_trivia.callback = next_trivia_trigger
+        previous_trivia.callback = previous_trivia_trigger
+        end_interaction.callback = end_interaction_trigger
+
+    @trivia.error
+    async def trivia_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: `{error}`')
+
+    # Quote command
+    @commands.command(aliases=['qu'], description='Replies with an inspirational quote', usage='quote')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.guild_only()
+    async def quote(self, ctx):
+
+        async def next_quote_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            q = get_quote()
+            if q[0]['a'] == 'zenquotes.io':
+                await interaction.response.send_message('Please wait for a few seconds', ephemeral=True)
+                return
+
+            embed.description = f'**{q[0]["q"]}**'
+            embed.set_author(name=q[0]['a'])
+            await interaction.response.edit_message(embed=embed)
+
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            next_quote.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
+
+        quote = get_quote()
+
+        if quote[0]['a'] == 'zenquotes.io':
+            await send_error_embed(ctx, description='Please wait for a few seconds before using this command again')
+            return
+
+        embed = discord.Embed(
+            description=f'**{quote[0]["q"]}**',
+            colour=discord.Colour.blue()
+        )
+        embed.set_author(name=quote[0]['a'])
+
+        next_quote = Button(emoji='⏭️', style=discord.ButtonStyle.green)
+        end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
+        view = View()
+        view.add_item(next_quote)
+        view.add_item(end_interaction)
+
+        await ctx.send(embed=embed, view=view)
+
+        next_quote.callback = next_quote_trigger
+        end_interaction.callback = end_interaction_trigger
+
+    @quote.error
+    async def quote_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
 

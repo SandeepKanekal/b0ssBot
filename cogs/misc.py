@@ -1,33 +1,13 @@
 # All misc commands stored here
 import datetime
 import discord
-from tools import send_error_embed, get_quote
+from tools import send_error_embed
 from discord.ext import commands
 
 
 class Misc(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    # Quote command
-    @commands.command(aliases=['qu'], description='Replies with an inspirational quote', usage='quote')
-    async def quote(self, ctx):
-        quote = get_quote()
-
-        if quote[0]['a'] == 'zenquotes.io':
-            await send_error_embed(ctx, description='Please wait for a few seconds before using this command again')
-            return
-
-        embed = discord.Embed(
-            description=f'**{quote[0]["q"]}**',
-            colour=discord.Colour.blue()
-        )
-        embed.set_author(name=quote[0]['a'])
-        await ctx.send(embed=embed)
-
-    @quote.error
-    async def quote_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Spam command
     @commands.command(aliases=['s'], description='Spams text or users', usage='spam <message>')
@@ -49,7 +29,7 @@ class Misc(commands.Cog):
         if member is None:
             member = ctx.author
         # Getting the urls
-        png_url = str(member.avatar) if member.avatar else str(member.default_avatar)
+        png_url = member.avatar or member.default_avatar
         webp_url = png_url.replace('png', 'webp')
         jpg_url = png_url.replace('png', 'jpg')
         # Response embed
@@ -96,6 +76,10 @@ class Misc(commands.Cog):
     @commands.command(aliases=['ms'], description='Spams a message 25 times', usage='megaspam <message>')
     @commands.has_permissions(manage_messages=True)
     async def megaspam(self, ctx, *, message):
+        if message.mentions:
+            await send_error_embed(ctx, description='You cannot mention people in megaspam')
+            return
+
         await ctx.message.delete()
         for _ in range(25):
             await ctx.send(message)

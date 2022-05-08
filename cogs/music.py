@@ -217,9 +217,10 @@ class Music(commands.Cog):
         if vc and vc.is_paused():
             raise PlayerPaused('The player is paused')
 
+        msg = await ctx.send('Downloading...')
         song = self.search_yt(query)  # Get the track details
         if isinstance(song, youtube_dl.utils.DownloadError):
-            await send_error_embed(ctx, description=f'Error: {song}')
+            await msg.edit(embed=discord.Embed(description=f'Error: {song}', colour=discord.Colour.red()))
             return
         if ctx.guild.id not in self.volume.keys():
             self.volume[ctx.guild.id] = 100
@@ -246,7 +247,7 @@ class Music(commands.Cog):
         embed.set_footer(
             text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
         )
-        await ctx.send(
+        await msg.edit(
             'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
             embed=embed
         )
