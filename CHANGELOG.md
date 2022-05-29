@@ -1,9 +1,7 @@
 # Changelog for b0ssb0t #
 
 # Overall #
-+ Slash commands have been added to the bot.
-+ Buttons in the bot are now disabled instead of being deleted.
-+ In any reddit command, if there is a video, the thumbnail will be set as the image, and a video link will be provided. This is better than just a spinning gif.
++ The Easter Egg has been solved!
 
 # Events #
 + Markdown syntax for embedding links in text is now detected and, a webhook is sent after deleting the original message.
@@ -46,3 +44,8 @@
 + Addition the code command.
 + The code command now sends `.py` files instead of `.txt` files.
 + More modules can now be viewed using the code command.
+
+# Games #
++ Addition of truth or dare commands.
++ Addition of guessthenumber command.
++ Addition of a tictactoe command.

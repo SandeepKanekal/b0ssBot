@@ -381,33 +381,51 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild) -> None:
-        if modlog_enabled(before.id):  # Check if modlog is enabled
-            sql = SQL('b0ssbot')
-            channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.id}'")[0][
-                0]  # Get channel id
-            channel = discord.utils.get(before.channels, id=int(channel_id))  # Get channel
+        if not modlog_enabled(before.id):
+            return
+        sql = SQL('b0ssbot')
+        channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{before.id}'")[0][
+            0]  # Get channel id
+        channel = discord.utils.get(before.channels, id=int(channel_id))  # Get channel
+        embeds = []
 
-            # Make embed
-            if before.name != after.name:
-                embed = discord.Embed(
-                    title='Server Name Changed',
-                    description=f'{before.name} has been changed to {after.name}',
+        # Make embed
+        if before.name != after.name:
+            embed1 = discord.Embed(
+                title='Server Name Changed',
+                description=f'{before.name} ---> {after.name}',
+                colour=discord.Colour.green()
+            )
+            embeds.append(embed1)
+
+        if after.icon and before.icon != after.icon:
+            embed2 = discord.Embed(
+                    title='Icon Update',
+                    description=f'{after.name}\'s previous icon -->',
                     colour=discord.Colour.green()
                 )
-                if before.icon:
-                    embed.set_author(name=before.name, icon_url=before.icon)
-                else:
-                    embed.set_author(name=before.name)
-                embed.set_footer(text=f'ID: {before.id}')
-                embed.timestamp = datetime.datetime.now()
+            if before.icon:
+                embed2.set_thumbnail(url=before.icon)
+            else:
+                embed2.description = f'No previous icon found for {after.name}'
+            embed2.add_field(name='New Icon', valur=f'[Click here]({after.icon})')
+            embeds.append(embed2)
 
-                # Send webhook
-                webhooks = await channel.webhooks()
-                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
-                if webhook is None:
-                    webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-                await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging',
-                                   avatar_url=self.bot.user.avatar)
+        for embed in embeds:
+            if after.icon:
+                embed.set_author(name=after.name, icon_url=after.icon)
+            else:
+                embed.set_author(name=after.name)
+            embed.set_footer(text=f'ID: {before.id}')
+            embed.timestamp = datetime.datetime.now()
+
+        # Send webhook
+        webhooks = await channel.webhooks()
+        webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
+        if webhook is None:
+            webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
+        await webhook.send(embeds=embeds, username=f'{self.bot.user.name} Logging',
+                           avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_guild_emojis_update(self, guild: discord.Guild, before: List[discord.Emoji],
@@ -846,25 +864,30 @@ class Moderation(commands.Cog):
     @commands.command(aliases=['nk'], description='Nukes the mentioned text channel', usage='nuke <channel>')
     @commands.has_permissions(manage_channels=True)
     async def nuke(self, ctx, channel: discord.TextChannel = None):
-        nuke_channel = None
+        sql = SQL('b0ssbot')
         if channel is None:
             await ctx.send('Please mention the text channel to be nuked')
             return
         try:
             nuke_channel = discord.utils.get(ctx.guild.channels, id=channel.id)  # Get the channel to be nuked
         except commands.errors.ChannelNotFound:
-            await ctx.send('Channel not found')
-        if nuke_channel is not None:
-            try:
-                new_channel = await nuke_channel.clone(reason="Has been Nuked!")
-                await nuke_channel.delete()
-                await send_embed(new_channel, description='This channel was nuked!', colour=discord.Colour.red())
-                await new_channel.send(
-                    'https://tenor.com/view/explosion-mushroom-cloud-atomic-bomb-bomb-boom-gif-4464831')
-                with contextlib.suppress(discord.NotFound):
-                    await ctx.reply("Nuked the Channel successfully!")
-            except discord.Forbidden:  # Permission error
-                await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='Channel not found')
+            return
+
+        try:
+            new_channel = await nuke_channel.clone(reason="Has been Nuked!")
+            await nuke_channel.delete()
+            await send_embed(new_channel, description='This channel was nuked!', colour=discord.Colour.red())
+            await new_channel.send(
+                'https://tenor.com/view/explosion-mushroom-cloud-atomic-bomb-bomb-boom-gif-4464831')
+            with contextlib.suppress(discord.NotFound):
+                await ctx.reply("Nuked the Channel successfully!")
+        except discord.Forbidden:  # Permission error
+            await send_embed(ctx, description='Permission error')
+            return
+
+        if sql.select(elements=['*'], table='modlogs', where=f"guild_id = '{ctx.guild.id}' AND channel_id = '{nuke_channel.id}'"):
+            sql.update(table='modlogs', column='channel_id', value=f"'{new_channel.id}'", where=f"guild_id = '{ctx.guild.id}' AND channel_id = '{nuke_channel.id}'")
 
     # Nuke error response
     @nuke.error

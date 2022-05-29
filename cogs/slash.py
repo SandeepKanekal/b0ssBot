@@ -74,15 +74,11 @@ class Slash(commands.Cog):
                                     default=None)):
         if member is None:
             member = ctx.author
-        # Getting the urls
-        png_url = member.avatar or member.default_avatar
-        webp_url = png_url.replace('png', 'webp')
-        jpg_url = png_url.replace('png', 'jpg')
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=str(member), icon_url=png_url)
-        embed.set_image(url=png_url)
-        embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
+        embed.set_author(name=member.name, icon_url=member.avatar or member.default_avatar)
+        embed.set_image(url=member.avatar or member.default_avatar)
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.avatar or member.default_avatar})')
         await ctx.respond(embed=embed)
 
     @avatar.error
@@ -451,7 +447,13 @@ class Slash(commands.Cog):
                                       colour=discord.Colour.green())
                 for row in elements:
                     embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
+                try:
                     await ctx.respond(embed=embed)
+                except discord.HTTPException:
+                    with open('responses.txt', 'w') as f:
+                        for row in elements:
+                            f.write(f'Message: {row[0]}\nResponse: {row[1]}\n\n')
+                    await ctx.respond(file=discord.File('responses.txt'))
 
     @message_response.error
     async def message_response_error(self, ctx, error):
@@ -595,8 +597,9 @@ class Slash(commands.Cog):
     async def code(self, ctx,
                    module: Option(str, description='The module to get the code for', required=True,
                                   choices=['events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'moderation',
-                                           'util',
-                                           'owner', 'slash', 'main', 'keep_alive', 'sql_tools', 'tools'])):
+                                           'util', 'owner', 'slash', 'main', 'keep_alive', 'sql_tools', 'tools',
+                                           'games']
+                                  )):
         try:
             await ctx.respond('https://github.com/SandeepKanekal/b0ssBot -> Source Code',
                               file=discord.File(f'{module}.py', filename=f'{module}.py'))

@@ -16,8 +16,20 @@ class Util(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         sql = SQL('b0ssbot')
-        values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
-                  f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'"]
+
+        if message.attachments:
+            attachment_str = ''.join(f"'{attachment.url}', " for attachment in message.attachments)
+            attachment_str = attachment_str[:-2]
+            values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
+                      f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'",
+                      f"ARRAY[{attachment_str}]"]
+
+        else:
+            values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
+                      f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'",
+                      "ARRAY['None']"]
+            attachment_str = "ARRAY['None']"
+
         if sql.select(elements=['*'], table='snipes',
                       where=f'guild_id = \'{message.guild.id}\' AND channel_id = \'{message.channel.id}\''):
             sql.update(table='snipes', column='message', value=f'\'{message.content}\'',
@@ -27,8 +39,15 @@ class Util(commands.Cog):
             sql.update(table='snipes', column='time',
                        value=f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'',
                        where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
+            if message.attachments:
+                sql.update(table='snipes', column='attachments', value=f"ARRAY[{attachment_str}]",
+                           where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
+            else:
+                sql.update(table='snipes', column='attachments', value="ARRAY['None']",
+                           where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
         else:
-            sql.insert(table='snipes', columns=['author_id', 'message', 'channel_id', 'time', 'guild_id'],
+            sql.insert(table='snipes',
+                       columns=['author_id', 'message', 'channel_id', 'time', 'guild_id', 'attachments'],
                        values=values)
 
     # Snipe command
@@ -37,7 +56,7 @@ class Util(commands.Cog):
     async def snipe(self, ctx):
         sql = SQL('b0ssbot')
         if message := sql.select(
-                elements=['author_id', 'message', 'channel_id', 'time'],
+                elements=['author_id', 'message', 'channel_id', 'time', 'attachments'],
                 table='snipes',
                 where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{ctx.channel.id}\''
         ):
@@ -62,6 +81,8 @@ class Util(commands.Cog):
                 text=f'Enable modlogs for more information. Type {command_prefix}help modlogs for more information')
             if ctx.guild.icon:
                 embed.set_thumbnail(url=ctx.guild.icon)
+            embed.add_field(name='Attachments', value='\n\n'.join(message[0][4]))
+
             await ctx.send(embed=embed)
         else:
             await send_error_embed(ctx, 'There are no messages to snipe')
@@ -106,7 +127,7 @@ class Util(commands.Cog):
                       description='Purges the amount of messages specified by the user\nPinned messages are not cleared',
                       usage='clear <limit>')
     @commands.has_permissions(manage_messages=True)
-    async def clear(self, ctx, limit=0):
+    async def clear(self, ctx, limit: int):
         if not limit:
             await send_error_embed(ctx, description='Provide a limit')
             return
@@ -117,7 +138,8 @@ class Util(commands.Cog):
         await ctx.channel.purge(limit=limit, check=lambda m: not m.pinned)
         msg = await ctx.send(f'Cleared {limit} messages')
         await asyncio.sleep(5)
-        await msg.delete()
+        with contextlib.suppress(discord.NotFound):
+            await msg.delete()
 
     # Permission errors in the clear command is handled here
     @clear.error
@@ -126,19 +148,18 @@ class Util(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Provide a limit\n\nProper Usage: `{self.bot.get_command("clear").usage}`')
             return
+        if isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a valid number\n\nProper Usage: `{self.bot.get_command("clear").usage}`')
+            return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Poll command
     @commands.command(name='poll', description='Make a poll!', usage='poll <question>')
-    async def poll(self, ctx, channel: discord.TextChannel = None, *, question):
-        embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.yellow())
-        embed.set_author(
-            name=ctx.author,
-            icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar)
-        )
-        embed.timestamp = datetime.datetime.now()
+    async def poll(self, ctx, *, question: str):
 
-        msg = await channel.send(embed=embed)
+        embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.random())
+        msg = await ctx.send(embed=embed)
         # Adding reactions
         await msg.add_reaction('👍')
         await msg.add_reaction('👎')
@@ -148,11 +169,6 @@ class Util(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Provide a question\n\nProper Usage: `{self.bot.get_command("poll").usage}`')
-            return
-
-        elif isinstance(error, commands.BadArgument):
-            await send_error_embed(ctx,
-                                   description=f'Provide a valid channel\n\nProper Usage: `{self.bot.get_command("poll").usage}`')
             return
 
         else:
@@ -167,7 +183,6 @@ class Util(commands.Cog):
             message_id = message_reference.split('/')[6]
 
         try:
-            message_link = f'https://discord.com/channels/{str(ctx.guild.id)}/{str(ctx.channel.id)}/{str(message_id)}'
             message = await ctx.fetch_message(message_id)
 
             if message.embeds:  # Send the embeds in the original message
@@ -179,7 +194,7 @@ class Util(commands.Cog):
                              icon_url=str(message.author.avatar) if message.author.avatar else str(
                                  message.author.default_avatar))
             embed.add_field(name=message.content or "Message does not contain content",
-                            value=f'\n[Jump to message]({message_link})')
+                            value=f'\n[Jump to message]({message.jump_url})')
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
                                  ctx.author.default_avatar))

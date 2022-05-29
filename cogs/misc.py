@@ -12,6 +12,9 @@ class Misc(commands.Cog):
     # Spam command
     @commands.command(aliases=['s'], description='Spams text or users', usage='spam <message>')
     async def spam(self, ctx, *, message):
+        if ctx.message.mentions:
+            await send_error_embed(ctx, description='You cannot mention users in spam!')
+            return
         for _ in range(5):
             await ctx.send(message)
 
@@ -28,15 +31,11 @@ class Misc(commands.Cog):
     async def avatar(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
-        # Getting the urls
-        png_url = member.avatar or member.default_avatar
-        webp_url = png_url.replace('png', 'webp')
-        jpg_url = png_url.replace('png', 'jpg')
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=str(member), icon_url=png_url)
-        embed.set_image(url=png_url)
-        embed.add_field(name='Download this image', value=f'[webp]({webp_url}) | [png]({png_url}) | [jpg]({jpg_url})')
+        embed.set_author(name=member.name, icon_url=member.avatar or member.default_avatar)
+        embed.set_image(url=member.avatar or member.default_avatar)
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.avatar or member.default_avatar})')
         await ctx.reply(embed=embed)
 
     @avatar.error
@@ -76,8 +75,8 @@ class Misc(commands.Cog):
     @commands.command(aliases=['ms'], description='Spams a message 25 times', usage='megaspam <message>')
     @commands.has_permissions(manage_messages=True)
     async def megaspam(self, ctx, *, message):
-        if message.mentions:
-            await send_error_embed(ctx, description='You cannot mention people in megaspam')
+        if ctx.message.mentions:
+            await send_error_embed(ctx, description='You cannot mention users in megaspam')
             return
 
         await ctx.message.delete()

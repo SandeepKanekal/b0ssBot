@@ -56,7 +56,7 @@ def convert_to_unix_time(date_time: str, fmt: str = 'R') -> str:
 
 
 # Gets post from the specified subreddit
-async def get_post(subreddit: str) -> List[Submission]:
+async def get_posts(subreddit: str) -> List[Submission]:
     """
     Gets the post from the specified subreddit
 

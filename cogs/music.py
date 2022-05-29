@@ -3,7 +3,6 @@
 # Windows - Add FFmpeg to PATH (https://windowsloop.com/install-ffmpeg-windows-10/)
 import contextlib
 import discord
-import youtube_dl
 import os
 import asyncio
 import datetime
@@ -88,7 +87,7 @@ class Music(commands.Cog):
         with YoutubeDL(self._ydl_options) as ydl:
             try:
                 info = ydl.extract_info(f"ytsearch:{item}", download=False)['entries'][0]  # Get the required details
-            except youtube_dl.utils.DownloadError as e:
+            except Exception as e:
                 return e
 
         return {'source': info['formats'][0]['url'], 'title': info['title'],
@@ -205,23 +204,29 @@ class Music(commands.Cog):
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
         voice_channel = ctx.author.voice.channel  # Get the voice channel
 
-        if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            # Do not let adding of new tracks if looping is enabled
-            raise LoopingEnabled('Looping is enabled')
-
         if vc is None:
             await voice_channel.connect()
         elif vc.is_connected() and vc.channel != voice_channel:
             raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
 
         if vc and vc.is_paused():
-            raise PlayerPaused('The player is paused')
+            vc.resume()
 
         msg = await ctx.send('Downloading...')
         song = self.search_yt(query)  # Get the track details
-        if isinstance(song, youtube_dl.utils.DownloadError):
-            await msg.edit(embed=discord.Embed(description=f'Error: {song}', colour=discord.Colour.red()))
+        
+        if isinstance(song, IndexError):
+            with contextlib.suppress(discord.NotFound):
+                await msg.delete()
+            await send_error_embed(ctx, description=f'No results found for {query}')
             return
+
+        if isinstance(song, Exception):
+            with contextlib.suppress(discord.NotFound):
+                await msg.delete()
+            await send_error_embed(ctx, description=f'Error: `{song}`')
+            return
+
         if ctx.guild.id not in self.volume.keys():
             self.volume[ctx.guild.id] = 100
         song["title"] = song["title"].replace("'", "''")  # Single quotes cause problems
@@ -616,7 +621,7 @@ class Music(commands.Cog):
         # Some songs' lyrics are too long to be sent, in that case, a text file is sent
         except discord.HTTPException:
             with open('lyrics.txt', 'w') as f:
-                f.write(f'Lyrics for the song {title}\n\n')
+                f.write(f'{title}\n\n')
                 f.write(lyrics)
                 f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
             await ctx.send(file=discord.File('lyrics.txt'))
@@ -628,7 +633,8 @@ class Music(commands.Cog):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Repeat/Loop command
-    @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode', usage='loop <0/1>')
+    @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode',
+                      usage='loop <0/1>')
     async def loop(self, ctx, mode: int):
         # Basic responses to false calls
         if mode not in [0, 1]:  # Checks if the mode argument is valid

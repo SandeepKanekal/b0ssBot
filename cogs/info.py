@@ -8,11 +8,11 @@ from discord.ext import commands
 class Info(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.uptime: str | None = None
-    
+        self.uptime: datetime.datetime | None = None
+
     @commands.Cog.listener()
     async def on_ready(self):
-        self.uptime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
+        self.uptime = datetime.datetime.now()
 
     # Userinfo command
     @commands.command(aliases=['whois', 'user', 'ui'],
@@ -98,7 +98,7 @@ class Info(commands.Cog):
         embed.add_field(name='Server Boosts', value=ctx.guild.premium_subscription_count)
         embed.add_field(name='Number of Bans', value=str(ban_count))
         try:
-            embed.add_field(name='Muted Users', value=len(discord.utils.get(ctx.guild.roles, name='Muted').members))
+            embed.add_field(name='Muted Users', value=str(len(discord.utils.get(ctx.guild.roles, name='Muted').members)))
         except AttributeError:
             embed.add_field(name='Muted Users', value=str(0))
         embed.set_footer(text=f'ID: {ctx.guild.id}')
@@ -123,7 +123,7 @@ class Info(commands.Cog):
         embed.add_field(name='Bot Tag', value=f'{self.bot.user.name}#{self.bot.user.discriminator}')
         embed.add_field(name='Source Code', value='[Click here](https://github.com/SandeepKanekal/b0ssBot)')
         embed.add_field(name='Invite Link',
-                        value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887&permissions=1377609837942&scope=bot%20applications.commands)')
+                        value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887&permissions=8&scope=bot%20applications.commands)')
         embed.set_footer(text=f'Requested by {ctx.author}',
                          icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
         embed.timestamp = datetime.datetime.now()
@@ -146,11 +146,14 @@ class Info(commands.Cog):
         embed.set_thumbnail(url=self.bot.user.avatar)
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
-    
+
     @commands.command(name='uptime', description='Shows the bot\'s uptime', usage='uptime')
     async def uptime(self, ctx):
         await ctx.send(
-            embed=discord.Embed(description=f'The bot was started {convert_to_unix_time(self.uptime)}', colour=self.bot.user.colour)
+            embed=discord.Embed(
+                description=f'The bot was started {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}',
+                colour=self.bot.user.colour
+            )
         )
 
 

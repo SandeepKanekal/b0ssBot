@@ -86,6 +86,17 @@ class Owner(commands.Cog):
     async def guildlist_error(self, ctx, e):
         await ctx.send(embed=discord.Embed(description=str(e)))
 
+    @commands.command(name='hunters', hidden=True)
+    @commands.is_owner()
+    async def eval_(self, ctx):
+        sql = SQL('b0ssbot')
+        hunters = sql.select(['user_id'], 'hunters')
+        await ctx.send(
+            embed=discord.Embed(
+                description='\n'.join([f'{self.bot.get_user(int(hunter[0])).name}#{self.bot.get_user(int(hunter[0])).discriminator}' for hunter in hunters])
+            )
+        )
+
 
 def setup(bot):
     bot.add_cog(Owner(bot))

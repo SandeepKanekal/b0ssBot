@@ -8,7 +8,7 @@ import asyncprawcore
 from googleapiclient.discovery import build
 from discord.ui import Button, View
 from discord.ext import commands
-from tools import send_error_embed, get_post, get_quote
+from tools import send_error_embed, get_posts, get_quote
 
 
 class Internet(commands.Cog):
@@ -17,7 +17,8 @@ class Internet(commands.Cog):
 
     # YouTubeSearch command
     @commands.command(aliases=['yt', 'youtube', 'ytsearch'],
-                      description='Searches YouTube and responds with the top 50 results', usage='youtubesearch <query>')
+                      description='Searches YouTube and responds with the top 50 results',
+                      usage='youtubesearch <query>')
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.guild_only()
     async def youtubesearch(self, ctx, *, query):
@@ -211,10 +212,11 @@ class Internet(commands.Cog):
             return
 
         embed = discord.Embed(
-            title=f'Weather for {weather_data["name"]}, {weather_data["sys"]["country"]}',
+            title=f'Weather for {weather_data["name"]}',
             description=f'{weather_data["weather"][0]["description"].capitalize()}',
             colour=discord.Colour.blue()
         )
+        embed.title += f', {weather_data["sys"]["country"]}' if "country" in weather_data["sys"].keys() else ''
         embed.set_thumbnail(url=f'https://openweathermap.org/img/wn/{weather_data["weather"][0]["icon"]}@2x.png')
         embed.add_field(name='Max. Temperature', value=f'{weather_data["main"]["temp_max"]}°C')
         embed.add_field(name='Min. Temperature', value=f'{weather_data["main"]["temp_min"]}°C')
@@ -268,6 +270,7 @@ class Internet(commands.Cog):
                     embed.set_image(url=submissions[index].thumbnail)
                 else:
                     embed.set_image(url=submissions[index].url)
+                    embed.description = ''
 
             try:
                 await interaction.response.edit_message(embed=embed)
@@ -290,19 +293,17 @@ class Internet(commands.Cog):
             index -= 1  # Decrement index
 
             embed.title = submissions[index].title
-            embed.description = submissions[index].selftext
+            embed.description = submissions[index].selftext if submissions[index].is_self else ''
             embed.url = f'https://reddit.com{submissions[index].permalink}'
             embed.set_footer(
                 text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
             embed.timestamp = datetime.datetime.now()
 
-            # Checking if the submission is text-only
-            if not submissions[index].is_self:
-                if submissions[index].is_video:
-                    embed.description += f'\n[Video Link]({submissions[index].url})'
-                    embed.set_image(url=submissions[index].thumbnail)
-                else:
-                    embed.set_image(url=submissions[index].url)
+            if submissions[index].is_video:
+                embed.description += f'\n[Video Link]({submissions[index].url})'
+                embed.set_image(url=submissions[index].thumbnail)
+            else:
+                embed.set_image(url=submissions[index].url)
 
             try:
                 await interaction.response.edit_message(embed=embed)
@@ -323,7 +324,7 @@ class Internet(commands.Cog):
             await interaction.response.edit_message(view=view)
 
         try:
-            submissions = await get_post(subreddit)
+            submissions = await get_posts(subreddit)
             if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
                 submissions = list(filter(lambda s: not s.over_18, submissions))
             if not len(submissions):
@@ -511,6 +512,90 @@ class Internet(commands.Cog):
 
     @quote.error
     async def quote_error(self, ctx, error):
+        await send_error_embed(ctx, description=f'Error: `{error}`')
+
+    # Joke command
+    @commands.command(name='joke', description='Get jokes from r/Jokes', usage='joke')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.guild_only()
+    async def joke(self, ctx):
+        submissions = list(filter(lambda s: not s.over_18, await get_posts('jokes')))  # Get and filter out NSFW posts
+        index = 0
+
+        # Remove pinned posts
+        submissions.pop(0)
+        submissions.pop(1)
+
+        # Make embed
+        embed = discord.Embed(
+            title=submissions[index].title,
+            colour=discord.Colour.orange(),
+            url=f'https://reddit.com{submissions[index].permalink}',
+            description=submissions[index].selftext
+        )
+
+        # Make buttons
+        next_joke = Button(emoji='⏭️', style=discord.ButtonStyle.green)
+        previous_joke = Button(emoji='⏮️', style=discord.ButtonStyle.green)
+        end_interaction = Button(label='End interaction', style=discord.ButtonStyle.red)
+
+        # Add buttons
+        view = View()
+        view.add_item(previous_joke)
+        view.add_item(next_joke)
+        view.add_item(end_interaction)
+
+        await ctx.send(embed=embed, view=view)
+
+        async def next_joke_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            nonlocal index
+            index += 1
+            if index >= len(submissions):
+                index = 0
+
+            # Edit embed
+            embed.title = submissions[index].title
+            embed.url = f'https://reddit.com{submissions[index].permalink}'
+            embed.description = submissions[index].selftext
+            await interaction.response.edit_message(embed=embed)
+
+        async def previous_joke_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            nonlocal index
+            index -= 1
+            if index < 0:
+                index = len(submissions) - 1
+
+            # Edit embed
+            embed.title = submissions[index].title
+            embed.url = f'https://reddit.com{submissions[index].permalink}'
+            embed.description = submissions[index].selftext
+            await interaction.response.edit_message(embed=embed)
+
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
+                return
+
+            # Disable buttons
+            next_joke.disabled = True
+            previous_joke.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
+
+        next_joke.callback = next_joke_trigger
+        previous_joke.callback = previous_joke_trigger
+        end_interaction.callback = end_interaction_trigger
+
+    @joke.error
+    async def joke_error(self, ctx, error):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
 

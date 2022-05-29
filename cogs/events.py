@@ -2,6 +2,7 @@
 import contextlib
 import os
 import discord
+import random
 import requests
 import datetime
 from sql_tools import SQL
@@ -88,16 +89,29 @@ class Events(commands.Cog):
                 await message.reply(response)
 
         with contextlib.suppress(discord.HTTPException):
-            if '[' in message.content and ']' in message.content and '(' in message.content and ')' in message.content and (
-                    message.content.split('(')[1].startswith('https://') or message.content.split('(')[1].startswith(
-                    'http://')) and '.' in message.content and (
-                    message.content.split('https://')[1] or message.content.split('http://')[1]):
+            if '[' in message.content and \
+                    ']' in message.content \
+                    and '(' in message.content \
+                    and ')' in message.content \
+                    and (message.content.split('(')[1].startswith('https://')
+                         or message.content.split('(')[1].startswith('http://')) \
+                    and '.' in message.content \
+                    and (message.content.split('https://')[1] or message.content.split('http://')[1]):
                 webhooks = await message.channel.webhooks()
                 webhook = discord.utils.get(webhooks, name='Markdown webhook')
                 if webhook is None:
                     webhook = await message.channel.create_webhook(name='Markdown webhook')
-                await webhook.send(message.content.replace("''", "'"), username=message.author.display_name, avatar_url=message.author.avatar)
+                await webhook.send(message.content.replace("''", "'"), username=message.author.display_name,
+                                   avatar_url=message.author.avatar)
                 await message.delete()
+
+    @commands.Cog.listener()
+    async def on_command(self, ctx):
+        if random.choice([True, False, False, False, False, False, False, False, False, False]):
+            sql = SQL('b0ssbot')
+            prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
+            await ctx.send(
+                f'Hey there {ctx.author.mention}! Check out the hidden easter egg in the bot! Type `{prefix}egg` to check it out!')
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -118,6 +132,14 @@ class Events(commands.Cog):
         sql = SQL('b0ssbot')
         sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='modlogs', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='afks', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='message_responses', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='youtube', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='hourlyweather', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='snipes', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='warns', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='queue', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='loop', where=f'guild_id = \'{guild.id}\'')
 
     @tasks.loop(minutes=60)
     async def check_for_videos(self):
