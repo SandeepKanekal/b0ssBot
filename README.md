@@ -11,6 +11,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [wikipedia](https://pypi.org/project/wikipedia/)
 + [google-api-python-client](https://pypi.org/project/google-api-python-client/)
 + [psycopg2](https://pypi.org/project/psycopg2/)
++ [pillow](https://pypi.org/project/Pillow/)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics
@@ -39,4 +40,4 @@ Currently, there are 10 tables:
 More details in [DATABASE.md](https://github.com/SandeepKanekal/b0ssBot/blob/main/DATABASE.md)
 
 # Invite
-Please contact Dose#7204 through discord for the invite link.
+[Click Here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887&permissions=8&scope=bot%20applications.commands) to invite b0ssBot to your server.

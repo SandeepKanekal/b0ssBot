@@ -13,7 +13,16 @@ from tools import send_error_embed, get_posts, get_quote
 
 class Internet(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        """
+        Initialize the cog
+
+        :param bot: The bot
+        :type bot: commands.Bot
+
+        :return: None
+        :rtype: None
+        """
+        self.bot = bot  # type: commands.Bot
 
     # YouTubeSearch command
     @commands.command(aliases=['yt', 'youtube', 'ytsearch'],
@@ -22,21 +31,32 @@ class Internet(commands.Cog):
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.guild_only()
     async def youtubesearch(self, ctx, *, query):
-        # sourcery no-metrics
+        """
+        Searches YouTube and responds with the top 50 results
+        
+        :param ctx: The context of where the message was sent
+        :param query: The query to search YouTube for
+        
+        :type ctx: commands.Context
+        :type query: str
+        
+        :return: None
+        :rtype: None
+        """
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        res = youtube.search().list(q=query, part='snippet', type='video', maxResults=50).execute()
+        res = youtube.search().list(q=query, part='snippet', type='video', maxResults=50).execute()  # type: dict
 
         if not res['items']:
             await send_error_embed(ctx, description='No results found')
             return
 
-        index = 0
-        video_ids = []
-        thumbnails = []
-        titles = []
-        publish_dates = []
-        channel_ids = []
-        authors = []
+        index = 0  # type: int
+        video_ids = []  # type: list[str]
+        thumbnails = []  # type: list[str]
+        titles = []  # type: list[str]
+        publish_dates = []  # type: list[str]
+        channel_ids = []  # type: list[str]
+        authors = []  # type: list[str]
 
         for item in res['items']:
             # Getting the video details
@@ -159,7 +179,22 @@ class Internet(commands.Cog):
         watch_video.callback = watch_video_trigger
 
     @youtubesearch.error
-    async def search_error(self, ctx, error):
+    async def youtubesearch_error(self, ctx, error):
+        """
+        Handles errors in the youtubesearch command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that was raised
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'You are on cooldown! Try again in {error.retry_after:.2f} seconds.')
+            return
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("youtubesearch").usage}`')
@@ -169,13 +204,24 @@ class Internet(commands.Cog):
     # Wikipedia command
     @commands.command(aliases=['wiki', 'wikisearch'], description='Gets a summary of the query from wikipedia',
                       usage='wikipedia <query>')
-    @commands.cooldown(1, 2, commands.BucketType.user)
-    async def wikipedia(self, ctx, *, query):
-        # Gets the data from wikipedia
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def wikipedia(self, ctx, *, query: str):
+        """
+        Gets a summary of the query from wikipedia
+        
+        :param ctx: The context of where the command was used
+        :param query: The query to search for
+
+        :type ctx: commands.Context
+        :type query: str
+
+        :return: None
+        :rtype: None
+        """
         try:
-            summary = wikipedia.summary(query, sentences=5)
-            thumbnail = wikipedia.page(query).images[0]
-            url = wikipedia.page(query).url
+            summary = wikipedia.summary(query, sentences=5)  # type: str
+            thumbnail = wikipedia.page(query).images[0]  # type: str
+            url = wikipedia.page(query).url  # type: str
             # Response embed
             summary += f'[ Read More...]({url})'
             embed = discord.Embed(title=wikipedia.page(query).title, url=url, description=summary,
@@ -188,6 +234,21 @@ class Internet(commands.Cog):
 
     @wikipedia.error
     async def wikipedia_error(self, ctx, error):
+        """
+        Handles errors in the wikipedia command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that was raised
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'You are on cooldown! Try again in {error.retry_after:.2f} seconds.')
+            return
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("wikipedia").usage}`')
@@ -196,13 +257,22 @@ class Internet(commands.Cog):
 
     # Weather command
     @commands.command(name='weather', description='Get the weather for a location', usage='weather <location>')
-    async def weather(self, ctx, *, location: str = None):
-        if not location:
-            await send_error_embed(ctx, description='Please enter a location')
-            return
-
+    @commands.cooldown(1, 2, commands.BucketType.user)
+    async def weather(self, ctx, *, location: str):
+        """
+        Gets the weather for a location
+        
+        :param ctx: The context of where the command was used
+        :param location: The location to get the weather for
+        
+        :type ctx: commands.Context
+        :type location: str
+        
+        :return: None
+        :rtype: None
+        """
         weather_data = requests.get(
-            f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={os.getenv("weather_api_key")}&units=metric').json()
+            f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={os.getenv("weather_api_key")}&units=metric').json()  # type: dict
         if weather_data['cod'] == '404':
             await send_error_embed(ctx, description='Location not found')
             return
@@ -233,6 +303,25 @@ class Internet(commands.Cog):
 
     @weather.error
     async def weather_error(self, ctx, error):
+        """
+        Handles errors in the weather command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that was raised
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'You are on cooldown! Try again in {error.retry_after:.2f} seconds.')
+            return
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please enter a location!\n\nProper Usage: `{self.bot.get_command("weather").usage}`')
+            return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Post command
@@ -240,8 +329,20 @@ class Internet(commands.Cog):
                       usage='redditpost <subreddit>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def redditpost(self, ctx, subreddit):  # sourcery no-metrics
-        index = 0
+    async def redditpost(self, ctx, subreddit):
+        """
+        Gets a post from the specified subreddit
+        
+        :param ctx: The context of where the command was used
+        :param subreddit: The subreddit to get a post from
+        
+        :type ctx: commands.Context
+        :type subreddit: str
+        
+        :return: None
+        :rtype: None
+        """
+        index = 0  # type: int
 
         async def next_post_trigger(interaction):
             nonlocal index
@@ -330,15 +431,19 @@ class Internet(commands.Cog):
             if not len(submissions):
                 await send_error_embed(ctx,
                                        description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
+
             embed = discord.Embed(colour=discord.Colour.orange())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+
             next_post = Button(emoji='⏭️', style=discord.ButtonStyle.green)
             previous_post = Button(emoji='⏮️', style=discord.ButtonStyle.green)
             end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
+
             view = View()
             view.add_item(previous_post)
             view.add_item(next_post)
             view.add_item(end_interaction)
+
             next_post.callback = next_post_trigger
             end_interaction.callback = end_interaction_trigger
             previous_post.callback = previous_post_trigger
@@ -373,6 +478,21 @@ class Internet(commands.Cog):
 
     @redditpost.error
     async def post_error(self, ctx, error):
+        """
+        Error handler for the redditpost command
+        
+        :param ctx: The context of the command
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
+            return
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a subreddit\n\nProper Usage: `{self.bot.get_command("redditpost").usage}`')
@@ -383,7 +503,16 @@ class Internet(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
     async def trivia(self, ctx):
-
+        """
+        Gets a random trivia fact from the Trivia API
+        
+        :param ctx: The context of the command
+        
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """
         async def next_trivia_trigger(interaction):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
@@ -423,7 +552,7 @@ class Internet(commands.Cog):
 
             await interaction.response.edit_message(view=view)
 
-        trivia = requests.get('https://opentdb.com/api.php?amount=100').json()
+        trivia = requests.get('https://opentdb.com/api.php?amount=100').json()  # type: dict
         if not trivia['results']:
             await send_error_embed(ctx, description='Could not retrieve a trivia question')
             return
@@ -432,7 +561,7 @@ class Internet(commands.Cog):
             item['question'] = item['question'].replace('&quot;', '"').replace('&#039;', "'")
             item['correct_answer'] = item['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
 
-        index = 0
+        index = 0  # type: int
 
         next_trivia = Button(emoji='⏭️', style=discord.ButtonStyle.green)
         previous_trivia = Button(emoji='⏮️', style=discord.ButtonStyle.green)
@@ -456,6 +585,21 @@ class Internet(commands.Cog):
 
     @trivia.error
     async def trivia_error(self, ctx, error):
+        """
+        Error handler for the trivia command
+        
+        :param ctx: The context of the command
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
+            return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Quote command
@@ -463,7 +607,16 @@ class Internet(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
     async def quote(self, ctx):
+        """
+        Gets a random quote from zenquotes.io API
 
+        :param ctx: The context of the command
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
         async def next_quote_trigger(interaction):
             if interaction.user != ctx.author:
                 await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
@@ -487,7 +640,7 @@ class Internet(commands.Cog):
             end_interaction.disabled = True
             await interaction.response.edit_message(view=view)
 
-        quote = get_quote()
+        quote = get_quote()  # type: list[dict[str, str]]
 
         if quote[0]['a'] == 'zenquotes.io':
             await send_error_embed(ctx, description='Please wait for a few seconds before using this command again')
@@ -501,6 +654,7 @@ class Internet(commands.Cog):
 
         next_quote = Button(emoji='⏭️', style=discord.ButtonStyle.green)
         end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
+
         view = View()
         view.add_item(next_quote)
         view.add_item(end_interaction)
@@ -512,6 +666,21 @@ class Internet(commands.Cog):
 
     @quote.error
     async def quote_error(self, ctx, error):
+        """
+        Error handler for the quote command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
+            return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Joke command
@@ -519,8 +688,18 @@ class Internet(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
     async def joke(self, ctx):
-        submissions = list(filter(lambda s: not s.over_18, await get_posts('jokes')))  # Get and filter out NSFW posts
-        index = 0
+        """
+        Get a random joke from r/Jokes
+        
+        :param ctx: The context of the command
+        
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """
+        submissions = list(filter(lambda s: not s.over_18, await get_posts('jokes')))
+        index = 0  # type: int
 
         # Remove pinned posts
         submissions.pop(0)
@@ -596,8 +775,33 @@ class Internet(commands.Cog):
 
     @joke.error
     async def joke_error(self, ctx, error):
+        """
+        Error handler for the joke command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
+            return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 def setup(bot):
+    """
+    Loads the cog
+    
+    :param bot: The bot to load the cog into
+    
+    :type bot: commands.Bot
+    
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Internet(bot))

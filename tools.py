@@ -16,7 +16,7 @@ async def send_error_embed(ctx, description: str) -> None:
 
     Parameters
     ----------
-    ctx : discord.ext.commands.Context
+    ctx : commands.Context
         The context of the command
     description : str
         The description of the error

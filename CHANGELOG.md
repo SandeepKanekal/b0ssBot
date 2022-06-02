@@ -8,6 +8,7 @@
 
 # Fun #
 + The messageresponse command has been transferred to slash commands since it is easier with slash commands.
++ Addition of an invert command.
 
 # Help #
 + The command usage field now calls the `command.usage` for its value.
@@ -26,6 +27,7 @@
 # Info #
 + Since a member can be of multiple strings, the `member` argument in the userinfo command now is a multiline string.
 + The changelog command will not copy everything from this file.
++ Addition of a roleinfo command.
 
 # Internet #
 + The youtubenotification, hourlyweather commands have been transferred to slash commands since it is easier with slash commands.
@@ -44,6 +46,8 @@
 + Addition the code command.
 + The code command now sends `.py` files instead of `.txt` files.
 + More modules can now be viewed using the code command.
++ Addition for a roleinfo command.
++ Addition of an invert command.
 
 # Games #
 + Addition of truth or dare commands.

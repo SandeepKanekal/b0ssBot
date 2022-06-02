@@ -13,7 +13,19 @@ class Help(commands.Cog):
                       description='Shows the list of all commands or the information about one command if specified',
                       usage='help <command>',
                       hidden=True)
-    async def help(self, ctx, command: str = None):  # sourcery no-metrics
+    async def help(self, ctx, command: str = None):  # sourcery skip: low-code-quality
+        """
+        Shows the list of all commands or the information about one command if specified
+        
+        :param ctx: The context of the command
+        :param command: The command to get the information about
+        
+        :type ctx: commands.Context
+        :type command: str
+        
+        :return: None
+        :rtype: None
+        """
         sql = SQL('b0ssbot')
         command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
         if command is not None:
@@ -54,7 +66,7 @@ class Help(commands.Cog):
                 embed.add_field(name=cog.upper(), value=cmds, inline=False)
                 cmds = ''
             embed.add_field(name='Slash Commands',
-                            value='`avatar` `userinfo` `youtubenotification` `hourlyweather` `prefix` `warn` `mute` `unmute` `timeout` `code`',
+                            value='`avatar` `userinfo` `youtubenotification` `hourlyweather` `prefix` `warn` `mute` `unmute` `timeout` `code` `roleinfo` `invert`',
                             inline=False)
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))

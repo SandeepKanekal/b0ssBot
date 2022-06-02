@@ -1,13 +1,25 @@
 import random
 import discord
 import datetime
+import requests
+import os
 from discord.ext import commands
 from tools import send_error_embed, get_posts, get_random_post
 from discord.ui import Button, View
+from PIL import Image, ImageChops
 
 
 class Fun(commands.Cog):
     def __init__(self, bot):
+        """
+        Initialize the cog
+
+        :param bot: The bot
+        :type bot: commands.Bot
+
+        :return: None
+        :rtype: None
+        """
         self.bot = bot
 
     # Meme command
@@ -17,7 +29,21 @@ class Fun(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
     async def meme(self, ctx, subreddit: str = None):  # sourcery no-metrics
-        index = 0
+        """
+        Posts memes from the most famous meme subreddits
+        Subreddit can be mentioned
+        Valid subreddits include: `dankmemes` `memes` `meme` `me_irl` `wholesomememes`
+
+        :param ctx: The context of where the message was sent
+        :param subreddit: The subreddit to get a meme from (defaults to a random choice among ['dankmemes', 'memes', 'meme'])
+
+        :type ctx: commands.Context
+        :type subreddit: str
+
+        :return: None
+        :rtype: None
+        """
+        index = 0  # type: int
 
         if subreddit is None:
             subreddit = random.choice(['memes', 'dankmemes', 'meme'])
@@ -68,6 +94,7 @@ class Fun(commands.Cog):
             else:
                 index += 1  # Otherwise, go to the next meme
 
+            # Edit the embed
             embed.title = submissions[index].title
             embed.url = f'https://reddit.com{submissions[index].permalink}'
 
@@ -96,6 +123,7 @@ class Fun(commands.Cog):
                 index += 1
                 return
 
+            # Edit the embed
             index -= 1
             embed.title = submissions[index].title
             embed.url = f'https://reddit.com{submissions[index].permalink}'
@@ -131,23 +159,113 @@ class Fun(commands.Cog):
 
     @meme.error
     async def meme_error(self, ctx, error):
+        """
+        Error handler for the meme command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Dankvideo command
-    @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from r/dankvideos', usage='dankvideo')
+    @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from the dankest subreddits', usage='dankvideo')
     async def dankvideo(self, ctx):
-        submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes', 'MemeVideos']))
+        """
+        Posts a random dank video from the dankest subreddits
+        
+        :param ctx: command context
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes', 'MemeVideos']))  # Gets a random post from the dankest subreddits
 
         if submission.over_18 and not ctx.channel.is_nsfw():
-            await send_error_embed(ctx, description='This post is NSFW. Please use this command in an NSFW channel.')
+            await self.dankvideo.reinvoke(ctx)
             return
 
         await ctx.send(f'https://reddit.com{submission.permalink}')
 
     @dankvideo.error
     async def dankvideo_error(self, ctx, error):
+        """
+        Error handler for the dankvideo command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await send_error_embed(ctx, description=f'Error: `{error}`')
+    
+    @commands.command(name='invert', description='Invert your or another user\'s avatar', usage='invert <member>')
+    async def invert(self, ctx, member: discord.Member = None):
+        """
+        Inverts the avatar of the user or another user
+        
+        :param ctx: command context
+        :param member: the member to invert the avatar of
+        :type ctx: commands.Context
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
+        member = member or ctx.author
+
+        response = requests.get(str(member.display_avatar))
+
+        with open(f'avatar_{member.id}.png', 'wb') as f:
+            f.write(response.content)
+
+        image = Image.open(f'avatar_{member.id}.png')
+        invert = ImageChops.invert(image.convert('RGB'))
+        invert.save(f'{member.id}_inverted.png')
+        
+        await ctx.send(file=discord.File(f'{member.id}_inverted.png', 'invert.png'))
+
+        os.remove(f'avatar_{member.id}.png')
+        os.remove(f'{member.id}_inverted.png')
+
+    @invert.error
+    async def invert_error(self, ctx, error):
+        """
+        Error handler for the invert command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx, description='Please provide a valid member.')
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 def setup(bot):
+    """
+    Function to load cog
+
+    :param bot: The bot object
+    :type bot: discord.ext.commands.Bot
+    
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Fun(bot))

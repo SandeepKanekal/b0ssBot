@@ -9,25 +9,57 @@ from discord.commands import Option
 from tools import convert_to_unix_time
 from sql_tools import SQL
 from googleapiclient.discovery import build
+from PIL import Image, ImageChops
 
 
 class Slash(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        """
+        Initialize the cog
+        
+        :param bot: The bot object
+        :type bot: commands.Bot
+        
+        :return: None
+        :rtype: None
+        """
+        self.bot = bot  # type: commands.Bot
 
-    @commands.slash_command(name='prefix', description='Change the prefix of the bot', usage='prefix <new_prefix>')
+    @commands.slash_command(name='prefix', description='Change the prefix of the bot for the server',
+                            usage='prefix <new_prefix>')
     @commands.has_permissions(administrator=True)
     async def prefix(self, ctx, new_prefix: Option(str, descrciption='The new prefix', required=True)):
+        """
+        Change the prefix of the bot for the server.
+        
+        :param ctx: The context of the message
+        :param new_prefix: The new prefix
+
+        type ctx: discord.ApplicationContext
+        :type new_prefix: str
+
+        :return: None
+        :rtype: None
+        """
         if len(new_prefix) > 2:
             await ctx.respond('Prefix must be 2 characters or less')
             return
 
-        sql = SQL('b0ssbot')
+        sql = SQL('b0ssbot')  # type: SQL
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
         await ctx.respond(f'Prefix changed to **{new_prefix}**')
 
     @prefix.error
     async def prefix_error(self, ctx, error):
+        """
+        Error handler for the prefix command
+        
+        :param ctx: The context of the message
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='userinfo',
@@ -36,15 +68,26 @@ class Slash(commands.Cog):
     async def userinfo(self, ctx,
                        member: Option(discord.Member, description='The user to get info on', required=False,
                                       default=None)):
-        if member is None:
-            member = ctx.author
+        """
+        Shows the mentioned user's information. Leave it blank to get your information.
+        
+        :param ctx: The context of the message
+        :param member: The user to get info on
+        
+        type ctx: discord.ApplicationContext
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
+        member = member or ctx.author  # type: discord.Member
 
         # Getting the dates
-        joined_at = member.joined_at.strftime('%Y-%m-%d %H:%M:%S:%f')
-        registered_at = member.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')
+        joined_at = member.joined_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
+        registered_at = member.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
 
-        joined_at = convert_to_unix_time(joined_at)
-        registered_at = convert_to_unix_time(registered_at)
+        joined_at = convert_to_unix_time(joined_at)  # type: str
+        registered_at = convert_to_unix_time(registered_at)  # type: str
 
         embed = discord.Embed(colour=member.colour)
         embed.set_author(name=str(member), icon_url=str(member.avatar)) if member.avatar else embed.set_author(
@@ -66,14 +109,37 @@ class Slash(commands.Cog):
 
     @userinfo.error
     async def userinfo_error(self, ctx, error):
+        """
+        Error handler for the userinfo command
+        
+        :param ctx: The context of the message
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='avatar', description='Shows the specified user\'s avatar', usage='avatar <user>')
     async def avatar(self, ctx,
                      member: Option(discord.Member, description='User to get the avatar of', required=False,
                                     default=None)):
-        if member is None:
-            member = ctx.author
+        """
+        Shows the specified user's avatar.
+        
+        :param ctx: The context of the message
+        :param member: The user to get the avatar of
+        
+        type ctx: discord.ApplicationContext
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
+        member = member or ctx.author  # type: discord.Member
         # Response embed
         embed = discord.Embed(colour=member.colour)
         embed.set_author(name=member.name, icon_url=member.avatar or member.default_avatar)
@@ -83,23 +149,53 @@ class Slash(commands.Cog):
 
     @avatar.error
     async def avatar_error(self, ctx, error):
+        """
+        Error handler for the avatar command
+        
+        :param ctx: The context of the message
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='youtubenotification', description='Configure youtube notifications for the server',
-                            usage='youtubenotification <mode> <text_channel_id> <youtube_channel_id>')
+                            usage='youtubenotification <mode> <text_channel> <youtube_channel_id>')
     @commands.has_permissions(manage_guild=True)
     async def youtubenotification(self, ctx,
                                   mode: Option(str, description='Mode for configuration',
                                                choices=['add', 'remove', 'view'], required=True),
-                                  text_channel_id: Option(str, description='Text channel ID',
-                                                          required=False, default=None),
-                                  youtube_channel: Option(str, description='Youtube channel', required=False,
+                                  text_channel: Option(discord.TextChannel,
+                                                       description='The text channel to send notifications to',
+                                                       required=False, default=None),
+                                  youtube_channel: Option(str, description='The URL of the YouTube channel',
+                                                          required=False,
                                                           default=None)):
-        # sourcery no-metrics
+        """
+        Configure youtube notifications for the server
+        
+        :param ctx: The context of the message
+        :param mode: The mode for configuration
+        :param text_channel: The text channel to send notifications to
+        :param youtube_channel: The URL of the YouTube channel
+        
+        type ctx: discord.ApplicationContext
+        :type mode: str
+        :type text_channel: discord.TextChannel
+        :type youtube_channel: str
+        
+        :return: None
+        :rtype: None
+        """
+        # sourcery skip: low-code-quality
 
         sql = SQL('b0ssbot')
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
-        text_channel = discord.utils.get(ctx.guild.text_channels, id=int(text_channel_id)) if text_channel_id else None
+        text_channel = discord.utils.get(ctx.guild.text_channels, id=text_channel.id) if text_channel else None
 
         if mode == 'add':
 
@@ -188,6 +284,18 @@ class Slash(commands.Cog):
 
     @youtubenotification.error
     async def youtubenotification_error(self, ctx, error):
+        """
+        Error handler for the youtubenotification command
+
+        :param ctx: The context of where the command was used
+        :param error: The error that was raised
+
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     # Hourlyweather command
@@ -198,18 +306,35 @@ class Slash(commands.Cog):
     async def hourlyweather(self, ctx,
                             mode: Option(str, description='The mode to use', choices=['add', 'remove', 'view'],
                                          required=True),
-                            channel_id: Option(str, description='The text channel to configure',
-                                               required=False, default=None),
+                            channel: Option(discord.TextChannel,
+                                            description='The text channel to send notifications to',
+                                            required=False, default=None),
                             location: Option(str, description='The location to be monitored', required=False,
                                              default=None)):
-        # sourcery no-metrics
+        """
+        Configure monitored weather locations for the server
+        
+        :param ctx: The context of where the command was used
+        :param mode: The mode to use
+        :param channel: The text channel to send notifications to
+        :param location: The location to be monitored
+        
+        type ctx: discord.ApplicationContext
+        :type mode: str
+        :type channel: discord.TextChannel
+        :type location: str
+
+        :return: None
+        :rtype: None
+        """
+        # sourcery skip: low-code-quality
         sql = SQL('b0ssbot')
-        channel = discord.utils.get(ctx.guild.text_channels, id=int(channel_id)) if channel_id else None
+        channel = discord.utils.get(ctx.guild.text_channels, id=channel.id) if channel else None
 
         if mode == 'add':
 
             if channel is None:
-                await ctx.respond('The channel ID is invalid', ephemeral=True)
+                await ctx.respond('The channel provided is invalid', ephemeral=True)
                 return
 
             if not location:
@@ -273,6 +398,18 @@ class Slash(commands.Cog):
 
     @hourlyweather.error
     async def hourlyweather_error(self, ctx, error):
+        """
+        Error handler for the hourlyweather command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     # Warn command
@@ -286,7 +423,23 @@ class Slash(commands.Cog):
                    member: Option(discord.Member, description='The member to warn', required=True),
                    reason: Option(str, description='The reason for the warning', required=False,
                                   default='No reason provided')):
-        # sourcery no-metrics
+        """
+        Configure warns for the user
+        
+        :param ctx: The context of where the command was used
+        :param subcommand: The subcommand to use
+        :param member: The member to warn
+        :param reason: The reason for the warning
+        
+        type ctx: discord.ApplicationContext
+        :type subcommand: str
+        :type member: discord.Member
+        :type reason: str
+        
+        :return: None
+        :rtype: None
+        """
+        # sourcery skip: low-code-quality
         sql = SQL('b0ssbot')
 
         if subcommand == 'add':
@@ -354,6 +507,22 @@ class Slash(commands.Cog):
             await ctx.respond(f'{member.mention}\'s oldest warn has been removed',
                               colour=discord.Colour.green())
 
+    @warn.error
+    async def warn_error(self, ctx, error):
+        """
+        Error handler for the warn command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
     @commands.slash_command(name='messageresponse', description='Configure chat triggers for the server',
                             usage='messageresponse <mode> <message> <response>')
     @commands.has_permissions(manage_guild=True)
@@ -364,7 +533,23 @@ class Slash(commands.Cog):
                                                default=None),
                                response: Option(str, description='The response to be sent', required=False,
                                                 default=None)):
-        # sourcery no-metrics
+        """
+        Configure chat triggers for the server
+        
+        :param ctx: The context of where the command was used
+        :param mode: The mode to use
+        :param message: The message to trigger on
+        :param response: The response to be sent
+        
+        type ctx: discord.ApplicationContext
+        :type mode: str
+        :type message: str
+        :type response: str
+        
+        :return: None
+        :rtype: None
+        """
+        # sourcery skip: low-code-quality
         sql = SQL('b0ssbot')
         original_message = message
         if mode == 'remove':
@@ -457,6 +642,18 @@ class Slash(commands.Cog):
 
     @message_response.error
     async def message_response_error(self, ctx, error):
+        """
+        Error handler for the messageresponse command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='mute', description='Mutes the user specified', usage='mute <user> <duration>')
@@ -468,6 +665,22 @@ class Slash(commands.Cog):
                                     default=None),
                    reason: Option(str, description='The reason for the mute', required=False,
                                   default='No reason provided')):
+        """
+        Mutes the user specified
+        
+        :param ctx: The context of where the command was used
+        :param member: The member to be muted
+        :param duration: The duration of the mute in minutes. Leave blank for permanent mute
+        :param reason: The reason for the mute
+        
+        type ctx: discord.ApplicationContext
+        :type member: discord.Member
+        :type duration: int
+        :type reason: str
+        
+        :return: None
+        :rtype: None
+        """
 
         if member == ctx.author:
             await ctx.respond('You cannot mute yourself', ephemeral=True)
@@ -506,11 +719,35 @@ class Slash(commands.Cog):
 
     @mute.error
     async def mute_error(self, ctx, error):
+        """
+        Error handler for the mute command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='unmute', description='Unmutes the user specified', usage='unmute <user>')
     @commands.has_permissions(manage_messages=True)
     async def unmute(self, ctx, member: Option(discord.Member, description='The member to be unmuted', required=True)):
+        """
+        Unmutes the user specified
+        
+        :param ctx: The context of where the command was used
+        :param member: The member to be unmuted
+        
+        type ctx: discord.ApplicationContext
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get the muted role
         if not muted_role:
             await ctx.respond('There is no muted role', ephemeral=True)
@@ -525,6 +762,18 @@ class Slash(commands.Cog):
 
     @unmute.error
     async def unmute_error(self, ctx, error):
+        """
+        Error handler for the unmute command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='timeout', description='Manage timeouts for the user',
@@ -538,6 +787,24 @@ class Slash(commands.Cog):
                                       default=0),
                       reason: Option(str, description='The reason for the timeout', required=False,
                                      default='No reason')):
+        """
+        Manages timeouts for the user specified
+        
+        :param ctx: The context of where the command was used
+        :param member: The member to be timed out
+        :param mode: The mode of the command
+        :param minutes: The duration of the timeout in seconds
+        :param reason: The reason for the timeout
+        
+        type ctx: discord.ApplicationContext
+        :type member: discord.Member
+        :type mode: str
+        :type minutes: int
+        :type reason: str
+        
+        :return: None
+        :rtype: None
+        """
 
         if mode == 'add':
             if member.timed_out:
@@ -589,6 +856,18 @@ class Slash(commands.Cog):
 
     @timeout.error
     async def timeout_error(self, ctx, error):
+        """
+        Error handler for the timeout command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     # Code command
@@ -600,6 +879,18 @@ class Slash(commands.Cog):
                                            'util', 'owner', 'slash', 'main', 'keep_alive', 'sql_tools', 'tools',
                                            'games']
                                   )):
+        """
+        Gets the code for the specified module
+        
+        :param ctx: The context of where the command was used
+        :param module: The module to get the code for
+        
+        type ctx: discord.ApplicationContext
+        :type module: str
+        
+        :return: None
+        :rtype: None
+        """
         try:
             await ctx.respond('https://github.com/SandeepKanekal/b0ssBot -> Source Code',
                               file=discord.File(f'{module}.py', filename=f'{module}.py'))
@@ -609,8 +900,165 @@ class Slash(commands.Cog):
 
     @code.error
     async def code_error(self, ctx, error):
+        """
+        Error handler for the code command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
+    @commands.slash_command(name='roleinfo', aliases=['role', 'ri'], description='Shows the information of a role',
+                            usage='roleinfo <role>')
+    async def roleinfo(self, ctx,
+                       role: Option(discord.Role, desription='The role to get the information of', required=True)):
+        """
+        Shows the information of a role
+        
+        :param ctx: The context of where the message was sent
+        
+        :type ctx: discord.ApplicationContext
+        
+        :param role: The role to get the information of
+        
+        :type role: discord.Role
+        
+        :return: None
+        :rtype: None
+        """
+        # Getting the creation date of the role relative unix time
+        created_at = role.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')
+        created_at = convert_to_unix_time(created_at)
+
+        # Getting the colour of the role
+        rgb_colour = role.colour.to_rgb()  # type: tuple[int, int, int]
+        hex_colour = str(role.colour)  # type: str
+
+        # Getting the permissions of the role
+        permissions = [permission[0].replace('_', ' ').title() for permission in role.permissions if
+                       permission[1]]  # type: list[str]
+
+        embed = discord.Embed(colour=role.colour)
+        if role.guild.icon:
+            embed.set_author(name=role.name, icon_url=role.guild.icon)
+        else:
+            embed.set_author(name=role.name)
+
+        embed.add_field(name='Members', value=str(len(role.members)), inline=True)
+        embed.add_field(name='Creation Date', value=created_at, inline=True)
+        embed.add_field(name='Colour',
+                        value=f'**RGB:** {rgb_colour[0]}, {rgb_colour[1]}, {rgb_colour[2]}\n**Hex Code:** {hex_colour}',
+                        inline=True)
+        embed.add_field(name='Mentionable', value=str(role.mentionable), inline=True)
+        embed.add_field(name='Position', value=str(role.position), inline=True)
+        embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
+        embed.add_field(name='Permissions', value=', '.join(permissions), inline=False)
+
+        embed.set_footer(text=f'ID: {role.id}')
+        embed.timestamp = datetime.datetime.now()
+
+        if role.icon:
+            embed.set_thumbnail(url=role.icon)
+
+        await ctx.respond(embed=embed)
+
+    @roleinfo.error
+    async def roleinfo_error(self, ctx, error):
+        """
+        Handles errors for the roleinfo command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.BadArgument):
+            await ctx.respond('Invalid role', ephemeral=True)
+        else:
+            await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
+    @commands.slash_command(name='invert', description='Invert avatars or images from URLs!',
+                            usage='invert <member> or <url>')
+    async def invert(self, ctx,
+                     member: Option(discord.Member, description='The member to invert the avatar of', required=False,
+                                    default=None),
+                     url: Option(str, description='The URL to get the image from', required=False, default=None)):
+        """
+        Inverts the avatar of the user or another user
+        
+        :param ctx: command context
+        :param member: the member to invert the avatar of
+        :param url: the URL to get the image from
+
+        :type ctx: discord.ApplicationContext
+        :type member: discord.Member
+        :type url: str
+        
+        :return: None
+        :rtype: None
+        """
+        if member and url:
+            await ctx.respond('You cannot specify both a member and a URL', ephemeral=True)
+            return
+
+        request_url = url or (member or ctx.author).display_avatar  # type: str
+        member = member or ctx.author
+
+        response = requests.get(request_url)  # type: requests.Response
+
+        with open(f'image_{ctx.author.id}.png', 'wb') as f:
+            f.write(response.content)
+
+        image = Image.open(f'image_{ctx.author.id}.png')
+        invert = ImageChops.invert(image.convert('RGB'))
+        invert.save(f'{member.id}_inverted.png')
+
+        await ctx.respond(file=discord.File(f'{member.id}_inverted.png', 'invert.png'))
+
+        os.remove(f'image_{ctx.author.id}.png')
+        os.remove(f'{member.id}_inverted.png')
+
+    @invert.error
+    async def invert_error(self, ctx, error):
+        """
+        Error handler for the invert command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: Exception
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, discord.ApplicationCommandInvokeError):
+            await ctx.respond('Invalid URL', ephemeral=True)
+            with contextlib.suppress(FileNotFoundError):
+                os.remove(f'image_{ctx.author.id}.png')
+            return
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
 
 def setup(bot):
+    """
+    Loads the Cog.
+    
+    :param bot: The bot object
+    
+    :type bot: commands.Bot
+    
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Slash(bot))

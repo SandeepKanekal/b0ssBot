@@ -10,23 +10,65 @@ from discord.ext import commands
 
 # A function to make simple embeds without thumbnails, footers and authors
 async def send_embed(ctx, description: str, colour: discord.Colour = discord.Colour.red()) -> None:
-    # Response embed
+    """
+    Sends an embed with the specified description
+    
+    :param ctx: The context of the command
+    :param description: The description of the embed
+    :param colour: The colour of the embed
+    
+    :type ctx: commands.Context
+    :type description: str
+    :type colour: discord.Colour
+    
+    :return: None
+    :rtype: None
+    """
     embed = discord.Embed(description=description, colour=colour)
     await ctx.send(embed=embed)
 
 
-def modlog_enabled(guild_id) -> bool:
-    # Check if modlog is enabled
+def modlog_enabled(guild_id: int) -> bool:
+    """
+    Checks if the modlog is enabled for the guild
+    
+    :param guild_id: The id of the guild
+
+    :type guild_id: int
+
+    :return: True if the modlog is enabled, False otherwise
+    :rtype: bool
+    """
     sql = SQL('b0ssbot')
     return sql.select(elements=['mode'], table='modlogs', where=f"guild_id='{guild_id}'")[0][0]
 
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        """
+        Initialises the Cog
+        
+        :param bot: The bot
+        
+        :type bot: commands.Bot
+        
+        :return: None
+        :rtype: None
+        """
+        self.bot = bot  # type: commands.Bot
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
+        """
+        Event listener for when a member joins the server
+        
+        :param member: The member that joined the server
+        
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(member.guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
@@ -53,6 +95,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:
+        """
+        Event listener for when a member leaves the server
+        
+        :param member: The member that left the server
+        
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(member.guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{member.guild.id}'")[0][
@@ -79,6 +131,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
+        """
+        Event listener for when a message is deleted
+        
+        :param message: The message that was deleted
+        
+        :type message: discord.Message
+        
+        :return: None
+        :rtype: None
+        """
         if not modlog_enabled(message.guild.id):  # Check if modlog is enabled
             return
 
@@ -114,6 +176,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
+        """
+        Event listener for when a message is edited
+        
+        :param before: The message before the edit
+        :param after: The message after the edit
+
+        :type before: discord.Message
+        :type after: discord.Message
+
+        :return: None
+        :rtype: None
+        """
         if not modlog_enabled(before.guild.id):  # Check if modlog is enabled
             return
 
@@ -150,6 +224,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User) -> None:
+        """
+        Event listener for when a member is banned
+        
+        :param guild: The guild the member was banned from
+        :param user: The user that was banned
+        
+        :type guild: discord.Guild
+        :type user: discord.User
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][
@@ -175,6 +261,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User) -> None:
+        """
+        Event listener for when a member is unbanned
+        
+        :param guild: The guild the member was unbanned from
+        :param user: The user that was unbanned
+        
+        :type guild: discord.Guild
+        :type user: discord.User
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][
@@ -200,6 +298,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.TextChannel) -> None:
+        """
+        Event listener for when a channel is created
+        
+        :param channel: The channel that was created
+        
+        :type channel: discord.TextChannel
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(channel.guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = \
@@ -229,6 +337,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.TextChannel) -> None:
+        """
+        Event listener for when a channel is deleted
+        
+        :param channel: The channel that was deleted
+        
+        :type channel: discord.TextChannel
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(channel.guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = \
@@ -258,6 +376,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.TextChannel, after: discord.TextChannel) -> None:
+        """
+        Event listener for when a channel is updated
+        
+        :param before: The channel before the update
+        :param after: The channel after the update
+        
+        :type before: discord.TextChannel
+        :type after: discord.TextChannel
+        
+        :return: None
+        :rtype: None
+        """
         if not modlog_enabled(before.guild.id):
             return
         sql = SQL('b0ssbot')
@@ -298,6 +428,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
+        """
+        Event listener for when a role is created
+        
+        :param role: The role that was created
+        
+        :type role: discord.Role
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(role.guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{role.guild.id}'")[0][
@@ -325,6 +465,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role) -> None:
+        """
+        Event listener for when a role is deleted
+        
+        :param role: The role that was deleted
+
+        :type role: discord.Role
+
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(role.guild.id):  # Check if modlog is enabled
             sql = SQL('b0ssbot')
             channel_id = sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{role.guild.id}'")[0][
@@ -352,6 +502,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before: discord.Role, after: discord.Role) -> None:
+        """
+        Event listener for when a role is updated
+        
+        :param before: The role before the update
+        :param after: The role after the update
+        
+        :type before: discord.Role
+        :type after: discord.Role
+        
+        :return: None
+        :rtype: None
+        """
         if modlog_enabled(
                 before.guild.id) and before.name != after.name:  # Check if modlog is enabled and if the name changed
             sql = SQL('b0ssbot')
@@ -381,6 +543,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild) -> None:
+        """
+        Event listener for when a guild is updated
+
+        :param before: The guild before the update
+        :param after: The guild after the update
+
+        :type before: discord.Guild
+        :type after: discord.Guild
+
+        :return: None
+        :rtype: None
+        """
         if not modlog_enabled(before.id):
             return
         sql = SQL('b0ssbot')
@@ -408,7 +582,8 @@ class Moderation(commands.Cog):
                 embed2.set_thumbnail(url=before.icon)
             else:
                 embed2.description = f'No previous icon found for {after.name}'
-            embed2.add_field(name='New Icon', valur=f'[Click here]({after.icon})')
+            embed2.add_field(name='New Icon', value=f'[Click here]({after.icon})')
+            embed2.set_image(url=after.icon)
             embeds.append(embed2)
 
         for embed in embeds:
@@ -430,6 +605,20 @@ class Moderation(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_emojis_update(self, guild: discord.Guild, before: List[discord.Emoji],
                                      after: List[discord.Emoji]) -> None:
+        """
+        Event listener for when a guild's emojis are updated
+
+        :param guild: The guild
+        :param before: The emojis before the update
+        :param after: The emojis after the update
+
+        :type guild: discord.Guild
+        :type before: List[discord.Emoji]
+        :type after: List[discord.Emoji]
+
+        :return: None
+        :rtype: None
+        """
         if not modlog_enabled(guild.id):
             return
         sql = SQL('b0ssbot')
@@ -514,7 +703,19 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
-        # sourcery no-metrics
+        """
+        Event listener for when a member's data is updated
+        
+        :param before: The member before the update
+        :param after: The member after the update
+        
+        :type before: discord.Member
+        :type after: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
+        # sourcery skip: low-code-quality
         if not modlog_enabled(before.guild.id):  # Check if modlog is enabled
             return
 
@@ -582,6 +783,18 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_user_update(self, before: discord.User, after: discord.User) -> None:
+        """
+        Event listener for when a user's data is updated
+        
+        :param before: The user before the update
+        :param after: The user after the update
+        
+        :type before: discord.User
+        :type after: discord.User
+        
+        :return: None
+        :rtype: None
+        """
         embeds = []
         # Make embed
         if before.name != after.name:
@@ -633,6 +846,16 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: List[discord.Message]) -> None:
+        """
+        Event listener for when a bulk message delete occurs
+        
+        :param messages: The messages that were deleted
+        
+        :type messages: List[discord.Message]
+        
+        :return: None
+        :rtype: None
+        """
         if not modlog_enabled(messages[0].guild.id):
             return
         sql = SQL('b0ssbot')
@@ -668,6 +891,20 @@ class Moderation(commands.Cog):
     @commands.command(name='ban', description='Bans the mentioned user from the server', usage='ban <user> <reason>')
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
+        """
+        Bans the mentioned user from the server
+        
+        :param ctx: The context of where the command was used
+        :param member: The user to be banned
+        :param reason: The reason for the ban
+        
+        :type ctx: commands.Context
+        :type member: discord.Member
+        :type reason: str
+
+        :return: None
+        :rtype: None
+        """
         if member == ctx.author:
             await send_embed(ctx, description='You cannot ban yourself', colour=discord.Colour.red())
             return
@@ -685,16 +922,47 @@ class Moderation(commands.Cog):
     # Ban error response
     @ban.error
     async def ban_error(self, ctx, error):
+        """
+        Error handler for the ban command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
                              description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("ban").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid user provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to ban users')
+            return
 
     # Kick command
     @commands.command(name='kick', description='Kicks the mentioned user from the server', usage='kick <user> <reason>')
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
+        """
+        Kicks the mentioned user from the server
+        
+        :param ctx: The context of where the command was used
+        :param member: The user to be kicked
+        :param reason: The reason for the kick
+        
+        :type ctx: commands.Context
+        :type member: discord.Member
+        :type reason: str
+        
+        :return: None
+        :rtype: None
+        """
         if member == ctx.author:
             await send_embed(ctx, description='You cannot kick yourself', colour=discord.Colour.red())
             return
@@ -712,21 +980,47 @@ class Moderation(commands.Cog):
     # Kick error response
     @kick.error
     async def kick_error(self, ctx, error):
+        """
+        Error handler for the kick command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
                              description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("kick").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid user provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to kick users')
+            return
 
     # Unban command
     @commands.command(aliases=['ub'], description='Unbans the mentioned member from the server', usage='unban <user>')
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, *, member):
+        """
+        Unbans the mentioned member from the server
+        
+        :param ctx: The context of where the command was used
+        :param member: The user to be unbanned
+        
+        :type ctx: commands.Context
+        :type member: str
+        
+        :return: None
+        :rtype: None
+        """
         if member == f'{ctx.author}#{ctx.author.discriminator}':
             await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
-            return
-        if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
-            await send_embed(ctx, description='You cannot unban this user', colour=discord.Colour.red())
             return
         banned_users = ctx.guild.bans()
         if '#' not in member:
@@ -751,16 +1045,47 @@ class Moderation(commands.Cog):
     # Unban error response
     @unban.error
     async def unban_error(self, ctx, error):
+        """
+        Error handler for the unban command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
                              description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("unban").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid user provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to unban users')
+            return
 
     # Mute command
     @commands.command(name='mute', description='Mutes the specified user', usage='mute <user> <reason>')
     @commands.has_permissions(manage_messages=True)
     async def mute(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
+        """
+        Mutes the specified user
+
+        :param ctx: The context of where the command was used
+        :param member: The user to be muted
+        :param reason: The reason for the mute
+
+        :type ctx: commands.Context
+        :type member: discord.Member
+        :type reason: str
+
+        :return: None
+        :rtype: None
+        """
         if member == ctx.author:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
             return
@@ -785,11 +1110,28 @@ class Moderation(commands.Cog):
     # Mute error response
     @mute.error
     async def mute_error(self, ctx, error):
+        """
+        Error handler for the mute command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
                              description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("mute").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid user provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to mute users')
+            return
 
     # Tempmute command
     @commands.command(aliases=['tm'],
@@ -797,6 +1139,22 @@ class Moderation(commands.Cog):
                       usage='tempmute <user> <duration> <reason>')
     @commands.has_permissions(manage_messages=True)
     async def tempmute(self, ctx, member: discord.Member, duration: int, *, reason: str = 'No reason provided'):
+        """
+        Temporarily mutes the specified user
+        
+        :param ctx: The context of where the command was used
+        :param member: The user to be muted
+        :param duration: The duration of the mute in minutes
+        :param reason: The reason for the mute
+
+        :type ctx: commands.Context
+        :type member: discord.Member
+        :type duration: int
+        :type reason: str
+
+        :return: None
+        :rtype: None
+        """
         if member == ctx.author:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
             return
@@ -826,16 +1184,48 @@ class Moderation(commands.Cog):
     # Tempmute error response
     @tempmute.error
     async def tempmute_error(self, ctx, error):
+        """
+        Error handler for the tempmute command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
                              description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("tempmute").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid user provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to mute users')
+            return
+        if isinstance(error, commands.BadUnionArgument):
+            await send_embed(ctx, description='Invalid duration provided')
+            return
 
     # Unmute command
     @commands.command(aliases=['um'], description='Unmutes the specified user', usage='unmute <user>')
     @commands.has_permissions(manage_messages=True)
     async def unmute(self, ctx, member: discord.Member):
+        """
+        Unmutes the specified user
+        
+        :param ctx: The context of where the command was used
+        :param member: The user to be unmuted
+        
+        :type ctx: commands.Context
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
         if member == ctx.author:
             await send_embed(ctx, description='You cannot unmute yourself', colour=discord.Colour.red())
             return
@@ -854,16 +1244,45 @@ class Moderation(commands.Cog):
     # Unmute error response
     @unmute.error
     async def unmute_error(self, ctx, error):
+        """
+        Error handler for the unmute command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
                              description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("unmute").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid user provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to mute users')
+            return
 
     # Nuke command
     @commands.command(aliases=['nk'], description='Nukes the mentioned text channel', usage='nuke <channel>')
     @commands.has_permissions(manage_channels=True)
     async def nuke(self, ctx, channel: discord.TextChannel = None):
+        """
+        Nukes the mentioned text channel
+        
+        :param ctx: The context of where the command was used
+        :param channel: The channel to be nuked
+        
+        :type ctx: commands.Context
+        :type channel: discord.TextChannel
+        
+        :return: None
+        :rtype: None
+        """
         sql = SQL('b0ssbot')
         if channel is None:
             await ctx.send('Please mention the text channel to be nuked')
@@ -877,7 +1296,7 @@ class Moderation(commands.Cog):
         try:
             new_channel = await nuke_channel.clone(reason="Has been Nuked!")
             await nuke_channel.delete()
-            await send_embed(new_channel, description='This channel was nuked!', colour=discord.Colour.red())
+            await new_channel.send('This channel has been nuked!')
             await new_channel.send(
                 'https://tenor.com/view/explosion-mushroom-cloud-atomic-bomb-bomb-boom-gif-4464831')
             with contextlib.suppress(discord.NotFound):
@@ -888,20 +1307,48 @@ class Moderation(commands.Cog):
 
         if sql.select(elements=['*'], table='modlogs', where=f"guild_id = '{ctx.guild.id}' AND channel_id = '{nuke_channel.id}'"):
             sql.update(table='modlogs', column='channel_id', value=f"'{new_channel.id}'", where=f"guild_id = '{ctx.guild.id}' AND channel_id = '{nuke_channel.id}'")
+            await new_channel.send(f'{new_channel.mention} will now be the modlogs channel!')
 
     # Nuke error response
     @nuke.error
     async def nuke_error(self, ctx, error):
+        """
+        Error handler for the nuke command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx,
-                             description=f'Missing required argument\n\nProper Usage: {self.bot.get_command("nuke").usage}')
+                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("nuke").usage}`')
             return
-        await send_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Invalid channel provided')
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to nuke channels')
+            return
 
     # Lock command
     @commands.command(name='lock', description='Locks the current channel', usage='lock')
     @commands.has_permissions(manage_channels=True)
     async def lock(self, ctx):
+        """
+        Locks the current channel
+        
+        :param ctx: The context of where the command was used
+        
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """
         try:
             channel = ctx.channel
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
@@ -912,12 +1359,36 @@ class Moderation(commands.Cog):
     # Lock error response
     @lock.error
     async def lock_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: `{error}`')
+        """
+        Error handler for the lock command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to lock channels')
+            return
 
     # Unlock command
     @commands.command(name='unlock', description='Unlocks te current channel', usage='unlock')
     @commands.has_permissions(manage_channels=True)
     async def unlock(self, ctx):
+        """
+        Unlocks the current channel
+
+        :param ctx: The context of where the command was used
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
         try:
             channel = ctx.channel
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
@@ -928,7 +1399,21 @@ class Moderation(commands.Cog):
     # Unlock error response
     @unlock.error
     async def unlock_error(self, ctx, error):
-        await send_embed(ctx, description=f'Error: `{error}`')
+        """
+        Error handler for the unlock command
+
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to unlock channels')
+            return
 
     # Modlogs command
     @commands.command(aliases=['modlog', 'ml'],
@@ -936,6 +1421,18 @@ class Moderation(commands.Cog):
                       usage='modlogs <channel>')
     @commands.has_permissions(manage_guild=True)
     async def modlogs(self, ctx, channel: discord.TextChannel = None):
+        """
+        Sets the modlogs channel
+        
+        :param ctx: The context of where the command was used
+        :param channel: The channel to be set as the modlogs channel
+        
+        :type ctx: commands.Context
+        :type channel: discord.TextChannel
+        
+        :return: None
+        :rtype: None
+        """
         sql = SQL('b0ssbot')
         try:
             mod_channel = discord.utils.get(ctx.guild.text_channels, id=int(
@@ -973,18 +1470,39 @@ class Moderation(commands.Cog):
     # Modlogs error response
     @modlogs.error
     async def modlogs_error(self, ctx, error):
+        """
+        Error handler for the modlogs command
+        
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+        
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to manage server settings')
+            return
         if isinstance(error, commands.BadArgument):
-            await send_embed(ctx,
-                             description=f'Invalid channel\n\nProper Usage: `{self.bot.get_command("modlogs").usage}`')
-
-        elif isinstance(error, commands.MissingRequiredArgument):
-            await send_embed(ctx,
-                             description=f'Missing required argument\n\nProper Usage: `{self.bot.get_command("modlogs").usage}`')
-
-        else:
-            await send_embed(ctx, description=f'Error: `{error}`')
+            await send_embed(ctx, description='Please mention a channel')
+            return
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx, description='Please mention a channel')
+            return
 
 
 # Setup
 def setup(bot):
+    """
+    Loads the cog
+    
+    :param bot: The bot to load the cog into
+    
+    :type bot: commands.Bot
+    
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Moderation(bot))

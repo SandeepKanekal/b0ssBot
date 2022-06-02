@@ -7,19 +7,52 @@ from discord.ext import commands
 
 class Misc(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        """
+        Initialize the cog
+
+        :param bot: The bot
+        :type bot: commands.Bot
+
+        :return: None
+        :rtype: None
+        """
+        self.bot = bot  # type: commands.Bot
 
     # Spam command
-    @commands.command(aliases=['s'], description='Spams text or users', usage='spam <message>')
-    async def spam(self, ctx, *, message):
+    @commands.command(aliases=['s'], description='Spams text', usage='spam <message>')
+    async def spam(self, ctx, *, text: str):
+        """
+        Spams text
+
+        :param ctx: The context of where the message was sent
+        :param text: The text to spam
+
+        :type ctx: commands.Context
+        :type text: str
+
+        :return: None
+        :rtype: None
+        """
         if ctx.message.mentions:
             await send_error_embed(ctx, description='You cannot mention users in spam!')
             return
         for _ in range(5):
-            await ctx.send(message)
+            await ctx.send(text)
 
     @spam.error
     async def spam_error(self, ctx, error):
+        """
+        Error handler for the spam command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("spam").usage}`')
@@ -29,8 +62,19 @@ class Misc(commands.Cog):
     # Av command
     @commands.command(aliases=['av', 'pfp'], description='Shows the specified user\'s avatar', usage='avatar <user>')
     async def avatar(self, ctx, *, member: discord.Member = None):
-        if member is None:
-            member = ctx.author
+        """
+        Shows the specified user's avatar. If no user is specified, shows the author's avatar
+
+        :param ctx: The context of where the message was sent
+        :param member: The member to show the avatar of
+
+        :type ctx: commands.Context
+        :type member: discord.Member
+
+        :return: None
+        :rtype: None
+        """
+        member = member or ctx.author  # type: discord.Member
         # Response embed
         embed = discord.Embed(colour=member.colour)
         embed.set_author(name=member.name, icon_url=member.avatar or member.default_avatar)
@@ -40,6 +84,18 @@ class Misc(commands.Cog):
 
     @avatar.error
     async def avatar_error(self, ctx, error):
+        """
+        Error handler for the avatar command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
         if isinstance(error, commands.BadArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a valid user\n\nProper Usage: `{self.bot.get_command("avatar").usage}`')
@@ -50,6 +106,16 @@ class Misc(commands.Cog):
     @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon',
                       usage='servericon')
     async def servericon(self, ctx):
+        """
+        Shows the server's icon
+
+        :param ctx: The context of where the message was sent
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
         if ctx.guild.icon is None:
             await send_error_embed(ctx, description='This server has no icon')
             return
@@ -67,14 +133,23 @@ class Misc(commands.Cog):
         embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
-    @servericon.error
-    async def servericon_error(self, ctx, error):
-        await send_error_embed(ctx, description=f'Error: `{error}`')
-
     # Megaspam command
     @commands.command(aliases=['ms'], description='Spams a message 25 times', usage='megaspam <message>')
     @commands.has_permissions(manage_messages=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def megaspam(self, ctx, *, message):
+        """
+        Spams a message 25 times
+
+        :param ctx: The context of where the message was sent
+        :param message: The message to spam
+
+        :type ctx: commands.Context
+        :type message: str
+
+        :return: None
+        :rtype: None
+        """
         if ctx.message.mentions:
             await send_error_embed(ctx, description='You cannot mention users in megaspam')
             return
@@ -85,13 +160,39 @@ class Misc(commands.Cog):
 
     @megaspam.error
     async def megaspam_error(self, ctx, error):
+        """
+        Error handler for the megaspam command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await send_error_embed(ctx,
+                                   description=f'You are on cooldown. Try again in {error.retry_after:.2f} seconds')
+            return
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
-                                   description=f'Please specify a message\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')
+                                   description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 # Setup
 def setup(bot):
+    """
+    Loads the Cog.
+
+    :param bot: The bot to load the Cog into
+
+    :type bot: commands.Bot
+
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Misc(bot))
