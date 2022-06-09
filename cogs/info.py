@@ -271,7 +271,7 @@ class Info(commands.Cog):
         embed.add_field(name='Mentionable', value=str(role.mentionable), inline=True)
         embed.add_field(name='Position', value=str(role.position), inline=True)
         embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
-        embed.add_field(name='Permissions', value=', '.join(permissions), inline=False)
+        embed.add_field(name='Permissions', value=', '.join(permissions) or 'None', inline=False)
 
         embed.set_footer(text=f'ID: {role.id}')
         embed.timestamp = datetime.datetime.now()

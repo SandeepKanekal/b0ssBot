@@ -1,4 +1,5 @@
 import contextlib
+from this import d
 import discord
 import datetime
 import requests
@@ -690,7 +691,7 @@ class Slash(commands.Cog):
             await ctx.respond('I cannot mute myself', ephemeral=True)
             return
 
-        if member.guild_permissions >= ctx.author.guild_permissions:
+        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
             await ctx.respond('You cannot mute a member with the same or higher permissions', ephemeral=True)
             return
 
@@ -698,8 +699,7 @@ class Slash(commands.Cog):
         if not muted_role:
             muted_role = await ctx.guild.create_role(name='Muted')  # Create a muted role if not present
             for channel in ctx.guild.channels:
-                await channel.set_permissions(muted_role, speak=False,
-                                              respond_messages=False)  # Set permissions of the muted role
+                await channel.set_permissions(muted_role, speak=False, send_messages=False)  # Set permissions of the muted role
 
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
@@ -748,9 +748,18 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+
+        if member == ctx.author:
+            await ctx.respond('You cannot unmute yourself', ephemeral=True)
+            return
+
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get the muted role
         if not muted_role:
             await ctx.respond('There is no muted role', ephemeral=True)
+            return
+        
+        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+            await ctx.respond('You cannot unmute a member with the same or higher permissions', ephemeral=True)
             return
 
         try:
@@ -958,7 +967,7 @@ class Slash(commands.Cog):
         embed.add_field(name='Mentionable', value=str(role.mentionable), inline=True)
         embed.add_field(name='Position', value=str(role.position), inline=True)
         embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
-        embed.add_field(name='Permissions', value=', '.join(permissions), inline=False)
+        embed.add_field(name='Permissions', value=', '.join(permissions) or 'None', inline=False)
 
         embed.set_footer(text=f'ID: {role.id}')
         embed.timestamp = datetime.datetime.now()
@@ -1048,6 +1057,87 @@ class Slash(commands.Cog):
                 os.remove(f'image_{ctx.author.id}.png')
             return
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
+    
+    @commands.slash_command(name='embed', description='Make an embed! Visit https://imgur.com/a/kbFJCL1 for more info')
+    async def embed(self, ctx,
+                    channel: Option(discord.TextChannel, description='Channel to send the embed to', required=True),
+                    title: Option(str, description='Title of the embed', required=True),
+                    description: Option(str, description='Description of the embed', required=True),
+                    colour: Option(int, description='HEX code for the colour of the embed', required=False, default=0x000000),
+                    url: Option(str, description='URL of the embed', required=False, default=None),
+                    image: Option(str, description='URL of the image', required=False, default=None),
+                    thumbnail: Option(str, description='URL of the thumbnail', required=False, default=None),
+                    author: Option(discord.Member, description='Author of the embed', required=False, default=None),
+                    footer: Option(str, description='Footer of the embed', required=False, default=None),
+                    timestamp: Option(str, description='Timestamp of the embed', required=False, choices=['True', 'False'], default=None)):
+        """
+        Makes an embed
+        
+        :param ctx: command context
+        :param channel: channel to send the embed to
+        :param title: title of the embed
+        :param description: description of the embed
+        :param colour: hex code for the colour of the embed
+        :param url: url of the embed
+        :param image: url of the image
+        :param thumbnail: url of the thumbnail
+        :param author: author of the embed
+        :param footer: footer of the embed
+        :param timestamp: timestamp of the embed
+
+        :type ctx: discord.ApplicationContext
+        :type channel: discord.TextChannel
+        :type title: str
+        :type description: str
+        :type colour: str
+        :type url: str
+        :type image: str
+        :type thumbnail: str
+        :type author: discord.Member
+        :type footer: str
+        :type timestamp: str
+        
+        :return: None
+        :rtype: None
+        """
+        embed = discord.Embed(title=title, description=description, url=url, colour=colour)
+
+        if author:
+            embed.set_author(name=author.display_name, icon_url=author.display_avatar)
+        
+        if footer:
+            embed.set_footer(text=footer)
+        
+        if image:
+            embed.set_image(url=image)
+        
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
+        
+        embed.timestamp = timestamp = datetime.datetime.now() if timestamp == 'True' else discord.Embed.Empty
+
+        await channel.send(embed=embed)
+        await ctx.respond('Embed sent!')
+
+    @embed.error
+    async def embed_error(self, ctx, error):
+        """
+        Error handler for the embed command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: Exception
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.BadArgument):
+            await ctx.respond('Invalid channel', ephemeral=True)
+        else:
+            await ctx.respond(f'Error: `{error}`', ephemeral=True)
+
 
 
 def setup(bot):

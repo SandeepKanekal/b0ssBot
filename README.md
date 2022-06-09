@@ -21,6 +21,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [Zenquotes.io API](https://zenquotes.io/api) Required for quote commands (no key required)
 + [OpenTDB API](https://opentdb.com/api_config.php) Required for trivia commands (no key required)
 + [TruthOrDareBot API](https://docs.truthordarebot.xyz/api-docs) Required for truth or dare commands (no key required)
++ [Icanhasdadjoke API](https://icanhazdadjoke.com/api) Required for dad joke commands (no key required)
 
 # Database 
 PostgreSQL is used. You can change the database details (username, host, database) to your convinience. 

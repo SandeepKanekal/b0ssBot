@@ -63,7 +63,7 @@ class Fun(commands.Cog):
                                  style=discord.ButtonStyle.red)  # The button the end the interaction
         previous_meme = Button(emoji='⏮️', style=discord.ButtonStyle.green)  # The button for going to the previous meme
 
-        view = View()
+        view = View(timeout=None)
         view.add_item(previous_meme)
         view.add_item(next_meme)
         view.add_item(end_interaction)
@@ -222,16 +222,17 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        member = member or ctx.author
+        async with ctx.typing():
+            member = member or ctx.author
 
-        response = requests.get(str(member.display_avatar))
+            response = requests.get(str(member.display_avatar))
 
-        with open(f'avatar_{member.id}.png', 'wb') as f:
-            f.write(response.content)
+            with open(f'avatar_{member.id}.png', 'wb') as f:
+                f.write(response.content)
 
-        image = Image.open(f'avatar_{member.id}.png')
-        invert = ImageChops.invert(image.convert('RGB'))
-        invert.save(f'{member.id}_inverted.png')
+            image = Image.open(f'avatar_{member.id}.png')
+            invert = ImageChops.invert(image.convert('RGB'))
+            invert.save(f'{member.id}_inverted.png')
         
         await ctx.send(file=discord.File(f'{member.id}_inverted.png', 'invert.png'))
 
@@ -256,6 +257,53 @@ class Fun(commands.Cog):
             await send_error_embed(ctx, description='Please provide a valid member.')
         else:
             await send_error_embed(ctx, description=f'Error: `{error}`')
+    
+    @commands.command(name='dadjoke', description='Posts a dad joke', usage='dadjoke')
+    async def dadjoke(self, ctx):
+        """
+        Posts a dad joke
+        
+        :param ctx: command context
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """
+        async with ctx.typing():
+            embed = discord.Embed(description=requests.get('https://icanhazdadjoke.com/', headers={'Accept': 'application/json'}).json()['joke'], colour=discord.Colour.random(), timestamp=datetime.datetime.now())
+        
+        next_joke = Button(emoji='➡️', style=discord.ButtonStyle.green)
+        end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
+
+        view = View(timeout=None)
+        view.add_item(next_joke)
+        view.add_item(end_interaction)
+
+        await ctx.send(embed=embed, view=view)
+
+        async def next_joke_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            # Callback to button1 triggers this function
+            embed.description = requests.get('https://icanhazdadjoke.com/', headers={'Accept': 'application/json'}).json()['joke']
+            embed.timestamp = datetime.datetime.now()
+            await interaction.response.edit_message(embed=embed)
+        
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            next_joke.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
+
+        next_joke.callback = next_joke_trigger
+        end_interaction.callback = end_interaction_trigger
 
 
 def setup(bot):

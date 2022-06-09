@@ -86,7 +86,6 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        print(type(error))
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please ask a question!\n\nProper Usage: `{self.bot.get_command("8ball").usage}`')

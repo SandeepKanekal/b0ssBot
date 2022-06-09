@@ -92,7 +92,7 @@ class Internet(commands.Cog):
         previous_video = Button(emoji='⏮️', style=discord.ButtonStyle.green)
         end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
         watch_video = Button(label='Watch Video', style=discord.ButtonStyle.green)
-        view = View()
+        view = View(timeout=None)
         view.add_item(previous_video)
         view.add_item(next_video)
         view.add_item(end_interaction)
@@ -271,35 +271,41 @@ class Internet(commands.Cog):
         :return: None
         :rtype: None
         """
-        weather_data = requests.get(
-            f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={os.getenv("weather_api_key")}&units=metric').json()  # type: dict
-        if weather_data['cod'] == '404':
-            await send_error_embed(ctx, description='Location not found')
-            return
+        async with ctx.typing():
+            weather_data = requests.get(
+                f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={os.getenv("weather_api_key")}&units=metric').json()  # type: dict
+            if weather_data['cod'] == '404':
+                await send_error_embed(ctx, description='Location not found')
+                return
 
-        if weather_data['cod'] == '429':
-            await send_error_embed(ctx, description='Too many requests. Please use the command after some time')
-            return
+            if weather_data['cod'] == '429':
+                await send_error_embed(ctx, description='Too many requests. Please use the command after some time')
+                return
+            
+            pollution_data = requests.get(
+                f'https://api.openweathermap.org/data/2.5/air_pollution?lat={weather_data["coord"]["lat"]}&lon={weather_data["coord"]["lon"]}&appid={os.getenv("weather_api_key")}').json()  # type: dict
 
-        embed = discord.Embed(
-            title=f'Weather for {weather_data["name"]}',
-            description=f'{weather_data["weather"][0]["description"].capitalize()}',
-            colour=discord.Colour.blue()
-        )
-        embed.title += f', {weather_data["sys"]["country"]}' if "country" in weather_data["sys"].keys() else ''
-        embed.set_thumbnail(url=f'https://openweathermap.org/img/wn/{weather_data["weather"][0]["icon"]}@2x.png')
-        embed.add_field(name='Max. Temperature', value=f'{weather_data["main"]["temp_max"]}°C')
-        embed.add_field(name='Min. Temperature', value=f'{weather_data["main"]["temp_min"]}°C')
-        embed.add_field(name='Temperature', value=f'{weather_data["main"]["temp"]}°C')
-        embed.add_field(name='Feels Like', value=f'{weather_data["main"]["feels_like"]}°C')
-        embed.add_field(name='Humidity', value=f'{weather_data["main"]["humidity"]}%')
-        embed.add_field(name='Wind Speed', value=f'{weather_data["wind"]["speed"]}m/s')
-        embed.add_field(name='Pressure', value=f'{weather_data["main"]["pressure"]}hPa')
-        embed.add_field(name='Sunrise', value=f'<t:{weather_data["sys"]["sunrise"]}:R>')
-        embed.add_field(name='Sunset', value=f'<t:{weather_data["sys"]["sunset"]}:R>')
-        embed.set_footer(text='Powered by OpenWeatherMap')
-        embed.timestamp = datetime.datetime.now()
-        await ctx.send(embed=embed)
+            embed = discord.Embed(
+                title=f'Weather for {weather_data["name"]}',
+                description=f'{weather_data["weather"][0]["description"].capitalize()}',
+                colour=discord.Colour.blue(),
+                timestamp=datetime.datetime.now()
+            )
+            embed.title += f', {weather_data["sys"]["country"]}' if "country" in weather_data["sys"].keys() else ''
+            embed.set_thumbnail(url=f'https://openweathermap.org/img/wn/{weather_data["weather"][0]["icon"]}@2x.png')
+            embed.add_field(name='Max. Temperature', value=f'{weather_data["main"]["temp_max"]}°C')
+            embed.add_field(name='Min. Temperature', value=f'{weather_data["main"]["temp_min"]}°C')
+            embed.add_field(name='Temperature', value=f'{weather_data["main"]["temp"]}°C')
+            embed.add_field(name='Feels Like', value=f'{weather_data["main"]["feels_like"]}°C')
+            embed.add_field(name='Humidity', value=f'{weather_data["main"]["humidity"]}%')
+            embed.add_field(name='Wind Speed', value=f'{weather_data["wind"]["speed"]}m/s')
+            embed.add_field(name='Pressure', value=f'{weather_data["main"]["pressure"]}hPa')
+            embed.add_field(name='Sunrise', value=f'<t:{weather_data["sys"]["sunrise"]}:R>')
+            embed.add_field(name='Sunset', value=f'<t:{weather_data["sys"]["sunset"]}:R>')
+            embed.add_field(name='Air Quality Index', value=pollution_data['list'][0]['main']['aqi'])
+            embed.add_field(name='Pollution', value='\n'.join(f'**{key.replace("_", ".").upper()}**: {value}' for key, value in pollution_data['list'][0]['components'].items()), inline=False)
+            embed.set_footer(text=f'Powered by OpenWeatherMap | ID: {weather_data["id"]}')
+            await ctx.send(embed=embed)
 
     @weather.error
     async def weather_error(self, ctx, error):
@@ -439,7 +445,7 @@ class Internet(commands.Cog):
             previous_post = Button(emoji='⏮️', style=discord.ButtonStyle.green)
             end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
 
-            view = View()
+            view = View(timeout=None)
             view.add_item(previous_post)
             view.add_item(next_post)
             view.add_item(end_interaction)
@@ -572,7 +578,7 @@ class Internet(commands.Cog):
 
         embed = discord.Embed(title=question, description=f'**Answer: {answer}**', colour=discord.Colour.orange())
 
-        view = View()
+        view = View(timeout=None)
         view.add_item(previous_trivia)
         view.add_item(next_trivia)
         view.add_item(end_interaction)
@@ -655,7 +661,7 @@ class Internet(commands.Cog):
         next_quote = Button(emoji='⏭️', style=discord.ButtonStyle.green)
         end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
 
-        view = View()
+        view = View(timeout=None)
         view.add_item(next_quote)
         view.add_item(end_interaction)
 
@@ -719,7 +725,7 @@ class Internet(commands.Cog):
         end_interaction = Button(label='End interaction', style=discord.ButtonStyle.red)
 
         # Add buttons
-        view = View()
+        view = View(timeout=None)
         view.add_item(previous_joke)
         view.add_item(next_joke)
         view.add_item(end_interaction)

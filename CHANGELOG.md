@@ -8,7 +8,7 @@
 
 # Fun #
 + The messageresponse command has been transferred to slash commands since it is easier with slash commands.
-+ Addition of an invert command.
++ Addition of a dadjoke command.
 
 # Help #
 + The command usage field now calls the `command.usage` for its value.
@@ -33,6 +33,7 @@
 + The youtubenotification, hourlyweather commands have been transferred to slash commands since it is easier with slash commands.
 + Addition of a trivia command.
 + The quote command has been transferred to the internet module. It also uses buttons now.
++ The weather command is more informative.
 
 # Music #
 + The lyrics command's response's title now is the title of the song instead of the query. However, the query is visible as the footer.
@@ -47,7 +48,6 @@
 + The code command now sends `.py` files instead of `.txt` files.
 + More modules can now be viewed using the code command.
 + Addition for a roleinfo command.
-+ Addition of an invert command.
 
 # Games #
 + Addition of truth or dare commands.
