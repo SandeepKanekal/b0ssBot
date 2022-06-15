@@ -86,6 +86,7 @@ class Util(commands.Cog):
             # Response embed
             embed = discord.Embed(
                 title='Sniped a message!',
+                url='https://cdn.discordapp.com/attachments/984912794031894568/984914060602642442/unknown.png',
                 description=f'Author: {member.mention if isinstance(member, discord.Member) else member}\nDeleted message: {message[0][1]}\nChannel: {channel.mention}\nTime: {del_time}',
                 colour=discord.Colour.green()
             ).set_footer(
@@ -163,7 +164,7 @@ class Util(commands.Cog):
         :return: None
         """
         latency = round(self.bot.latency * 1000)
-        embed = discord.Embed(description=f'**Pong!!** Bot latency is {str(latency)}ms', colour=discord.Colour.yellow())
+        embed = discord.Embed(description=f'**Pong[!!](https://cdn.discordapp.com/attachments/984912794031894568/984914090193465374/unknown.png)** Bot latency is {str(latency)}ms', colour=discord.Colour.yellow())
         await ctx.reply(embed=embed)
 
     # Clear command
@@ -297,7 +298,7 @@ class Util(commands.Cog):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild', usage='prefix <new_prefix>')
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def prefix(self, ctx, new_prefix):
         """
         Changes the prefix of the bot for the guild.

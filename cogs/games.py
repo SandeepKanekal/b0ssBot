@@ -51,24 +51,24 @@ class Games(commands.Cog):
 
         # Response list
         responses = [
-            'Yes[.](https://youtu.be/Uq9QTPHYxSo)',
-            'No[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Never[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Hell Yea[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Without a Doubt[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Highly doubt that[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Ask again later[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Maybe[.](https://youtu.be/Uq9QTPHYxSo)',
-            'I don\'t know[.](https://youtu.be/Uq9QTPHYxSo)',
-            'I\'m not sure[.](https://youtu.be/Uq9QTPHYxSo)',
-            'I don\'t think so[.](https://youtu.be/Uq9QTPHYxSo)',
-            'Probably[.](https://youtu.be/Uq9QTPHYxSo)'
+            'Yes[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'No[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Never[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Hell Yea[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Without a Doubt[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Highly doubt that[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Ask again later[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Maybe[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'I don\'t know[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'I\'m not sure[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'I don\'t think so[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
+            'Probably[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)'
         ]
 
         response = random.choice(responses)
         if 'tiktok' in question.lower() or 'tik tok' in question.lower():
             # TikTok is just horrible
-            response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS[.](https://youtu.be/Uq9QTPHYxSo)'
+            response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)'
         embed = discord.Embed(title=f':8ball: {question}', description=response, colour=discord.Colour.random())
         await ctx.send(embed=embed)
 

@@ -208,7 +208,7 @@ class Owner(commands.Cog):
         
         :param ctx: The context of where the command was used
         :param code: The code to evaluate
-        
+
         :type ctx: commands.Context
         :type code: str
         
@@ -222,7 +222,7 @@ class Owner(commands.Cog):
                 await eval(code.strip('await')) if 'await' in code else eval(code)
         except Exception as e:
             await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
-    
+
     @eval_.error
     async def eval_error(self, ctx, e):
         """
@@ -231,13 +231,13 @@ class Owner(commands.Cog):
         :param ctx: The context of where the command was used
         :param e: The error that was raised
         
-        :type ctx: commands.Context
+        :type ctx: discord.ApplicationContext
         :type e: commands.CommandError
         
         :return: None
         :rtype: None
         """
-        await ctx.send(embed=discord.Embed(description=str(e)))
+        await ctx.respond(f'**`ERROR:`** {type(e).__name__} - {e}', ephemeral=True)
 
 
 def setup(bot):

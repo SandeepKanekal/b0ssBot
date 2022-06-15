@@ -1,5 +1,4 @@
 import contextlib
-from this import d
 import discord
 import datetime
 import requests
@@ -299,120 +298,6 @@ class Slash(commands.Cog):
         """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
-    # Hourlyweather command
-    @commands.slash_command(name='hourlyweather', aliases=['hw'],
-                            description='Configure monitored weather locations for the server',
-                            usage='hourlyweather <mode> <channel_id> <location>')
-    @commands.has_permissions(manage_guild=True)
-    async def hourlyweather(self, ctx,
-                            mode: Option(str, description='The mode to use', choices=['add', 'remove', 'view'],
-                                         required=True),
-                            channel: Option(discord.TextChannel,
-                                            description='The text channel to send notifications to',
-                                            required=False, default=None),
-                            location: Option(str, description='The location to be monitored', required=False,
-                                             default=None)):
-        """
-        Configure monitored weather locations for the server
-        
-        :param ctx: The context of where the command was used
-        :param mode: The mode to use
-        :param channel: The text channel to send notifications to
-        :param location: The location to be monitored
-        
-        type ctx: discord.ApplicationContext
-        :type mode: str
-        :type channel: discord.TextChannel
-        :type location: str
-
-        :return: None
-        :rtype: None
-        """
-        # sourcery skip: low-code-quality
-        sql = SQL('b0ssbot')
-        channel = discord.utils.get(ctx.guild.text_channels, id=channel.id) if channel else None
-
-        if mode == 'add':
-
-            if channel is None:
-                await ctx.respond('The channel provided is invalid', ephemeral=True)
-                return
-
-            if not location:
-                await ctx.respond('Please specify a location', ephemeral=True)
-                return
-
-            original_location = location
-            location = location.lower().replace("'", "''")  # Make sure the location is lowercase
-
-            if channel is None or location is None:  # If the channel or location is not specified
-                await ctx.respond('Please provide a channel and location', ephemeral=True)
-                return
-
-            with contextlib.suppress(IndexError):
-                if location == \
-                        sql.select(elements=['location'], table='hourlyweather', where=f"guild_id = '{ctx.guild.id}'")[
-                            0][0]:  # If the location is already in the database
-                    sql.update(table='hourlyweather', column='channel_id', value=f'{channel.id}',
-                               where=f"guild_id = '{ctx.guild.id}'")  # Update the channel
-                    await ctx.respond(
-                        embed=discord.Embed(description=f'Updated the hourly weather channel to {channel.mention}',
-                                            colour=discord.Colour.green()))  # Send a success embed
-                    return
-
-            sql.insert(table='hourlyweather', columns=['guild_id', 'channel_id', 'location'],
-                       values=[f"'{ctx.guild.id}'", f"'{channel.id}'", f"'{location}'"])  # Insert the location
-            await ctx.respond(embed=discord.Embed(description=f'Added hourly weather for {original_location}',
-                                                  colour=discord.Colour.green()))  # Send a success embed
-
-        elif mode == 'remove':
-
-            original_location = location
-
-            if not location:
-                await ctx.respond('Please specify a location', ephemeral=True)
-                return
-
-            if sql.select(elements=['*'], table='hourlyweather', where=f"guild_id = '{ctx.guild.id}'"):
-                location = location.lower().replace("'", "''")  # Make sure the location is lowercase
-                sql.delete(table='hourlyweather', where=f"guild_id = '{ctx.guild.id}' AND location = '{location}'")
-                await ctx.respond(embed=discord.Embed(description=f'Removed hourly weather for {original_location}',
-                                                      colour=discord.Colour.green()))  # Send a success embed
-            else:
-                await ctx.respond(f'{original_location} is not monitored', ephemeral=True)
-
-        elif mode == 'view':
-            response = sql.select(elements=['location', 'channel_id'], table='hourlyweather',
-                                  where=f"guild_id = '{ctx.guild.id}'")  # Get the locations and channels
-            if not response:
-                await ctx.respond('No locations are monitored', ephemeral=True)
-                return
-
-            embed = discord.Embed(title=f'Hourly Weather Locations for {ctx.guild.name}', description='',
-                                  colour=discord.Colour.blue())
-            for item in response:  # Append each location to embed.description along with the text channel
-                channel = discord.utils.get(ctx.guild.text_channels, id=int(item[1]))
-                location = item[0].replace("''", "'")
-                embed.description += f'{location} in {channel.mention}\n'
-
-            await ctx.respond(embed=embed)
-
-    @hourlyweather.error
-    async def hourlyweather_error(self, ctx, error):
-        """
-        Error handler for the hourlyweather command
-        
-        :param ctx: The context of where the command was used
-        :param error: The error that occurred
-        
-        type ctx: discord.ApplicationContext
-        :type error: commands.CommandError
-        
-        :return: None
-        :rtype: None
-        """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
-
     # Warn command
     @commands.slash_command(name='warn',
                             description='Configure warns for the user',
@@ -566,8 +451,9 @@ class Slash(commands.Cog):
                 return
             sql.delete(table='message_responses',
                        where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
-            await ctx.respond(embed=discord.Embed(description=f'Removed the response for **{original_message}**',
-                                                  colour=discord.Colour.green()))
+            await ctx.respond(embed=discord.Embed(
+                description=f'Removed the response for **{original_message}**[.](https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png)',
+                colour=discord.Colour.green()))
 
         elif mode == 'add':
             if not message:
@@ -596,8 +482,9 @@ class Slash(commands.Cog):
                 sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
                            values=[f"'{ctx.guild.id}'", f"'{message}'", f"'{response}'"])
                 await ctx.respond(
-                    embed=discord.Embed(description=f'Added the response for **{original_message}**',
-                                        colour=discord.Colour.green()))
+                    embed=discord.Embed(
+                        description=f'Added the response for **{original_message}**[.](https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png)',
+                        colour=discord.Colour.green()))
 
         else:
             if not sql.select(elements=['message', 'response'], table='message_responses',
@@ -607,6 +494,7 @@ class Slash(commands.Cog):
 
             if message is None and response is None:
                 embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                      url='https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png',
                                       colour=discord.Colour.green())
                 responses = sql.select(elements=['message', 'response'], table='message_responses',
                                        where=f"guild_id = '{ctx.guild.id}'")
@@ -630,6 +518,7 @@ class Slash(commands.Cog):
                     await ctx.respond('No chat triggers found', ephemeral=True)
                     return
                 embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
+                                      url='https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png',
                                       colour=discord.Colour.green())
                 for row in elements:
                     embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
@@ -699,7 +588,8 @@ class Slash(commands.Cog):
         if not muted_role:
             muted_role = await ctx.guild.create_role(name='Muted')  # Create a muted role if not present
             for channel in ctx.guild.channels:
-                await channel.set_permissions(muted_role, speak=False, send_messages=False)  # Set permissions of the muted role
+                await channel.set_permissions(muted_role, speak=False,
+                                              send_messages=False)  # Set permissions of the muted role
 
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
@@ -757,7 +647,7 @@ class Slash(commands.Cog):
         if not muted_role:
             await ctx.respond('There is no muted role', ephemeral=True)
             return
-        
+
         if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
             await ctx.respond('You cannot unmute a member with the same or higher permissions', ephemeral=True)
             return
@@ -885,9 +775,9 @@ class Slash(commands.Cog):
     async def code(self, ctx,
                    module: Option(str, description='The module to get the code for', required=True,
                                   choices=['events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'moderation',
-                                           'util', 'owner', 'slash', 'main', 'keep_alive', 'sql_tools', 'tools',
-                                           'games']
-                                  )):
+                                           'util', 'owner', 'slash', 'games', 'main', 'keep_alive', 'sql_tools',
+                                           'tools'])
+                   ):
         """
         Gets the code for the specified module
         
@@ -1057,19 +947,21 @@ class Slash(commands.Cog):
                 os.remove(f'image_{ctx.author.id}.png')
             return
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
-    
+
     @commands.slash_command(name='embed', description='Make an embed! Visit https://imgur.com/a/kbFJCL1 for more info')
     async def embed(self, ctx,
                     channel: Option(discord.TextChannel, description='Channel to send the embed to', required=True),
                     title: Option(str, description='Title of the embed', required=True),
                     description: Option(str, description='Description of the embed', required=True),
-                    colour: Option(int, description='HEX code for the colour of the embed', required=False, default=0x000000),
+                    colour: Option(int, description='HEX code for the colour of the embed as an octal integer',
+                                   required=False, default=0x000000),
                     url: Option(str, description='URL of the embed', required=False, default=None),
                     image: Option(str, description='URL of the image', required=False, default=None),
                     thumbnail: Option(str, description='URL of the thumbnail', required=False, default=None),
                     author: Option(discord.Member, description='Author of the embed', required=False, default=None),
                     footer: Option(str, description='Footer of the embed', required=False, default=None),
-                    timestamp: Option(str, description='Timestamp of the embed', required=False, choices=['True', 'False'], default=None)):
+                    timestamp: Option(str, description='Timestamp of the embed', required=False,
+                                      choices=['True', 'False'], default=None)):
         """
         Makes an embed
         
@@ -1089,7 +981,7 @@ class Slash(commands.Cog):
         :type channel: discord.TextChannel
         :type title: str
         :type description: str
-        :type colour: str
+        :type colour: int
         :type url: str
         :type image: str
         :type thumbnail: str
@@ -1104,17 +996,17 @@ class Slash(commands.Cog):
 
         if author:
             embed.set_author(name=author.display_name, icon_url=author.display_avatar)
-        
+
         if footer:
             embed.set_footer(text=footer)
-        
+
         if image:
             embed.set_image(url=image)
-        
+
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
-        
-        embed.timestamp = timestamp = datetime.datetime.now() if timestamp == 'True' else discord.Embed.Empty
+
+        embed.timestamp = datetime.datetime.now() if timestamp == 'True' else discord.Embed.Empty
 
         await channel.send(embed=embed)
         await ctx.respond('Embed sent!')
@@ -1135,9 +1027,89 @@ class Slash(commands.Cog):
         """
         if isinstance(error, commands.BadArgument):
             await ctx.respond('Invalid channel', ephemeral=True)
-        else:
-            await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        elif isinstance(error, discord.HTTPException):
+            await ctx.respond('URL provided is invalid', ephemeral=True)
 
+    @commands.slash_command(name='datetime', desription='Get a dynamic datetime display string',
+                            usage='datetime <year> <month> <day> <hour> <minute> <second>')
+    async def datetime(self, ctx,
+                       year: Option(int, description='Year of the datetime (cannot be before 1970)', required=True),
+                       month: Option(int, description='Month of the datetime', required=True,
+                                     choices=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+                       day: Option(int, description='Day of the datetime', required=True),
+                       hour: Option(int, description='Hour of the datetime', required=True),
+                       minute: Option(int, description='Minute of the datetime', required=True),
+                       second: Option(int, description='Second of the datetime', required=True),
+                       display_type: Option(str, description='Type of the datetime display', required=True,
+                                            choices=['short time', 'long time', 'short date', 'long date',
+                                                     'long date with short time',
+                                                     'long date with day of the week and short time', 'relative'])):
+        """
+        Gets a dynamic datetime display string
+
+        :param ctx: command context
+        :param year: year of the datetime
+        :param month: month of the datetime
+        :param day: day of the datetime
+        :param hour: hour of the datetime
+        :param minute: minute of the datetime
+        :param second: second of the datetime
+        :param display_type: type of the datetime display
+
+        :type ctx: discord.ApplicationContext
+        :type year: int
+        :type month: int
+        :type day: int
+        :type hour: int
+        :type minute: int
+        :type second: int`
+        :type display_type: str
+
+        :return: None
+        :rtype: None
+        """
+        date_time = datetime.datetime(year, month, day, hour, minute, second).strftime(
+            '%Y-%m-%d %H:%M:%S:%f')
+
+        fmt: str = ''
+        if display_type == 'short time':
+            fmt = 't'
+        elif display_type == 'long time':
+            fmt = 'T'
+        elif display_type == 'short date':
+            fmt = 'd'
+        elif display_type == 'long date':
+            fmt = 'D'
+        elif display_type == 'long date with short time':
+            fmt = 'f'
+        elif display_type == 'long date with day of the week and short time':
+            fmt = 'F'
+        elif display_type == 'relative':
+            fmt = 'R'
+
+        await ctx.respond(
+            f'{convert_to_unix_time(date_time, fmt)}\nPaste this and send to get the same result: \\{convert_to_unix_time(date_time, fmt)}')
+
+    @datetime.error
+    async def datetime_error(self, ctx, error):
+        """
+        Error handler for the datetime command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: Exception
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, ValueError):
+            await ctx.respond('Invalid datetime provided', ephemeral=True)
+        elif isinstance(error, OverflowError):
+            await ctx.respond('Please provide a year after 1970', ephemeral=True)
+        else:
+            await ctx.respond(f'Error: {error}', ephemeral=True)
 
 
 def setup(bot):

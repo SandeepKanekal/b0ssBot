@@ -22,6 +22,10 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [OpenTDB API](https://opentdb.com/api_config.php) Required for trivia commands (no key required)
 + [TruthOrDareBot API](https://docs.truthordarebot.xyz/api-docs) Required for truth or dare commands (no key required)
 + [Icanhasdadjoke API](https://icanhazdadjoke.com/api) Required for dad joke commands (no key required)
++ [BoredAPI](https://boredapi.com/api) Required for bored commands (no key required)
++ [GitHub API](https://developer.github.com/v3/) Required for GitHub commands (no key required)
++ [Dog CEO API](https://dog.ceo/dog-api/) Required for dog commands (no key required)
++ [The Cat API](https://thecatapi.com/) Required for cat commands (no key required)
 
 # Database 
 PostgreSQL is used. You can change the database details (username, host, database) to your convinience. 
@@ -36,7 +40,6 @@ Currently, there are 10 tables:
 + loop (columns: SN, guild_id, source, title, url)
 + message_responses(columns: SN, guild_id, message, response)
 + youtube(columns: SN, guild_id, text_channel_id, channel_id, channel_name, latest_video_id)
-+ hourlyweather(columns: SN, guild_id, channel_id, location)
 
 More details in [DATABASE.md](https://github.com/SandeepKanekal/b0ssBot/blob/main/DATABASE.md)
 

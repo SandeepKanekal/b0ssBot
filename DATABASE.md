@@ -73,10 +73,3 @@ Stores the YouTube channels that the guild wants to be notified when a video is 
 + channel_id: Channel ID (Not Null, VARCHAR(24))
 + channel_name: Channel name (Not Null, VARCHAR(2000))
 + latest_video_id: Latest video ID (Not Null, VARCHAR(11))
-
-# hourlyweather
-Stores the guilds that monitor locations for hourly weather
-+ SN: Serial number (Not Null, Primary Key)
-+ guild_id: Guild ID (Not Null, VARCHAR(18))
-+ channel_id: Channel ID (Not Null, VARCHAR(18))
-+ location: Location (Not Null, VARCHAR(2000))

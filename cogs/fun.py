@@ -304,6 +304,164 @@ class Fun(commands.Cog):
 
         next_joke.callback = next_joke_trigger
         end_interaction.callback = end_interaction_trigger
+    
+    @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
+    async def bored(self, ctx):
+        """
+        Get a random task to do for fun!
+
+        :param ctx: command context
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """ 
+        async with ctx.typing():
+            response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
+
+            embed = discord.Embed(description=f'{response["activity"]}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913029625950289/unknown.png)', timestamp=datetime.datetime.now(), colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
+
+            next_activity = Button(emoji='➡️', style=discord.ButtonStyle.green)
+            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
+
+            view = View(timeout=None)
+
+            view.add_item(next_activity)
+            view.add_item(end_interaction)
+        
+        async def next_activity_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            new_response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
+            embed.description = f'{new_response["activity"]}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913029625950289/unknown.png)'
+            embed.timestamp = datetime.datetime.now()
+            embed.set_footer(text=f'Type: {new_response["type"].upper()}')
+
+            await interaction.response.edit_message(embed=embed)
+        
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            next_activity.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
+
+        await ctx.send(embed=embed, view=view)
+
+        next_activity.callback = next_activity_trigger
+        end_interaction.callback = end_interaction_trigger
+    
+    @commands.command(name='egg', description='Get information on the egghunt!', usage='egg')
+    async def egg(self, ctx):
+        await ctx.reply(embed=discord.Embed(description='The bot has 9 accessible modules. Each module except `moderation` has 1 to 2 command(s) which will give you a character along with the position of the character[.](https://cdn.discordapp.com/attachments/984912794031894568/984913331540348938/unknown.png) By concatenating the 11 characters in the right order, you will get a YouTube video ID! After concatenation, you can visit https://www.youtube.com/watch?v=<ID> to watch the video! This video is the bot developer\'s favorite song!\n\nUse the help command to see the list of modules and commands!\n\n**HINT: YOU ARE SUPPOSED TO FIND URL REDIRECTS TO GET THE CHARACTERS!**\n\nYou can DM Dose#7204 for details if you did not understand.'))
+    
+    @commands.command(name='dog', description='Get a random dog picture', usage='dog')
+    @commands.cooldown(1, 1, commands.BucketType.user)
+    async def dog(self, ctx):
+        """
+        Get a random dog picture
+        
+        :param ctx: command
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        async with ctx.typing():
+            response = requests.get('https://dog.ceo/api/breeds/image/random').json()
+            embed = discord.Embed(title=':dog: woof!', url=response['message'], colour=discord.Colour.blurple()).set_image(url=response['message'])
+
+            next_dog = Button(emoji='➡️', style=discord.ButtonStyle.green)
+            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
+
+            view = View(timeout=None)
+            view.add_item(next_dog)
+            view.add_item(end_interaction)
+
+        async def next_dog_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            new_response = requests.get('https://dog.ceo/api/breeds/image/random').json()
+            embed.url = new_response['message']
+            embed.set_image(url=new_response['message'])
+
+            await interaction.response.edit_message(embed=embed)
+        
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            next_dog.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
+
+        await ctx.send(embed=embed, view=view)
+
+        next_dog.callback = next_dog_trigger
+        end_interaction.callback = end_interaction_trigger
+    
+    @commands.command(name='cat', description='Get a random cat picture', usage='cat')
+    @commands.cooldown(1, 1, commands.BucketType.user)
+    async def cat(self, ctx):
+        """
+        Get a random cat picture
+        
+        :param ctx: command
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        async with ctx.typing():
+            response = requests.get('https://api.thecatapi.com/v1/images/search').json()
+            embed = discord.Embed(title=':cat: meow!', url=response[0]['url'], colour=discord.Colour.blurple()).set_image(url=response[0]['url'])
+
+            next_cat = Button(emoji='➡️', style=discord.ButtonStyle.green)
+            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
+
+            view = View(timeout=None)
+            view.add_item(next_cat)
+            view.add_item(end_interaction)
+
+        async def next_cat_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            new_response = requests.get('https://api.thecatapi.com/v1/images/search').json()
+            embed.url = new_response[0]['url']
+            embed.set_image(url=new_response[0]['url'])
+
+            await interaction.response.edit_message(embed=embed)
+
+        async def end_interaction_trigger(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
+                                                        ephemeral=True)
+                return
+
+            next_cat.disabled = True
+            end_interaction.disabled = True
+            await interaction.response.edit_message(view=view)
+
+        await ctx.send(embed=embed, view=view)
+
+        next_cat.callback = next_cat_trigger
+        end_interaction.callback = end_interaction_trigger
 
 
 def setup(bot):

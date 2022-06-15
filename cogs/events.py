@@ -2,8 +2,6 @@
 import contextlib
 import os
 import discord
-import requests
-import datetime
 import random
 from googleapiclient.discovery import build
 from sql_tools import SQL
@@ -36,7 +34,6 @@ class Events(commands.Cog):
         print('Bot is ready')
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
         self.check_for_videos.start()
-        self.hourly_weather.start()
         sql = SQL('b0ssbot')
         sql.delete(table='queue')
         sql.delete(table='loop')
@@ -143,8 +140,11 @@ class Events(commands.Cog):
 
         :return: None
         """
-        if random.choice([True, False, False, False, False, False, False, False, False, False]):
-            await ctx.send(f'Hey there {ctx.author.mention}! Check out the new commands: (commands here)')
+        sql = SQL('b0ssbot')  # type: SQL
+        prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
+        if random.choice([True, False, False, False, False, False, False, False, False,
+                          False]) and ctx.command != self.bot.get_command('clear'):
+            await ctx.send(random.choice([f'Hey there {ctx.author.mention}! Check out the new commands: (commands here)', f'Hey there {ctx.author.mention}! Check out the new egghunt! Type `**{prefix}egg**`']))
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild) -> None:
@@ -167,7 +167,7 @@ class Events(commands.Cog):
         if guild.system_channel:  # Send an informative embed to the guild's system channel
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{guild.id}'")
             embed = discord.Embed(
-                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**',
+                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**. You can change my prefix using the slash command: `/prefix`!',
                 colour=self.bot.user.colour)
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await guild.system_channel.send(embed=embed)
@@ -233,45 +233,6 @@ class Events(commands.Cog):
 
                 sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
                            where=f'channel_id = \'{data[0]}\'')  # Update the latest video id
-
-    @tasks.loop(hours=1)
-    async def hourly_weather(self) -> None:
-        """
-        Check for hourly weather every hour
-        
-        :return: None
-        """
-        print('Checking for weather...')
-        sql = SQL('b0ssbot')  # type: SQL
-
-        weather = sql.select(elements=['guild_id', 'channel_id', 'location'], table='hourlyweather')
-
-        for data in weather:
-            guild = discord.utils.get(self.bot.guilds, id=int(data[0]))  # type: discord.Guild
-            channel = discord.utils.get(guild.text_channels, id=int(data[1]))  # type: discord.TextChannel
-            location = data[2].replace("''", "'")  # type: str
-
-            weather_data = requests.get(
-                f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={os.getenv("weather_api_key")}&units=metric').json()  # type: dict
-
-            if weather_data['cod'] == 200:
-                embed = discord.Embed(title=f'Weather for {data[2]}, {weather_data["sys"]["country"]}',
-                                      description=f'{weather_data["weather"][0]["description"]}',
-                                      colour=discord.Colour.blue())
-                embed.set_thumbnail(
-                    url=f'https://openweathermap.org/img/wn/{weather_data["weather"][0]["icon"]}@2x.png')
-                embed.add_field(name='Max. Temperature', value=f'{weather_data["main"]["temp_max"]}°C')
-                embed.add_field(name='Min. Temperature', value=f'{weather_data["main"]["temp_min"]}°C')
-                embed.add_field(name='Temperature', value=f'{weather_data["main"]["temp"]}°C')
-                embed.add_field(name='Feels Like', value=f'{weather_data["main"]["feels_like"]}°C')
-                embed.add_field(name='Humidity', value=f'{weather_data["main"]["humidity"]}%')
-                embed.add_field(name='Wind Speed', value=f'{weather_data["wind"]["speed"]}m/s')
-                embed.add_field(name='Pressure', value=f'{weather_data["main"]["pressure"]}hPa')
-                embed.add_field(name='Sunrise', value=f'<t:{weather_data["sys"]["sunrise"]}:R>')
-                embed.add_field(name='Sunset', value=f'<t:{weather_data["sys"]["sunset"]}:R>')
-                embed.set_footer(text='Powered by OpenWeatherMap')
-                embed.timestamp = datetime.datetime.now()
-                await channel.send(embed=embed)  # Send the embed
 
 
 # Setup

@@ -66,7 +66,7 @@ class Help(commands.Cog):
                 embed.add_field(name=cog.upper(), value=cmds, inline=False)
                 cmds = ''
             embed.add_field(name='Slash Commands',
-                            value='`avatar` `userinfo` `youtubenotification` `hourlyweather` `prefix` `warn` `mute` `unmute` `timeout` `code` `roleinfo` `invert` `embed`',
+                            value='`avatar` `userinfo` `youtubenotification` `prefix` `warn` `mute` `unmute` `timeout` `code` `roleinfo` `invert` `embed` `datetime`',
                             inline=False)
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))

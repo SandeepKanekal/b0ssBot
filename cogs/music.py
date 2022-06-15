@@ -912,6 +912,7 @@ class Music(commands.Cog):
 
             # Response embed
             embed = discord.Embed(title=title, description=lyrics,
+                                  url='https://cdn.discordapp.com/attachments/984912794031894568/984913958693634158/unknown.png',
                                   colour=discord.Colour.blue())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
@@ -925,12 +926,12 @@ class Music(commands.Cog):
 
         # Some songs' lyrics are too long to be sent, in that case, a text file is sent
         except discord.HTTPException:
-            with open('lyrics.txt', 'w') as f:
+            with open(f'lyrics_{ctx.author.id}.txt', 'w') as f:
                 f.write(f'{title}\n\n')
                 f.write(lyrics)
                 f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
             await ctx.send(file=discord.File('lyrics.txt'))
-            os.remove('lyrics.txt')
+            os.remove(f'lyrics_{ctx.author.id}.txt')
 
     # Error in lyrics command
     @lyrics.error

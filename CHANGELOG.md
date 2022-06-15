@@ -1,39 +1,34 @@
 # Changelog for b0ssb0t #
 
 # Overall #
-+ The Easter Egg has been solved!
++ A new egghunt is now available!
 
 # Events #
-+ Markdown syntax for embedding links in text is now detected and, a webhook is sent after deleting the original message.
++ Markdown syntax detection.
 
 # Fun #
-+ The messageresponse command has been transferred to slash commands since it is easier with slash commands.
 + Addition of a dadjoke command.
++ Addition of a bored command.
++ Addition of dog and cat commands.
 
 # Help #
 + The command usage field now calls the `command.usage` for its value.
 + A field showing the slash commands has been added.
 
 # Moderation #
-+ Modlogs now detect voice state updates and bulk message deletions.
-+ A small bug which made `'` to be visible as `''` was fixed.
-+ Edit messages in modlogs now shows even if there are embeds in the message.
-+ Avatar updates are shown differently. Previous avatar is the thumbnail, and the new avatar is the image.
-+ The timeout and warn commands have been removed since it is tough to use. They are still available as slash commands
++ Modlogs now record updates to threads, scheduled events and webhooks.
 
 # MISC #
 + Since a member can be of multiple strings, the `member` argument in the avatar command now is a multiline string.
 
 # Info #
-+ Since a member can be of multiple strings, the `member` argument in the userinfo command now is a multiline string.
-+ The changelog command will not copy everything from this file.
 + Addition of a roleinfo command.
++ Botinfo command has a description in the response embed.
 
 # Internet #
-+ The youtubenotification, hourlyweather commands have been transferred to slash commands since it is easier with slash commands.
-+ Addition of a trivia command.
-+ The quote command has been transferred to the internet module. It also uses buttons now.
 + The weather command is more informative.
++ Removal of the hourlyweather command since it is no longer needed.
++ Addition of a GitHub command.
 
 # Music #
 + The lyrics command's response's title now is the title of the song instead of the query. However, the query is visible as the footer.
@@ -47,7 +42,9 @@
 + Addition the code command.
 + The code command now sends `.py` files instead of `.txt` files.
 + More modules can now be viewed using the code command.
-+ Addition for a roleinfo command.
++ Addition of a roleinfo command.
++ Addition of an embed command.
++ Addition of a datetime command.
 
 # Games #
 + Addition of truth or dare commands.

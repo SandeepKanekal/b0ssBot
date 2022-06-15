@@ -124,7 +124,7 @@ class Info(commands.Cog):
         emoji_string = f'Total: **{len(emojis)}**\n'
         animated_emojis_len = len(list(filter(lambda emoji: emoji.animated, emojis)))
         emoji_string += f'Animated: **{animated_emojis_len}**\n'
-        emoji_string += f'Non Animated: **{len(emojis) - animated_emojis_len}**'
+        emoji_string += f'Non Animated[:](https://cdn.discordapp.com/attachments/984912794031894568/984914001664299079/unknown.png) **{len(emojis) - animated_emojis_len}**'
 
         # Getting the creation date of the server relative unix time
         created_at = ctx.guild.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
@@ -147,7 +147,8 @@ class Info(commands.Cog):
         embed.add_field(name='Server Boosts', value=str(ctx.guild.premium_subscription_count))
         embed.add_field(name='Number of Bans', value=str(ban_count))
         try:
-            embed.add_field(name='Muted Users', value=str(len(discord.utils.get(ctx.guild.roles, name='Muted').members)))
+            embed.add_field(name='Muted Users',
+                            value=str(len(discord.utils.get(ctx.guild.roles, name='Muted').members)))
         except AttributeError:
             embed.add_field(name='Muted Users', value=str(0))
         embed.set_footer(text=f'ID: {ctx.guild.id}')
@@ -171,7 +172,9 @@ class Info(commands.Cog):
         created_at = self.bot.user.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
         created_at = convert_to_unix_time(created_at)  # type: str
 
-        embed = discord.Embed(colour=self.bot.user.colour)
+        embed = discord.Embed(
+            description=f'I am {self.bot.user.name}! I was created by Dose#7204. I was coded using the [pycord](https://github.com/Pycord-Development/pycord) library and my code is available [here](https://github.com/SandeepKanekal/b0ssBot). Though I am a multipurpose bot, my bet feature is the internet commands. Use the help command to get to know all my commands.',
+            colour=self.bot.user.colour, timestamp=datetime.datetime.now())
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='Bot Username', value=str(self.bot.user.name), inline=True)
         embed.add_field(name='Bot Owner', value='Dose#7204')
@@ -185,7 +188,6 @@ class Info(commands.Cog):
                         value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887&permissions=8&scope=bot%20applications.commands)')
         embed.set_footer(text=f'Requested by {ctx.author}',
                          icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['cl'], description='Shows the changelog', usage='changelog')
@@ -227,12 +229,13 @@ class Info(commands.Cog):
         """
         await ctx.send(
             embed=discord.Embed(
-                description=f'The bot was started {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}',
+                description=f'The bot was started on {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913407964766288/unknown.png)',
                 colour=self.bot.user.colour
             )
         )
 
-    @commands.command(name='roleinfo', aliases=['role', 'ri'], description='Shows the information of a role', usage='roleinfo <role>')
+    @commands.command(name='roleinfo', aliases=['role', 'ri'], description='Shows the information of a role',
+                      usage='roleinfo <role>')
     async def roleinfo(self, ctx, *, role: discord.Role):
         """
         Shows the information of a role
@@ -254,33 +257,28 @@ class Info(commands.Cog):
 
         # Getting the colour of the role
         rgb_colour = role.colour.to_rgb()  # type: tuple[int, int, int]
-        hex_colour = str(role.colour)  # type: str
 
-        # Getting the permissions of the role
-        permissions = [permission[0].replace('_', ' ').title() for permission in role.permissions if permission[1]]  # type: list[str]
+        embed = discord.Embed(colour=role.colour, timestamp=datetime.datetime.now())
 
-        embed = discord.Embed(colour=role.colour)
-        if role.guild.icon:
-            embed.set_author(name=role.name, icon_url=role.guild.icon)
-        else:
-            embed.set_author(name=role.name)
-        
+        embed.set_author(name=role.name, icon_url=role.icon or role.guild.icon or discord.Embed.Empty)
+
         embed.add_field(name='Members', value=str(len(role.members)), inline=True)
         embed.add_field(name='Creation Date', value=created_at, inline=True)
-        embed.add_field(name='Colour', value=f'**RGB:** {rgb_colour[0]}, {rgb_colour[1]}, {rgb_colour[2]}\n**Hex Code:** {hex_colour}', inline=True)
+        embed.add_field(name='Colour',
+                        value=f'**RGB:** {rgb_colour[0]}, {rgb_colour[1]}, {rgb_colour[2]}\n**Hex Code:** {role.colour}',
+                        inline=True)
         embed.add_field(name='Mentionable', value=str(role.mentionable), inline=True)
         embed.add_field(name='Position', value=str(role.position), inline=True)
         embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
-        embed.add_field(name='Permissions', value=', '.join(permissions) or 'None', inline=False)
+        embed.add_field(name='Permissions', value=', '.join(
+            [permission[0].replace('_', ' ').title() for permission in role.permissions if permission[1]]) or 'None',
+                        inline=False)
 
         embed.set_footer(text=f'ID: {role.id}')
-        embed.timestamp = datetime.datetime.now()
-
-        if role.icon:
-            embed.set_thumbnail(url=role.icon)
+        embed.set_thumbnail(url=role.icon or discord.Embed.Empty)
 
         await ctx.send(embed=embed)
-    
+
     @roleinfo.error
     async def roleinfo_error(self, ctx, error):
         """
@@ -298,7 +296,8 @@ class Info(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await send_error_embed(ctx, 'Invalid role')
         elif isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx, f'Missing required argument. Please specify a role\n\nProper Usage: `{self.bot.get_command("roleinfo").usage}`')
+            await send_error_embed(ctx,
+                                   f'Missing required argument. Please specify a role\n\nProper Usage: `{self.bot.get_command("roleinfo").usage}`')
         else:
             await send_error_embed(ctx, f'Error: `{error}`')
 
