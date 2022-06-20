@@ -684,7 +684,7 @@ class Games(commands.Cog):
 
         cancel = Button(label='Cancel', style=discord.ButtonStyle.red, row=3)
 
-        view = View(timeout=2)
+        view = View(timeout=None)
         view.add_item(button_one)
         view.add_item(button_two)
         view.add_item(button_three)
@@ -731,10 +731,12 @@ class Games(commands.Cog):
                             button_three.style != discord.ButtonStyle.gray)):  # Check if the player has won
                 for b in list(filter(lambda x: not x.disabled, buttons)):
                     b.disabled = True
+                cancel.disabled = True
 
                 await interaction.response.edit_message(content=f'{turn.mention} has won!', view=view)
 
             elif not list(filter(lambda x: not x.disabled, buttons)):  # Check if the game is a draw
+                cancel.disabled = True
                 await interaction.response.edit_message(content='It\'s a draw!', view=view)
 
             else:

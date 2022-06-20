@@ -192,7 +192,8 @@ class Music(commands.Cog):
         :rtype: None
         """
         # Get the url to be played from the loop or queue table
-        track = self.sql.select(['source', 'title', 'url'], 'loop', f"guild_id = '{ctx.guild.id}'") or self.sql.select(
+        track = self.sql.select(elements=['source', 'title', 'url'], table='loop',
+                                where=f"guild_id = '{ctx.guild.id}'") or self.sql.select(
             elements=['source', 'title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
 
         m_url = track[0][0]
@@ -300,62 +301,57 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
+        async with ctx.typing():
+            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
+            if ctx.author.voice is None:
+                raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+            voice_channel = ctx.author.voice.channel  # Get the voice channel
 
-        if ctx.author.voice is None:
-            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
-        voice_channel = ctx.author.voice.channel  # Get the voice channel
+            if vc is None:
+                await voice_channel.connect()
+            elif vc.is_connected() and vc.channel != voice_channel:
+                raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
 
-        if vc is None:
-            await voice_channel.connect()
-        elif vc.is_connected() and vc.channel != voice_channel:
-            raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
+            if vc and vc.is_paused():
+                vc.resume()
 
-        if vc and vc.is_paused():
-            vc.resume()
+            song = self.search_yt(query)  # Get the track details
 
-        msg = await ctx.send('Downloading...')
-        song = self.search_yt(query)  # Get the track details
+            if isinstance(song, IndexError):
+                await send_error_embed(ctx, description=f'No results found for {query}')
+                return
 
-        if isinstance(song, IndexError):
-            with contextlib.suppress(discord.NotFound):
-                await msg.delete()
-            await send_error_embed(ctx, description=f'No results found for {query}')
-            return
+            if isinstance(song, Exception):
+                await send_error_embed(ctx, description=f'Error: `{song}`')
+                return
 
-        if isinstance(song, Exception):
-            with contextlib.suppress(discord.NotFound):
-                await msg.delete()
-            await send_error_embed(ctx, description=f'Error: `{song}`')
-            return
+            if ctx.guild.id not in self.volume:
+                self.volume[ctx.guild.id] = 100
+            song["title"] = song["title"].replace("'", "''")  # Single quotes cause problems
 
-        if ctx.guild.id not in self.volume.keys():
-            self.volume[ctx.guild.id] = 100
-        song["title"] = song["title"].replace("'", "''")  # Single quotes cause problems
-
-        self.sql.insert(
-            table='queue',
-            columns=['guild_id', 'source', 'title', 'url'],
-            values=[
-                f"'{ctx.guild.id}'",
-                f"'{song['source']}'",
-                f"'{song['title']}'",
-                f"'{song['url']}'"
-            ]
-        )
-        song["title"] = song["title"].replace("''", "'")  # Replace the single quotes back for the response
-        embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
-            url=song['thumbnail'])
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.add_field(
-            name='Song added to queue',
-            value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
-        )
-        embed.set_footer(
-            text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
-        )
-        await msg.edit(
+            self.sql.insert(
+                table='queue',
+                columns=['guild_id', 'source', 'title', 'url'],
+                values=[
+                    f"'{ctx.guild.id}'",
+                    f"'{song['source']}'",
+                    f"'{song['title']}'",
+                    f"'{song['url']}'"
+                ]
+            )
+            song["title"] = song["title"].replace("''", "'")  # Replace the single quotes back for the response
+            embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
+                url=song['thumbnail'])
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.add_field(
+                name='Song added to queue',
+                value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
+            )
+            embed.set_footer(
+                text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
+            )
+        await ctx.send(
             'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
             embed=embed
         )
@@ -890,48 +886,49 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-        lyrics = ''
-        title = ''
+        async with ctx.typing():
+            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            lyrics = ''
+            title = ''
 
-        # If the query is of type None, this means the user wants the lyrics of the current playing track
-        if query is None:
-            # Basic responses to false calls
-            if vc is None:
-                raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+            # If the query is of type None, this means the user wants the lyrics of the current playing track
+            if query is None:
+                # Basic responses to false calls
+                if vc is None:
+                    raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
-            if not vc.is_playing():
-                raise NoAudioPlaying('No audio is being played')
-            query = self.now_playing[ctx.guild.id]
+                if not vc.is_playing():
+                    raise NoAudioPlaying('No audio is being played')
+                query = self.now_playing[ctx.guild.id]
 
-        try:
-            # Gets the lyrics of the current track
-            extract_lyrics = lyrics_extractor.SongLyrics(os.getenv('json_api_key'), os.getenv('engine_id'))
-            song = extract_lyrics.get_lyrics(query)
-            title, lyrics = song['title'], song['lyrics']
+            try:
+                # Gets the lyrics of the current track
+                extract_lyrics = lyrics_extractor.SongLyrics(os.getenv('json_api_key'), os.getenv('engine_id'))
+                song = extract_lyrics.get_lyrics(query)
+                title, lyrics = song['title'], song['lyrics']
 
-            # Response embed
-            embed = discord.Embed(title=title, description=lyrics,
-                                  url='https://cdn.discordapp.com/attachments/984912794031894568/984913958693634158/unknown.png',
-                                  colour=discord.Colour.blue())
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
-            embed.timestamp = datetime.datetime.now()
-            await ctx.send(embed=embed)
+                # Response embed
+                embed = discord.Embed(title=title, description=lyrics,
+                                      url='https://cdn.discordapp.com/attachments/984912794031894568/984913958693634158/unknown.png',
+                                      colour=discord.Colour.blue())
+                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+                embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
+                embed.timestamp = datetime.datetime.now()
+                await ctx.send(embed=embed)
 
-        # Lyrics not found exception
-        except lyrics_extractor.lyrics.LyricScraperException:
-            await send_error_embed(ctx,
-                                   description=f'Lyrics for the song {query} could not be found')
+            # Lyrics not found exception
+            except lyrics_extractor.lyrics.LyricScraperException:
+                await send_error_embed(ctx,
+                                       description=f'Lyrics for the song {query} could not be found')
 
-        # Some songs' lyrics are too long to be sent, in that case, a text file is sent
-        except discord.HTTPException:
-            with open(f'lyrics_{ctx.author.id}.txt', 'w') as f:
-                f.write(f'{title}\n\n')
-                f.write(lyrics)
-                f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
-            await ctx.send(file=discord.File('lyrics.txt'))
-            os.remove(f'lyrics_{ctx.author.id}.txt')
+            # Some songs' lyrics are too long to be sent, in that case, a text file is sent
+            except discord.HTTPException:
+                with open(f'lyrics_{ctx.author.id}.txt', 'w') as f:
+                    f.write(f'{title}\n\n')
+                    f.write(lyrics)
+                    f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
+                await ctx.send(file=discord.File(f'lyrics_{ctx.author.id}.txt', 'lyrics.txt'))
+                os.remove(f'lyrics_{ctx.author.id}.txt')
 
     # Error in lyrics command
     @lyrics.error

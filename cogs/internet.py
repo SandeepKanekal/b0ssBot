@@ -82,12 +82,12 @@ class Internet(commands.Cog):
             # Creating the embed
             stats = youtube.videos().list(id=video_ids[0], part='statistics, contentDetails').execute()
 
-            embed = discord.Embed(colour=discord.Colour.red())
+            embed = discord.Embed(colour=0xff0000)
             embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
             embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
             embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
             embed.set_image(url=thumbnails[0])
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_author(name='YouTube', icon_url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj', url='https://www.youtube.com/')
             embed.set_footer(
                 text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"] if "likeCount" in stats["items"][0]["statistics"].keys() else "Could not fetch likes"}\nResult {index + 1} out of 50')
             next_video = Button(emoji='⏭️', style=discord.ButtonStyle.green)
@@ -112,9 +112,11 @@ class Internet(commands.Cog):
                 return
 
             embed.clear_fields()
-            index += 1
+
             if index == len(video_ids) - 1:
                 index = 0  # Resetting the index
+            else:
+                index += 1
 
             statistics = youtube.videos().list(part='statistics, contentDetails', id=video_ids[index]).execute()
 
@@ -124,7 +126,6 @@ class Internet(commands.Cog):
                             value=f'[{authors[index]}](https://youtube.com/channel/{channel_ids[index]})')
             embed.add_field(name='Publish Date:', value=f'{publish_dates[index]}')
             embed.set_image(url=thumbnails[index])
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(
                 text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"] if "likeCount" in statistics["items"][0]["statistics"].keys() else "Could not fetch likes"}\nResult {index + 1} out of 50')
             await interaction.response.edit_message(embed=embed)
@@ -139,10 +140,9 @@ class Internet(commands.Cog):
             embed.clear_fields()
 
             if index == 0:
-                await interaction.response.send_message('This is the first video!', ephemeral=True)
-                return
-
-            index -= 1
+                index = len(video_ids) - 1
+            else:
+                index -= 1
 
             statistics = youtube.videos().list(part='statistics, contentDetails', id=video_ids[index]).execute()
 
@@ -152,7 +152,6 @@ class Internet(commands.Cog):
                             value=f'[{authors[index]}](https://youtube.com/channel/{channel_ids[index]})')
             embed.add_field(name='Publish Date:', value=f'{publish_dates[index]}')
             embed.set_image(url=thumbnails[index])
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.set_footer(
                 text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}\nResult {index + 1} out of 50')
             await interaction.response.edit_message(embed=embed)
@@ -161,10 +160,9 @@ class Internet(commands.Cog):
         async def watch_video_trigger(interaction):
             nonlocal index
             if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            await interaction.response.send_message(f'https://youtube.com/watch?v={video_ids[index]}')
+                await interaction.response.send_message(f'https://youtube.com/watch?v={video_ids[index]}', ephemeral=True)
+            else:
+                await interaction.response.send_message(f'https://youtube.com/watch?v={video_ids[index]}')
 
         # Ends the interaction
         async def end_interaction_trigger(interaction):
@@ -357,6 +355,50 @@ class Internet(commands.Cog):
         :return: None
         :rtype: None
         """
+        index = 0  # type: int
+        async with ctx.typing():
+            try:
+                submissions = await get_posts(subreddit)
+                if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
+                    submissions = list(filter(lambda s: not s.over_18, submissions))
+                if not len(submissions):
+                    await send_error_embed(ctx,
+                                            description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
+
+                embed = discord.Embed(title=submissions[index].title, description=submissions[index].selftext, url=f'https://reddit.com{submissions[index].permalink}', colour=0xff4300, timestamp=datetime.datetime.now())
+                embed.set_author(name=f'r/{subreddit}', icon_url='https://www.redditinc.com/assets/images/site/reddit-logo.png', url=f'https://reddit.com/r/{subreddit}')
+                embed.set_footer(
+                    text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nPost {index + 1} out of {len(submissions)}')
+
+                next_post = Button(emoji='⏭️', style=discord.ButtonStyle.green)
+                previous_post = Button(emoji='⏮️', style=discord.ButtonStyle.green)
+                end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
+
+                view = View(timeout=None)
+                view.add_item(previous_post)
+                view.add_item(next_post)
+                view.add_item(end_interaction)
+                
+                # Checking if the submission is text-only
+                if not submissions[0].is_self:
+                    if submissions[0].is_video:
+                        embed.description += f'\n[Video Link]({submissions[0].url})'
+                    else:
+                        embed.set_image(url=submissions[0].url)
+
+                try:
+                    await ctx.send(embed=embed, view=view)
+                except discord.HTTPException:
+                    embed = discord.Embed(description='The post content was too long to be sent',
+                                            colour=discord.Colour.orange())
+                    await ctx.send(embed=embed, view=view)
+
+            except AttributeError:
+                # Could not get a post
+                await send_error_embed(ctx, description='Could not retrieve a post from **r/{subreddit}**')
+
+            except asyncprawcore.exceptions.AsyncPrawcoreException as e:
+                await send_error_embed(ctx, description=str(e))
 
         async def next_post_trigger(interaction):
             nonlocal index
@@ -375,8 +417,7 @@ class Internet(commands.Cog):
             embed.description = submissions[index].selftext
             embed.url = f'https://reddit.com{submissions[index].permalink}'
             embed.set_footer(
-                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
-            embed.timestamp = datetime.datetime.now()
+                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nPost {index + 1} out of {len(submissions)}')
 
             # Checking if the submission is text-only
             if submissions[index].is_self:
@@ -405,17 +446,15 @@ class Internet(commands.Cog):
                 return
 
             if index == 0:
-                await interaction.response.send_message(content='This is the first post', ephemeral=True)
-                return
-
-            index -= 1  # Decrement index
+                index = len(submissions) - 1
+            else:
+                index -= 1
 
             embed.title = submissions[index].title
             embed.description = submissions[index].selftext if submissions[index].is_self else ''
             embed.url = f'https://reddit.com{submissions[index].permalink}'
             embed.set_footer(
-                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
-            embed.timestamp = datetime.datetime.now()
+                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nPost {index + 1} out of {len(submissions)}')
 
             if submissions[index].is_video:
                 embed.description += f'\n[Video Link]({submissions[index].url})'
@@ -441,59 +480,9 @@ class Internet(commands.Cog):
             end_interaction.disabled = True
             await interaction.response.edit_message(view=view)
 
-        index = 0  # type: int
-        try:
-            async with ctx.typing():
-                submissions = await get_posts(subreddit)
-                if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
-                    submissions = list(filter(lambda s: not s.over_18, submissions))
-                if not len(submissions):
-                    await send_error_embed(ctx,
-                                           description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
-
-                embed = discord.Embed(colour=discord.Colour.orange())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-
-                next_post = Button(emoji='⏭️', style=discord.ButtonStyle.green)
-                previous_post = Button(emoji='⏮️', style=discord.ButtonStyle.green)
-                end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-
-                view = View(timeout=None)
-                view.add_item(previous_post)
-                view.add_item(next_post)
-                view.add_item(end_interaction)
-
-                next_post.callback = next_post_trigger
-                end_interaction.callback = end_interaction_trigger
-                previous_post.callback = previous_post_trigger
-
-                embed.title = submissions[0].title
-                embed.description = submissions[0].selftext
-                embed.url = f'https://reddit.com{submissions[0].permalink}'
-                embed.set_footer(
-                    text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-                embed.timestamp = datetime.datetime.now()
-
-                # Checking if the submission is text-only
-                if not submissions[0].is_self:
-                    if submissions[0].is_video:
-                        embed.description += f'\n[Video Link]({submissions[0].url})'
-                    else:
-                        embed.set_image(url=submissions[0].url)
-
-            try:
-                await ctx.send(embed=embed, view=view)
-            except discord.HTTPException:
-                embed = discord.Embed(description='The post content was too long to be sent',
-                                      colour=discord.Colour.orange())
-                await ctx.send(embed=embed, view=view)
-
-        except AttributeError:
-            # Could not get a post
-            await send_error_embed(ctx, description='Could not retrieve a post from **r/{subreddit}**')
-
-        except asyncprawcore.exceptions.AsyncPrawcoreException as e:
-            await send_error_embed(ctx, description=str(e))
+        next_post.callback = next_post_trigger
+        end_interaction.callback = end_interaction_trigger
+        previous_post.callback = previous_post_trigger
 
     @redditpost.error
     async def post_error(self, ctx, error):
@@ -649,7 +638,7 @@ class Internet(commands.Cog):
                 await interaction.response.send_message('Please wait for a few seconds', ephemeral=True)
                 return
 
-            embed.description = f'**{q[0]["q"]}**'
+            embed.description = f'> **{q[0]["q"]}**'
             embed.set_author(name=q[0]['a'])
             await interaction.response.edit_message(embed=embed)
 
@@ -670,7 +659,7 @@ class Internet(commands.Cog):
                 return
 
             embed = discord.Embed(
-                description=f'**{quote[0]["q"]}**',
+                description=f'**> {quote[0]["q"]}**',
                 colour=discord.Colour.blue()
             )
             embed.set_author(name=quote[0]['a'])
@@ -815,8 +804,10 @@ class Internet(commands.Cog):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
-    
-    @commands.command(name='github', description='Get information on any public github repository\nExample: `github SandeepKanekal/b0ssBot`', usage='github <repository_owner/repository>')
+
+    @commands.command(name='github',
+                      description='Get information on any public github repository\nExample: `github SandeepKanekal/b0ssBot`',
+                      usage='github <repository_owner/repository>')
     @commands.cooldown(1, 1, commands.BucketType.user)
     async def github(self, ctx, repository):
         """
@@ -833,12 +824,13 @@ class Internet(commands.Cog):
         """
         async with ctx.typing():
             # Get repository information
-            repo_information = requests.get(f'https://api.github.com/repos/{repository.split("/")[0]}/{repository.split("/")[1]}').json()
-            
+            repo_information = requests.get(
+                f'https://api.github.com/repos/{repository.split("/")[0]}/{repository.split("/")[1]}').json()
+
             if 'message' in repo_information:
                 await send_error_embed(ctx, description=f'Error: `{repo_information["message"]}`')
                 return
-            
+
             # Make embed
             embed = discord.Embed(
                 title=repo_information['name'],
@@ -847,20 +839,26 @@ class Internet(commands.Cog):
                 colour=discord.Colour.blurple(),
                 timestamp=datetime.datetime.now()
             )
-            embed.set_author(name=repo_information['owner']['login'], icon_url=repo_information['owner']['avatar_url'], url=repo_information['owner']['html_url'])
+            embed.set_author(name=repo_information['owner']['login'], icon_url=repo_information['owner']['avatar_url'],
+                             url=repo_information['owner']['html_url'])
             embed.set_thumbnail(url=repo_information['owner']['avatar_url'])
             embed.set_footer(text='Information retrieved using the GitHub API')
-            
+
             embed.add_field(name='Language', value=repo_information['language'])
             embed.add_field(name='Forks', value=repo_information['forks'])
             embed.add_field(name='Watchers', value=repo_information['watchers_count'])
-            embed.add_field(name='Created at', value=convert_to_unix_time(repo_information['created_at'].replace('T', ' ').replace('Z', '')))
-            embed.add_field(name='Updated at', value=convert_to_unix_time(repo_information['updated_at'].replace('T', ' ').replace('Z', '')))
-            embed.add_field(name='Pushed at', value=convert_to_unix_time(repo_information['pushed_at'].replace('T', ' ').replace('Z', '')))
-            embed.add_field(name='License', value=repo_information['license']['name'] if repo_information['license'] else repo_information['license'])
+            embed.add_field(name='Created at', value=convert_to_unix_time(
+                repo_information['created_at'].replace('T', ' ').replace('Z', '')))
+            embed.add_field(name='Updated at', value=convert_to_unix_time(
+                repo_information['updated_at'].replace('T', ' ').replace('Z', '')))
+            embed.add_field(name='Pushed at', value=convert_to_unix_time(
+                repo_information['pushed_at'].replace('T', ' ').replace('Z', '')))
+            embed.add_field(name='License',
+                            value=repo_information['license']['name'] if repo_information['license'] else
+                            repo_information['license'])
             embed.add_field(name='Default Branch', value=repo_information['default_branch'])
             embed.add_field(name='Open Issues', value=repo_information['open_issues_count'])
-    
+
             await ctx.send(embed=embed)
 
     @github.error
@@ -881,6 +879,7 @@ class Internet(commands.Cog):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
+
 
 def setup(bot):
     """

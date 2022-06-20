@@ -55,16 +55,21 @@ def get_mod_channel(guild: discord.Guild) -> discord.TextChannel:
     :rtype: discord.TextChannel
     """
     sql = SQL('b0ssbot')
-    return discord.utils.get(guild.text_channels, id=int(sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]))
+    return discord.utils.get(guild.text_channels, id=int(
+        sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]))
 
 
 async def send_webhook(channel: discord.TextChannel, embed: discord.Embed, bot: commands.Bot) -> None:
     """
     Sends a webhook to the specified channel
-    
+
     :param channel: The channel to send the webhook to
+    :param embed: The embed to send to the webhook
+    :param bot: The bot
     
     :type channel: discord.TextChannel
+    :type embed: discord.Embed
+    :type bot: commands.Bot
     
     :return: None
     :rtype: None
@@ -189,7 +194,8 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            await webhook.send(content='Message contained embeds', embeds=message.embeds, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+            await webhook.send(content='Message contained embeds', embeds=message.embeds,
+                               username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
@@ -328,7 +334,7 @@ class Moderation(commands.Cog):
         embed.set_footer(text=f'ID: {channel.id}')
 
         # Send webhook
-        await send_webhook(channel, embed, self.bot)
+        await send_webhook(mod_channel, embed, self.bot)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.TextChannel) -> None:
@@ -358,7 +364,7 @@ class Moderation(commands.Cog):
         embed.set_footer(text=f'ID: {channel.id}')
 
         # Send webhook
-        await send_webhook(channel, embed, self.bot)
+        await send_webhook(mod_channel, embed, self.bot)
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.TextChannel, after: discord.TextChannel) -> None:
@@ -805,7 +811,7 @@ class Moderation(commands.Cog):
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
             await webhook.send(embeds=embeds, username=f'{self.bot.user.name} Logging',
-                                avatar_url=self.bot.user.avatar)
+                               avatar_url=self.bot.user.avatar)
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]) -> None:
@@ -839,9 +845,10 @@ class Moderation(commands.Cog):
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
-    async def on_guild_stickers_update(self, guild: discord.Guild, before: list[discord.Sticker], after: list[discord.Sticker]) -> None:
+    async def on_guild_stickers_update(self, guild: discord.Guild, before: list[discord.Sticker],
+                                       after: list[discord.Sticker]) -> None:
         """
         Event listener for when a guild's stickers are updated
         
@@ -858,7 +865,7 @@ class Moderation(commands.Cog):
         """
         if not modlog_enabled(guild.id):  # Check if modlog is enabled
             return
-        
+
         channel = get_mod_channel(guild)
 
         # Make embed
@@ -868,7 +875,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
         ).set_author(name=guild.name, icon_url=guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {guild.id}')
-        
+
         if len(before) > len(after):
             removed_stickers = [sticker for sticker in before if sticker not in after]
             embed.description += f'Stickers removed: {", ".join([f"`{sticker.name}`" for sticker in removed_stickers])}\n'
@@ -882,10 +889,10 @@ class Moderation(commands.Cog):
                 [f'`{sticker.name}` has been updated to `{after[index].name}`' for index, sticker in
                  enumerate(before) if sticker.name != after[index].name]
             )
-        
+
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_thread_create(self, thread: discord.Thread) -> None:
         """
@@ -900,7 +907,7 @@ class Moderation(commands.Cog):
         """
         if not modlog_enabled(thread.guild.id):  # Check if modlog is enabled
             return
-        
+
         channel = get_mod_channel(thread.guild)  # Get the modlog channel
 
         # Make embed
@@ -909,11 +916,12 @@ class Moderation(commands.Cog):
             description=f'{thread.mention} has been created in {thread.parent.mention}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {thread.id}')
+        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_thread_delete(self, thread: discord.Thread) -> None:
         """
@@ -937,7 +945,8 @@ class Moderation(commands.Cog):
             description=f'{thread.name} has been deleted in {thread.parent.mention}',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {thread.id}')
+        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
@@ -967,19 +976,20 @@ class Moderation(commands.Cog):
             description='',
             colour=discord.Colour.gold(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=before.guild.name, icon_url=before.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {before.id}')
+        ).set_author(name=before.guild.name, icon_url=before.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {before.id}')
 
         if before.name != after.name:
             embed.description += f'Name changed from `{before.name}` to `{after.name}`\n'
         if before.archived != after.archived:
             embed.description += f'{before.name} has been {"archived" if after.archived else "unarchived"}\n'
-        
+
         if not embed.description:
             return
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_thread_remove(self, thread: discord.Thread) -> None:
         """
@@ -1003,11 +1013,12 @@ class Moderation(commands.Cog):
             description=f'{thread.name} has been removed from {thread.parent.mention}',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {thread.id}')
+        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_thread_join(self, thread: discord.Thread) -> None:
         """
@@ -1022,7 +1033,7 @@ class Moderation(commands.Cog):
         """
         if not modlog_enabled(thread.guild.id):  # Check if modlog is enabled
             return
-        
+
         channel = get_mod_channel(thread.guild)  # Get the modlog channel
 
         # Make embed
@@ -1031,26 +1042,27 @@ class Moderation(commands.Cog):
             description=f'{thread.name} has been unarchived in {thread.parent.mention}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {thread.id}')
+        ).set_author(name=thread.guild.name, icon_url=thread.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
 
     @commands.Cog.listener()
-    async def on_thread_member_join(self, member: discord.ThreadMember) -> None:
+    async def on_thread_member_join(self, member: discord.Member) -> None:
         """
         Event listener for when a member joins a thread.
 
         :param member: The member that joined the thread
 
-        :type member: discord.ThreadMember
+        :type member: discord.Member
 
         :return: None
         :rtype: None
         """
         if not modlog_enabled(member.guild.id):  # Check if modlog is enabled
             return
-        
+
         channel = get_mod_channel(member.guild)
 
         # Make embed
@@ -1059,19 +1071,20 @@ class Moderation(commands.Cog):
             description=f'{member.mention} has joined {member.thread.mention}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=member.guild.name, icon_url=member.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {member.thread.id}')
+        ).set_author(name=member.guild.name, icon_url=member.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {member.thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
-    async def on_thread_member_remove(self, member: discord.ThreadMember) -> None:
+    async def on_thread_member_remove(self, member: discord.Member) -> None:
         """
         Event listener for when a member leaves a thread.
 
         :param member: The member that left the thread
 
-        :type member: discord.ThreadMember
+        :type member: discord.Member
 
         :return: None
         :rtype: None
@@ -1087,11 +1100,12 @@ class Moderation(commands.Cog):
             description=f'{member.mention} has left {member.thread.mention}',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=member.guild.name, icon_url=member.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {member.thread.id}')
+        ).set_author(name=member.guild.name, icon_url=member.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {member.thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_invite_create(self, invite: discord.Invite) -> None:
         """
@@ -1106,7 +1120,7 @@ class Moderation(commands.Cog):
         """
         if not modlog_enabled(invite.guild.id):  # Check if modlog is enabled
             return
-        
+
         channel = get_mod_channel(invite.guild)  # Get the modlog channel
 
         # Make embed
@@ -1115,11 +1129,12 @@ class Moderation(commands.Cog):
             description=f'{invite.inviter.mention} created an invite to {invite.guild.name}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=invite.guild.name, icon_url=invite.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {invite.id}')
+        ).set_author(name=invite.guild.name, icon_url=invite.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {invite.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_invite_delete(self, invite: discord.Invite) -> None:
         """
@@ -1143,7 +1158,8 @@ class Moderation(commands.Cog):
             description=f'An invite created by {invite.inviter.mention} has been deleted',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=invite.guild.name, icon_url=invite.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {invite.id}')
+        ).set_author(name=invite.guild.name, icon_url=invite.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {invite.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
@@ -1171,7 +1187,8 @@ class Moderation(commands.Cog):
             description=f'{event.name} created in {event.guild.name}.\nStart: {convert_to_unix_time(event.start_time.strftime("%Y-%m-%d %H:%M:%S:%f"))}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {event.guild.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
+        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {event.guild.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
         embed.description += f', End: {convert_to_unix_time(event.end_time.strftime("%Y-%m-%d %H:%M:%S:%f"))}' if event.end_time else ''
 
         # Send webhook
@@ -1200,11 +1217,12 @@ class Moderation(commands.Cog):
             description=f'{event.name} deleted in {event.guild.name}',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {event.guild.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
+        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {event.guild.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     # @commands.Cog.listener()
     # async def on_scheduled_event_update(self, before: discord.ScheduledEvent, after: discord.ScheduledEvent) -> None:
     #     """
@@ -1221,7 +1239,7 @@ class Moderation(commands.Cog):
     #     """
     #     if not modlog_enabled(after.guild.id):
     #         return
-        
+
     #     channel = get_mod_channel(after.guild)  # Get the modlog channel
 
     #     # Make embed
@@ -1240,13 +1258,13 @@ class Moderation(commands.Cog):
     #         embed.description += f'End time: {convert_to_unix_time(before.end_time.strftime("%Y-%m-%d %H:%M:%S:%f"))} -> {convert_to_unix_time(after.end_time.strftime("%Y-%m-%d %H:%M:%S:%f"))}\n'
     #     if before.location != after.location:
     #         embed.description += f'Location: {before.location} -> {after.location}\n'
-        
+
     #     if not embed.description: 
     #         return
-        
+
     #     # Send webhook
     #     await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_scheduled_event_user_add(self, event: discord.ScheduledEvent, member: discord.Member) -> None:
         """
@@ -1272,11 +1290,12 @@ class Moderation(commands.Cog):
             description=f'{member.mention} has joined {event.name}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {member.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
-        
+        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {member.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
+
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent, member: discord.Member) -> None:
         """
@@ -1302,11 +1321,12 @@ class Moderation(commands.Cog):
             description=f'{member.mention} has left {event.name}',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {member.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
+        ).set_author(name=event.guild.name, icon_url=event.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {member.id}').set_thumbnail(url=event.cover or discord.Embed.Empty)
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_webhooks_update(self, channel: discord.abc.GuildChannel) -> None:
         """
@@ -1321,7 +1341,7 @@ class Moderation(commands.Cog):
         """
         if not modlog_enabled(channel.guild.id):
             return
-        
+
         mod_channel = get_mod_channel(channel.guild)  # Get the modlog channel
 
         # Make embed
@@ -1330,11 +1350,12 @@ class Moderation(commands.Cog):
             description=f'Webhook(s) updated in {channel.mention}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=channel.guild.name, icon_url=channel.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {channel.id}').set_thumbnail(url=channel.cover or discord.Embed.Empty)
+        ).set_author(name=channel.guild.name, icon_url=channel.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {channel.id}')
 
         # Send webhook
         await send_webhook(mod_channel, embed, self.bot)
-    
+
     @commands.Cog.listener()
     async def on_integration_create(self, integration: discord.Integration) -> None:
         """
@@ -1358,7 +1379,8 @@ class Moderation(commands.Cog):
             description=f'Integration {integration.name} created in {integration.guild.name}\nType: {integration.type}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=integration.guild.name, icon_url=integration.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {integration.id}')
+        ).set_author(name=integration.guild.name, icon_url=integration.guild.icon or discord.Embed.Empty).set_footer(
+            text=f'ID: {integration.id}')
 
         # Send webhook
         await send_webhook(mod_channel, embed, self.bot)
@@ -1393,7 +1415,7 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were banned in {ctx.guild.name} for: {reason}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Ban error response
     @ban.error
@@ -1451,7 +1473,7 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were kicked in {ctx.guild.name} for {reason}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Kick error response
     @kick.error
@@ -1513,7 +1535,7 @@ class Moderation(commands.Cog):
                     await send_embed(ctx, description=f'{member} was unbanned', colour=discord.Colour.green())
                     return
                 except discord.Forbidden:  # Permission error
-                    await send_embed(ctx, description='Permission error')
+                    await send_embed(ctx, description='I do not have permissionto perform this action!')
                     return
         if user_flag == 0:
             await send_embed(ctx, description='User not found')
@@ -1581,7 +1603,7 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were muted in {guild.name} for {reason}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Mute error response
     @mute.error
@@ -1655,7 +1677,7 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were unmuted in {guild.name}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Tempmute error response
     @tempmute.error
@@ -1715,7 +1737,7 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You have been unmuted in {ctx.guild.name}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Unmute error response
     @unmute.error
@@ -1778,7 +1800,7 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.NotFound):
                 await ctx.reply("Nuked the Channel successfully!")
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
             return
 
         if sql.select(elements=['*'], table='modlogs',
@@ -1832,7 +1854,7 @@ class Moderation(commands.Cog):
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
             await send_embed(ctx, description=f'{channel} is in lockdown', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Lock error response
     @lock.error
@@ -1872,7 +1894,7 @@ class Moderation(commands.Cog):
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
             await send_embed(ctx, description=f'{channel} has been unlocked', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='Permission error')
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
 
     # Unlock error response
     @unlock.error
@@ -1968,6 +1990,104 @@ class Moderation(commands.Cog):
             return
         if isinstance(error, commands.MissingRequiredArgument):
             await send_embed(ctx, description='Please mention a channel')
+            return
+
+    @commands.command(name='deafen', description='Deafen a member', usage='deafen <member>')
+    @commands.has_permissions(deafen_members=True)
+    async def deafen(self, ctx, member: discord.Member):
+        """
+        Deafens a member
+        
+        :param ctx: The context of where the command was used
+        :param member: The member to be deafened
+        
+        :type ctx: commands.Context
+        :type member: discord.Member
+        
+        :return: None
+        :rtype: None
+        """
+        if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
+            await send_embed(ctx, description='You cannot deafen this user', colour=discord.Colour.red())
+            return
+
+        try:
+            await member.edit(deafen=True)
+            await send_embed(ctx, description=f'{member.mention} has been deafened')
+        except discord.Forbidden:  # Permission error
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
+
+    @deafen.error
+    async def deafen_error(self, ctx, error):
+        """
+        Error handler for the deafen command
+
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to deafen members')
+            return
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx, description='Please mention a member')
+            return
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Please mention a valid member')
+            return
+
+    @commands.command(name='undeafen', description='Undeafen a member', usage='undeafen <member>')
+    @commands.has_permissions(deafen_members=True)
+    async def undeafen(self, ctx, member: discord.Member):
+        """
+        Undeafens a member
+        
+        :param ctx: The context of where the command was used
+        :param member: The member to be undeafened
+        
+        :type ctx: commands.Context
+        :type member: discord.Member
+
+        :return: None
+        :rtype: None
+        """
+        if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
+            await send_embed(ctx, description='You cannot undeafen this user', colour=discord.Colour.red())
+            return
+
+        try:
+            await member.edit(deafen=False)
+            await send_embed(ctx, description=f'{member.mention} has been undeafened')
+        except discord.Forbidden:  # Permission error
+            await send_embed(ctx, description='I do not have permissionto perform this action!')
+
+    @undeafen.error
+    async def undeafen_error(self, ctx, error):
+        """
+        Error handler for the undeafen command
+            
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.MissingPermissions):
+            await send_embed(ctx, description='You do not have permission to undeafen members')
+            return
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_embed(ctx, description='Please mention a member')
+            return
+        if isinstance(error, commands.BadArgument):
+            await send_embed(ctx, description='Please mention a valid member')
             return
 
 

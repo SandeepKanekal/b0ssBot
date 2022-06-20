@@ -164,7 +164,9 @@ class Util(commands.Cog):
         :return: None
         """
         latency = round(self.bot.latency * 1000)
-        embed = discord.Embed(description=f'**Pong[!!](https://cdn.discordapp.com/attachments/984912794031894568/984914090193465374/unknown.png)** Bot latency is {str(latency)}ms', colour=discord.Colour.yellow())
+        embed = discord.Embed(
+            description=f'**Pong[!!](https://cdn.discordapp.com/attachments/984912794031894568/984914090193465374/unknown.png)** Bot latency is {str(latency)}ms',
+            colour=discord.Colour.yellow())
         await ctx.reply(embed=embed)
 
     # Clear command
@@ -297,7 +299,8 @@ class Util(commands.Cog):
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
-    @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild', usage='prefix <new_prefix>')
+    @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild',
+                      usage='prefix <new_prefix>')
     @commands.has_permissions(manage_guild=True)
     async def prefix(self, ctx, new_prefix):
         """

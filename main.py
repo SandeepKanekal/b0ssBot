@@ -12,11 +12,8 @@ def get_prefix(bot, message):
 
 
 # Pre-run requirements
-intents = discord.Intents.all()
 sql = SQL('b0ssbot')
-discord.Intents.members = True
-discord.Intents.webhooks = True
-bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents)
+bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=discord.Intents.all())
 bot.remove_command('help')
 
 # Loads the cog

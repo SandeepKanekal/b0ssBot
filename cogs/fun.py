@@ -43,42 +43,44 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        index = 0  # type: int
+        async with ctx.typing():
+            index = 0  # type: int
 
-        if subreddit is None:
-            subreddit = random.choice(['memes', 'dankmemes', 'meme'])
-        elif subreddit.lower() in ['dankmemes', 'memes', 'meme', 'me_irl', 'wholesomememes']:
-            subreddit = subreddit.lower()
-        else:
-            await send_error_embed(ctx, description='Invalid subreddit')
-            return
+            if subreddit is None:
+                subreddit = random.choice(['memes', 'dankmemes', 'meme'])
+            elif subreddit.lower() in ['dankmemes', 'memes', 'meme', 'me_irl', 'wholesomememes']:
+                subreddit = subreddit.lower()
+            else:
+                await send_error_embed(ctx, description='Invalid subreddit')
+                return
 
-        submissions = await get_posts(subreddit)
-        submissions.pop(0)  # Pops the pinned post
-        if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
-            submissions = list(filter(lambda s: not s.over_18, submissions))
+            submissions = await get_posts(subreddit)
+            submissions.pop(0)  # Pops the pinned post
+            if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
+                submissions = list(filter(lambda s: not s.over_18, submissions))
 
-        next_meme = Button(style=discord.ButtonStyle.green, emoji='⏭️')  # The button for going to the next meme
-        end_interaction = Button(label='End Interaction',
-                                 style=discord.ButtonStyle.red)  # The button the end the interaction
-        previous_meme = Button(emoji='⏮️', style=discord.ButtonStyle.green)  # The button for going to the previous meme
+            next_meme = Button(style=discord.ButtonStyle.green, emoji='⏭️')  # The button for going to the next meme
+            end_interaction = Button(label='End Interaction',
+                                     style=discord.ButtonStyle.red)  # The button the end the interaction
+            previous_meme = Button(emoji='⏮️', style=discord.ButtonStyle.green)  # The button for going to the previous meme
 
-        view = View(timeout=None)
-        view.add_item(previous_meme)
-        view.add_item(next_meme)
-        view.add_item(end_interaction)
-        embed = discord.Embed(title=submissions[0].title, url=f'https://reddit.com{submissions[0].permalink}',
-                              colour=discord.Colour.random())
+            view = View(timeout=None)
+            view.add_item(previous_meme)
+            view.add_item(next_meme)
+            view.add_item(end_interaction)
 
-        if submissions[0].is_video:
-            embed.set_image(url=submissions[0].thumbnail)
-            embed.description = f'[Video link]({submissions[0].url})'
-        else:
-            embed.set_image(url=submissions[0].url)
+            embed = discord.Embed(title=submissions[0].title, url=f'https://reddit.com{submissions[0].permalink}',
+                                  colour=0xff4300, timestamp = datetime.datetime.now())
+            embed.set_footer(
+                text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nMeme {index + 1} out of {len(submissions)}')
+            embed.set_author(name=f'r/{subreddit}', icon_url='https://www.redditinc.com/assets/images/site/reddit-logo.png', url=f'https://reddit.com/r/{subreddit}')
 
-        embed.set_footer(
-            text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nSession for {ctx.author}')
-        embed.timestamp = datetime.datetime.now()
+            if submissions[0].is_video:
+                embed.set_image(url=submissions[0].thumbnail)
+                embed.description = f'[Video link]({submissions[0].url})'
+            else:
+                embed.set_image(url=submissions[0].url)
+
         await ctx.send(embed=embed, view=view)
 
         async def next_meme_trigger(interaction):
@@ -106,8 +108,7 @@ class Fun(commands.Cog):
                 embed.description = ''
 
             embed.set_footer(
-                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
-            embed.timestamp = datetime.datetime.now()
+                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nMeme {index + 1} out of {len(submissions)}')
             await interaction.response.edit_message(embed=embed)
 
         async def previous_meme_trigger(interaction):
@@ -119,12 +120,11 @@ class Fun(commands.Cog):
                 return
 
             if index == 0:
-                await interaction.response.send_message(content='This is the first meme.', ephemeral=True)
-                index += 1
-                return
+                index = len(submissions) - 1
+            else:
+                index -= 1
 
             # Edit the embed
-            index -= 1
             embed.title = submissions[index].title
             embed.url = f'https://reddit.com{submissions[index].permalink}'
 
@@ -136,8 +136,7 @@ class Fun(commands.Cog):
                 embed.description = ''
 
             embed.set_footer(
-                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nSession for {ctx.author}')
-            embed.timestamp = datetime.datetime.now()
+                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nMeme {index + 1} out of {len(submissions)}')
             await interaction.response.edit_message(embed=embed)
 
         async def end_interaction_trigger(interaction):
@@ -185,11 +184,12 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes', 'MemeVideos']))  # Gets a random post from the dankest subreddits
+        async with ctx.typing():
+            submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes', 'MemeVideos']))  # Gets a random post from the dankest subreddits
 
-        if submission.over_18 and not ctx.channel.is_nsfw():
-            await self.dankvideo.reinvoke(ctx)
-            return
+            if submission.over_18 and not ctx.channel.is_nsfw():
+                await self.dankvideo.reinvoke(ctx)
+                return
 
         await ctx.send(f'https://reddit.com{submission.permalink}')
 

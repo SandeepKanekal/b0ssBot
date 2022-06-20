@@ -4,6 +4,8 @@ import datetime
 import requests
 import os
 import asyncio
+from requests.exceptions import MissingSchema
+from PIL import UnidentifiedImageError
 from discord.ext import commands
 from discord.commands import Option
 from tools import convert_to_unix_time
@@ -27,7 +29,7 @@ class Slash(commands.Cog):
 
     @commands.slash_command(name='prefix', description='Change the prefix of the bot for the server',
                             usage='prefix <new_prefix>')
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def prefix(self, ctx, new_prefix: Option(str, descrciption='The new prefix', required=True)):
         """
         Change the prefix of the bot for the server.
@@ -168,13 +170,15 @@ class Slash(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def youtubenotification(self, ctx,
                                   mode: Option(str, description='Mode for configuration',
-                                               choices=['add', 'remove', 'view'], required=True),
+                                               choices=['add', 'remove', 'view', 'update'], required=True),
                                   text_channel: Option(discord.TextChannel,
                                                        description='The text channel to send notifications to',
                                                        required=False, default=None),
                                   youtube_channel: Option(str, description='The URL of the YouTube channel',
                                                           required=False,
-                                                          default=None)):
+                                                          default=None),
+                                  ping_role: Option(discord.Role, description='The role to ping when a video is posted',
+                                                    required=False, default=None)):
         """
         Configure youtube notifications for the server
         
@@ -182,11 +186,13 @@ class Slash(commands.Cog):
         :param mode: The mode for configuration
         :param text_channel: The text channel to send notifications to
         :param youtube_channel: The URL of the YouTube channel
+        :param ping_role: The role to ping when a video is posted
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type mode: str
         :type text_channel: discord.TextChannel
         :type youtube_channel: str
+        :type ping_role: discord.Role
         
         :return: None
         :rtype: None
@@ -219,9 +225,11 @@ class Slash(commands.Cog):
             channel_name = channel['items'][0]['snippet']['title'].replace("'", "''")
 
             sql.insert(table='youtube',
-                       columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id'],
+                       columns=['guild_id', 'text_channel_id', 'channel_id', 'channel_name', 'latest_video_id',
+                                'ping_role'],
                        values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
-                               f"'{channel_name}'", f"'{latest_video_id}'"])
+                               f"'{channel_name}'", f"'{latest_video_id}'",
+                               f"'{ping_role.id}'" if ping_role else 'None'])
             await ctx.respond(
                 f'NOTE: This command requires **Send Webhooks** to be enabled in {text_channel.mention}',
                 embed=discord.Embed(
@@ -252,6 +260,42 @@ class Slash(commands.Cog):
                 colour=discord.Colour.green(),
                 description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel{channel["items"][0]["id"]})** will no longer be sent to {text_channel.mention}').set_thumbnail(
                 url=channel["items"][0]["snippet"]["thumbnails"]["high"]["url"]))
+
+        elif mode == 'update':
+            if youtube_channel is None:
+                await ctx.respond('Error: YouTube channel not specified', ephemeral=True)
+                return
+
+            youtube_channel_id = requests.get(
+                f"https://www.googleapis.com/youtube/v3/search?part=id&q={youtube_channel.split('/c/')[1]}&type=channel&key={os.getenv('youtube_api_key')}").json()[
+                'items'][0]['id']['channelId'] if '/c/' in youtube_channel else youtube_channel.split('/channel/')[1]
+
+            if not sql.select(elements=['*'], table='youtube',
+                              where=f"guild_id='{ctx.guild.id}' and channel_id = '{youtube_channel_id}'"):
+                await ctx.respond('Error: YouTube channel not configured', ephemeral=True)
+                return
+
+            if text_channel and int(sql.select(elements=['text_channel_id'], table='youtube',
+                                               where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{youtube_channel_id}\'')[
+                                        0][0]) != text_channel.id:
+                sql.update(table='youtube', column='text_channel_id', value=f"'{text_channel.id}'",
+                           where=f"guild_id='{ctx.guild.id}' and channel_id = '{youtube_channel_id}'")
+
+            elif ping_role and (sql.select(elements=['ping_role'], table='youtube',
+                                           where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{youtube_channel_id}\'')[
+                                    0][0] != 'None' or str(ping_role.id)):
+                sql.update(table='youtube', column='ping_role', value=f"'{ping_role.id}'",
+                           where=f"guild_id='{ctx.guild.id}' and channel_id = '{youtube_channel_id}'")
+
+            else:
+                await ctx.respond('No changes made', ephemeral=True)
+                return
+
+            await ctx.respond(embed=discord.Embed(
+                colour=discord.Colour.green(),
+                description='Updates saved!',
+                timestamp=datetime.datetime.now()
+            ))
 
         else:
             if youtube_channel:
@@ -290,7 +334,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that was raised
 
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
 
         :return: None
@@ -465,9 +509,7 @@ class Slash(commands.Cog):
                 return
 
             if message.strip() == '' or response.strip() == '':
-                await ctx.respond(
-                    embed=discord.Embed(description='Please provide both, a message and a response',
-                                        colour=discord.Colour.red()))
+                await ctx.respond('Please provide both, a message and a response', ephemeral=True)
                 return
 
             message = message.replace("'", "''").lower()
@@ -571,7 +613,6 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-
         if member == ctx.author:
             await ctx.respond('You cannot mute yourself', ephemeral=True)
             return
@@ -586,6 +627,7 @@ class Slash(commands.Cog):
 
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get the muted role
         if not muted_role:
+            await ctx.interaction.response.defer()
             muted_role = await ctx.guild.create_role(name='Muted')  # Create a muted role if not present
             for channel in ctx.guild.channels:
                 await channel.set_permissions(muted_role, speak=False,
@@ -594,16 +636,24 @@ class Slash(commands.Cog):
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
             await ctx.respond(
-                embed=discord.Embed(description=f'{member} has been muted for {reason}', colour=discord.Colour.red()))
+                embed=discord.Embed(
+                    description=f'{member} has been muted for {reason}. Duration: {duration or "Permanent"}.',
+                    colour=discord.Colour.red()))
+
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
-                await member.send(f'You were muted in {ctx.guild.name} for {reason}')
+                await member.send(
+                    f'You were muted in {ctx.guild.name} for {reason}. Duration: {duration or "Permanent"}.')
                 if duration:
                     await asyncio.sleep(duration * 60)
-                    await member.remove_roles(muted_role, reason=reason)
-                    await ctx.respond(
-                        embed=discord.Embed(description=f'{member} has been unmuted', colour=discord.Colour.green()))
-                    with contextlib.suppress(discord.HTTPException):
-                        await member.send(f'You have been unmuted in {ctx.guild.name}')
+                    if muted_role in member.roles:
+                        print('trigger')
+                        await member.remove_roles(muted_role, reason=reason)
+                        await ctx.respond(
+                            embed=discord.Embed(description=f'{member} has been unmuted',
+                                                colour=discord.Colour.green()))
+                        with contextlib.suppress(discord.HTTPException):
+                            await member.send(f'You have been unmuted in {ctx.guild.name}')
+
         except discord.Forbidden:  # Permission error
             await ctx.respond('Permission error', ephemeral=True)
 
@@ -910,6 +960,8 @@ class Slash(commands.Cog):
             await ctx.respond('You cannot specify both a member and a URL', ephemeral=True)
             return
 
+        await ctx.interaction.response.defer()
+
         request_url = url or (member or ctx.author).display_avatar  # type: str
         member = member or ctx.author
 
@@ -921,6 +973,13 @@ class Slash(commands.Cog):
         image = Image.open(f'image_{ctx.author.id}.png')
         invert = ImageChops.invert(image.convert('RGB'))
         invert.save(f'{member.id}_inverted.png')
+
+        # Checking if file size is greater than 8mb
+        if os.path.getsize(f'{member.id}_inverted.png') > 8000000:
+            await ctx.respond('Image is too large to send', ephemeral=True)
+            os.remove(f'image_{ctx.author.id}.png')
+            os.remove(f'{member.id}_inverted.png')
+            return
 
         await ctx.respond(file=discord.File(f'{member.id}_inverted.png', 'invert.png'))
 
@@ -941,12 +1000,14 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, discord.ApplicationCommandInvokeError):
+        if isinstance(error.original, (ConnectionError, MissingSchema, UnidentifiedImageError)):
             await ctx.respond('Invalid URL', ephemeral=True)
-            with contextlib.suppress(FileNotFoundError):
+            with contextlib.suppress(FileNotFoundError, IndexError):
                 os.remove(f'image_{ctx.author.id}.png')
-            return
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+                await asyncio.sleep(10)
+                os.remove(list(filter(lambda n: '_inverted.png' in n, os.listdir('./')))[0])
+        else:
+            await ctx.respond(f'Error: `{error}`', ephemeral=True)
 
     @commands.slash_command(name='embed', description='Make an embed! Visit https://imgur.com/a/kbFJCL1 for more info')
     async def embed(self, ctx,
@@ -992,6 +1053,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
         embed = discord.Embed(title=title, description=description, url=url, colour=colour)
 
         if author:

@@ -84,7 +84,9 @@ class Misc(commands.Cog):
         await ctx.reply(embed=embed)
 
         if random.choice([True, False]):
-            await ctx.author.send(embed=discord.Embed(description='[OMG!](https://cdn.discordapp.com/attachments/984912794031894568/984913669290852392/unknown.png)', colour=self.bot.user.colour))
+            await ctx.author.send(embed=discord.Embed(
+                description='[OMG!](https://cdn.discordapp.com/attachments/984912794031894568/984913669290852392/unknown.png)',
+                colour=self.bot.user.colour))
 
     @avatar.error
     async def avatar_error(self, ctx, error):

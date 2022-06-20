@@ -119,7 +119,7 @@ class Events(commands.Cog):
                          or message.content.split('(')[1].startswith('http://')) \
                     and '.' in message.content \
                     and (message.content.split('https://')[1] or message.content.split('http://')[1]):
-                # Check for markdown syntax
+                # Check for Markdown syntax
 
                 webhooks = await message.channel.webhooks()
                 webhook = discord.utils.get(webhooks, name='Markdown webhook')
@@ -144,7 +144,9 @@ class Events(commands.Cog):
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
         if random.choice([True, False, False, False, False, False, False, False, False,
                           False]) and ctx.command != self.bot.get_command('clear'):
-            await ctx.send(random.choice([f'Hey there {ctx.author.mention}! Check out the new commands: (commands here)', f'Hey there {ctx.author.mention}! Check out the new egghunt! Type `**{prefix}egg**`']))
+            await ctx.send(random.choice(
+                [f'Hey there {ctx.author.mention}! Check out the new commands: (commands here)',
+                 f'Hey there {ctx.author.mention}! Check out the new egghunt! Type `**{prefix}egg**`']))
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild) -> None:
@@ -206,8 +208,9 @@ class Events(commands.Cog):
         sql = SQL('b0ssbot')  # type: SQL
         print('Checking for videos...')
 
-        channel = sql.select(elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name'],
-                             table='youtube')
+        channel = sql.select(
+            elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name', 'ping_role'],
+            table='youtube')
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         for data in channel:
@@ -220,6 +223,8 @@ class Events(commands.Cog):
             if data[1] != latest_video_id:
                 guild = discord.utils.get(self.bot.guilds, id=int(data[2]))  # type: discord.Guild
                 text_channel = discord.utils.get(guild.text_channels, id=int(data[3]))  # type: discord.TextChannel
+                ping_role = discord.utils.get(guild.roles, id=int(data[5])) if data[
+                                                                                   5] != 'None' else None  # type: discord.Role | None
 
                 webhooks = await text_channel.webhooks()
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
@@ -227,7 +232,7 @@ class Events(commands.Cog):
                     webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
 
                 await webhook.send(
-                    f'New video uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
+                    f'{f"Hey {ping_role.mention}" if ping_role else "Hey everyone"}! New video uploaded by **[{data[4]}](https://youtube.com/channel/{data[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
                     username=f'{self.bot.user.name} YouTube Notifier',
                     avatar_url=self.bot.user.avatar)  # Send the message to the webhook
 
