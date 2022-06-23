@@ -209,10 +209,10 @@ class Info(commands.Cog):
             title='Changelog',
             url='https://github.com/SandeepKanekal/b0ssBot/blob/main/CHANGELOG.md',
             description=changelog,
-            colour=self.bot.user.colour
+            colour=self.bot.user.colour,
+            timestamp=datetime.datetime.now(),
         )
         embed.set_thumbnail(url=self.bot.user.avatar)
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     @commands.command(name='uptime', description='Shows the bot\'s uptime', usage='uptime')

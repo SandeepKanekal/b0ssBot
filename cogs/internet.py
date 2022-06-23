@@ -359,6 +359,7 @@ class Internet(commands.Cog):
         async with ctx.typing():
             try:
                 submissions = await get_posts(subreddit)
+                submissions = list(filter(lambda p: not p.stickied, submissions))  # type: list
                 if not ctx.channel.is_nsfw():  # Filters out nsfw posts if the channel is not marked NSFW
                     submissions = list(filter(lambda s: not s.over_18, submissions))
                 if not len(submissions):
@@ -389,8 +390,7 @@ class Internet(commands.Cog):
                 try:
                     await ctx.send(embed=embed, view=view)
                 except discord.HTTPException:
-                    embed = discord.Embed(description='The post content was too long to be sent',
-                                            colour=discord.Colour.orange())
+                    embed = discord.Embed(description='The post content was too long to be sent', colour=0xff4300)
                     await ctx.send(embed=embed, view=view)
 
             except AttributeError:
@@ -580,7 +580,7 @@ class Internet(commands.Cog):
             question = trivia['results'][index]['question'].replace('&quot;', '"').replace('&#039;', "'")
             answer = trivia['results'][index]['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
 
-            embed = discord.Embed(title=question, description=f'**Answer: {answer}**', colour=discord.Colour.orange())
+            embed = discord.Embed(title=question, description=f'**Answer: {answer}**', colour=0xff4300)
 
             view = View(timeout=None)
             view.add_item(previous_trivia)
@@ -710,81 +710,7 @@ class Internet(commands.Cog):
         :return: None
         :rtype: None
         """
-        async with ctx.typing():
-            submissions = list(filter(lambda s: not s.over_18, await get_posts('jokes')))
-            index = 0  # type: int
-
-            # Remove pinned posts
-            submissions.pop(0)
-            submissions.pop(1)
-
-            # Make embed
-            embed = discord.Embed(
-                title=submissions[index].title,
-                colour=discord.Colour.orange(),
-                url=f'https://reddit.com{submissions[index].permalink}',
-                description=submissions[index].selftext
-            )
-
-            # Make buttons
-            next_joke = Button(emoji='⏭️', style=discord.ButtonStyle.green)
-            previous_joke = Button(emoji='⏮️', style=discord.ButtonStyle.green)
-            end_interaction = Button(label='End interaction', style=discord.ButtonStyle.red)
-
-            # Add buttons
-            view = View(timeout=None)
-            view.add_item(previous_joke)
-            view.add_item(next_joke)
-            view.add_item(end_interaction)
-
-        await ctx.send(embed=embed, view=view)
-
-        async def next_joke_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            nonlocal index
-            index += 1
-            if index >= len(submissions):
-                index = 0
-
-            # Edit embed
-            embed.title = submissions[index].title
-            embed.url = f'https://reddit.com{submissions[index].permalink}'
-            embed.description = submissions[index].selftext
-            await interaction.response.edit_message(embed=embed)
-
-        async def previous_joke_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            nonlocal index
-            index -= 1
-            if index < 0:
-                index = len(submissions) - 1
-
-            # Edit embed
-            embed.title = submissions[index].title
-            embed.url = f'https://reddit.com{submissions[index].permalink}'
-            embed.description = submissions[index].selftext
-            await interaction.response.edit_message(embed=embed)
-
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            # Disable buttons
-            next_joke.disabled = True
-            previous_joke.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        next_joke.callback = next_joke_trigger
-        previous_joke.callback = previous_joke_trigger
-        end_interaction.callback = end_interaction_trigger
+        await ctx.invoke(self.bot.get_command('redditpost'), subreddit='Jokes')
 
     @joke.error
     async def joke_error(self, ctx, error):

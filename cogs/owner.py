@@ -2,6 +2,8 @@ import discord
 import os
 from sql_tools import SQL
 from discord.ext import commands
+from discord.commands import Option
+from discord.ui import Modal, InputText
 
 
 class Owner(commands.Cog):
@@ -200,28 +202,55 @@ class Owner(commands.Cog):
         """
         await ctx.send(embed=discord.Embed(description=str(e)))
 
-    @commands.command(name='eval', hidden=True)
+    @commands.slash_command(name='eval', guild_ids=[930715526441885696])
     @commands.is_owner()
-    async def eval_(self, ctx, *, code: str):
+    async def eval_(self, ctx, *, mode: Option(str, description='The mode to run the code in', required=True, choices=['single', 'file']), code: Option(str, description='Code for single line', required=False, default=None)):
         """
         Evaluates code
         
         :param ctx: The context of where the command was used
+        :param mode: The mode to run the code in
         :param code: The code to evaluate
 
-        :type ctx: commands.Context
+        :type ctx: discord.ApplicationContext
+        :type mode: str
         :type code: str
         
         :return: None
         :rtype: None
         """
-        try:
-            if 'os.getenv' in code or 'os.environ' in code or 'os.system' in code or 'os.chdir' in code:
-                raise discord.Forbidden('os is not allowed')
-            else:
+        if mode == 'single':
+            try:
                 await eval(code.strip('await')) if 'await' in code else eval(code)
-        except Exception as e:
-            await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
+            except Exception as e:
+                await ctx.respond(f'**`ERROR:`** {type(e).__name__} - {e}')
+            else:
+                await ctx.respond('**`SUCCESS`**')
+
+        elif mode == 'file':
+            modal = Modal(title='Eval')
+            modal.add_item(
+                InputText(
+                    label='Code',
+                    placeholder='Code to evaluate',
+                    style=discord.InputTextStyle.long,
+                )
+            )
+            await ctx.response.send_modal(modal=modal)
+
+            async def callback(interaction):
+                with open('cogs/eval.py', 'w') as f:
+                    f.write(modal.children[0].value)
+                
+                try:
+                    self.bot.load_extension('cogs.eval')
+                except Exception as e:
+                    await interaction.response.send_message(f'**`ERROR:`** {type(e).__name__} - {e}')
+                    return
+
+                await interaction.response.send_message('File created!')
+        
+            modal.callback = callback
 
     @eval_.error
     async def eval_error(self, ctx, e):
