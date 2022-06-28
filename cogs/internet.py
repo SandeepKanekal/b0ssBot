@@ -364,10 +364,14 @@ class Internet(commands.Cog):
                     submissions = list(filter(lambda s: not s.over_18, submissions))
                 if not len(submissions):
                     await send_error_embed(ctx,
-                                            description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
+                                           description=f'The subreddit **r/{subreddit}** has been marked as NSFW, please use the same command in a NSFW channel.')
 
-                embed = discord.Embed(title=submissions[index].title, description=submissions[index].selftext, url=f'https://reddit.com{submissions[index].permalink}', colour=0xff4300, timestamp=datetime.datetime.now())
-                embed.set_author(name=f'r/{subreddit}', icon_url='https://www.redditinc.com/assets/images/site/reddit-logo.png', url=f'https://reddit.com/r/{subreddit}')
+                embed = discord.Embed(title=submissions[index].title, description=submissions[index].selftext,
+                                      url=f'https://reddit.com{submissions[index].permalink}', colour=0xff4300,
+                                      timestamp=datetime.datetime.now())
+                embed.set_author(name=f'r/{subreddit}',
+                                 icon_url='https://www.redditinc.com/assets/images/site/reddit-logo.png',
+                                 url=f'https://reddit.com/r/{subreddit}')
                 embed.set_footer(
                     text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nPost {index + 1} out of {len(submissions)}')
 
@@ -379,7 +383,7 @@ class Internet(commands.Cog):
                 view.add_item(previous_post)
                 view.add_item(next_post)
                 view.add_item(end_interaction)
-                
+
                 # Checking if the submission is text-only
                 if not submissions[0].is_self:
                     if submissions[0].is_video:

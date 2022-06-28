@@ -1,7 +1,7 @@
 # b0ssBot
 A discord bot for fun, moderation, and music! Adding features everyday
 
-# Prerequisites
+# Package requisites
 + [py-cord 2.0+](https://github.com/Pycord-Development/pycord)
 + [Flask](https://pypi.org/project/Flask/)
 + [FFmpeg](https://www.ffmpeg.org/)
@@ -12,6 +12,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [google-api-python-client](https://pypi.org/project/google-api-python-client/)
 + [psycopg2](https://pypi.org/project/psycopg2/)
 + [pillow](https://pypi.org/project/Pillow/)
++ [youtube-search-python](https://pypi.org/project/youtube-search-python/)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics

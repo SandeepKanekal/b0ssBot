@@ -97,7 +97,7 @@ class Util(commands.Cog):
 
             await ctx.send(embed=embed)
         else:
-            await send_error_embed(ctx, 'There are no messages to snipe')
+            await send_error_embed(ctx, 'There are no messages to snipe[.](https://cdn.discordapp.com/attachments/984912794031894568/984914060602642442/unknown.png)')
 
     @snipe.error
     async def snipe_error(self, ctx, error):
@@ -107,7 +107,7 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         :return: None"""
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description=f'Error: `{error}`[!](https://cdn.discordapp.com/attachments/984912794031894568/984914060602642442/unknown.png)')
 
     # AFK command
     @commands.command(name='afk', description='Marks the user as AFK', usage='afk <reason>')
@@ -296,8 +296,10 @@ class Util(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Provide a message reference\n\nProper Usage: `{self.bot.get_command("refer").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        elif isinstance(error, commands.CommandInvokeError) and isinstance(error.__cause__, discord.HTTPException):
+            await send_error_embed(ctx, description='Provided argument is not a message ID or link')
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
     @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild',
                       usage='prefix <new_prefix>')

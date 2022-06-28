@@ -4,7 +4,7 @@ import datetime
 import requests
 import os
 from discord.ext import commands
-from tools import send_error_embed, get_posts, get_random_post
+from tools import send_error_embed, get_random_post
 from discord.ui import Button, View
 from PIL import Image, ImageChops
 

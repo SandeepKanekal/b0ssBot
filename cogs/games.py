@@ -698,7 +698,7 @@ class Games(commands.Cog):
 
         turn = random.choice([ctx.author, player])  # type: discord.Member
         first_turn = turn  # type: discord.Member
-        await ctx.send(f'It is {turn.mention}\'s turn!', view=view)
+        msg = await ctx.send(f'It is {turn.mention}\'s turn!', view=view)
 
         async def button_callback(interaction):
             # sourcery skip: low-code-quality
@@ -747,13 +747,41 @@ class Games(commands.Cog):
             if interaction.user not in [ctx.author, player]:  # Prevent foreign users from cancelling
                 await interaction.response.send_message(content='You are not playing this game!', ephemeral=True)
                 return
+            
+            confirm_cancel = Button(style=discord.ButtonStyle.green, label='Cancel!')
+            dont_cancel = Button(style=discord.ButtonStyle.red, label='Don\'t cancel!')
 
-            for b in list(filter(lambda x: not x.disabled, buttons)):  # Disable all buttons
-                b.disabled = True
-            cancel.disabled = True
+            cancel_view = View(timeout=None)
+            cancel_view.add_item(confirm_cancel)
+            cancel_view.add_item(dont_cancel)
 
-            await interaction.response.edit_message(content=f'{interaction.user.mention} has cancelled the game.',
-                                                    view=view)
+            other_user = player if interaction.user == ctx.author else ctx.author  # The other user in the game
+
+            await interaction.response.edit_message(content=f'{other_user.mention}, {interaction.user.mention} would like to cancel this game!', view=cancel_view)
+
+            async def cancel_callback(inter):
+                if inter.user != other_user:
+                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}', ephemeral=True)
+                    return
+
+                for b in list(filter(lambda x: not x.disabled, buttons)):  # Disable all buttons
+                    b.disabled = True
+                cancel.disabled = True
+
+                await inter.response.edit_message(content=f'{interaction.user.mention} has cancelled the game.',
+                                                        view=view)
+            
+            async def dont_cancel_(inter):
+                if inter.user != other_user:
+                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}', ephemeral=True)
+                    return
+
+                await inter.response.send_message('This game has not been cancelled!', delete_after=3)
+
+                await inter.followup.edit_message(content=f'It is {turn.mention}\'s turn!', view=view, message_id=msg.id)
+
+            confirm_cancel.callback = cancel_callback
+            dont_cancel.callback = dont_cancel_
 
         for button in buttons:
             button.callback = button_callback

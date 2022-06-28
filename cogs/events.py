@@ -3,12 +3,21 @@ import contextlib
 import os
 import discord
 import random
-from googleapiclient.discovery import build
 from sql_tools import SQL
 from discord.ext import commands, tasks
+import youtubesearchpython as youtube
 
 
 def remove(nick_name: str) -> str:
+    """
+    Removed '[AFK]' from a nickname
+    
+    :param nick_name: The nickname to remove '[AFK]' from
+    :type nick_name: str
+    
+    :return: The nickname without '[AFK]'
+    :rtype: str
+    """
     return " ".join(nick_name.split()[1:]) if '[AFK]' in nick_name.split() else nick_name
 
 
@@ -20,6 +29,9 @@ class Events(commands.Cog):
         :param bot: The client
 
         :type bot: discord.ext.commands.Bot
+
+        :return: None
+        :rtype: None
         """
         self.bot = bot  # type: commands.Bot
 
@@ -30,10 +42,14 @@ class Events(commands.Cog):
         Bot activity on starting
 
         :return: None
+        :rtype: None
         """
         print('Bot is ready')
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
+
         self.check_for_videos.start()
+        self.clear_ytdl_cache.start()
+
         sql = SQL('b0ssbot')
         sql.delete(table='queue')
         sql.delete(table='loop')
@@ -50,6 +66,7 @@ class Events(commands.Cog):
         :type message: discord.Message
 
         :return: None
+        :rtype: None
         """
         sql = SQL('b0ssbot')  # type: SQL
         if message.author.bot:  # Ignore bots
@@ -58,6 +75,7 @@ class Events(commands.Cog):
         if "'" in message.content:
             message.content = message.content.replace("'", "''")  # Replace single quotes with double quotes
 
+        # AFKs
         if sql.select(elements=['member_id', 'guild_id', 'reason'], table='afks',
                       where=f'member_id = \'{message.author.id}\' AND guild_id = \'{message.guild.id}\''):
             # Check if the user is afk
@@ -94,6 +112,7 @@ class Events(commands.Cog):
                             ).set_thumbnail(url=member.avatar or member.default_avatar)
                         )  # Reply to the user
 
+        # Ping reply
         if self.bot.user.id in message.raw_mentions and message.content != '@everyone' and message.content != '@here':
             # Ping response
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{message.guild.id}'")
@@ -103,6 +122,7 @@ class Events(commands.Cog):
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await message.reply(embed=embed)
 
+        # Messageresponse
         with contextlib.suppress(IndexError):
             if response := sql.select(elements=['response'], table='message_responses',
                                       where=f"message = '{message.content.lower()}' AND guild_id = '{message.guild.id}'"
@@ -110,6 +130,7 @@ class Events(commands.Cog):
                 # Check for chat triggers
                 await message.reply(response)
 
+        # Markdown
         with contextlib.suppress(discord.HTTPException):
             if '[' in message.content and \
                     ']' in message.content \
@@ -139,6 +160,7 @@ class Events(commands.Cog):
         :type ctx: commands.Context
 
         :return: None
+        :rtype: None
         """
         sql = SQL('b0ssbot')  # type: SQL
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
@@ -158,6 +180,7 @@ class Events(commands.Cog):
         :type guild: discord.Guild
 
         :return: None
+        :rtype: None
         """
         sql = SQL('b0ssbot')
 
@@ -184,6 +207,7 @@ class Events(commands.Cog):
         :type guild: discord.Guild
 
         :return: None
+        :rtype: None
         """
         sql = SQL('b0ssbot')
         sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
@@ -196,35 +220,46 @@ class Events(commands.Cog):
         sql.delete(table='warns', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='queue', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='loop', where=f'guild_id = \'{guild.id}\'')
-
+    
     @tasks.loop(minutes=60)
+    async def clear_ytdl_cache(self):
+        """
+        Clears the YTDL cache
+        
+        :return: None
+        :rtype: None
+        """
+        os.system('youtube-dl --rm-cache-dir')  # Clearing cache to prevent 403 errors
+
+    @tasks.loop(seconds=60)
     async def check_for_videos(self) -> None:
         """
         Check for new videos every hour
 
         :return: None
+        :rtype: None
         """
-        os.system('youtube-dl --rm-cache-dir')  # Clearing cache to prevent 403 errors
         sql = SQL('b0ssbot')  # type: SQL
         print('Checking for videos...')
 
-        channel = sql.select(
+        channels = sql.select(
             elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name', 'ping_role'],
             table='youtube')
-        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
-        for data in channel:
-            c = youtube.channels().list(part='contentDetails', id=data[0]).execute()  # type: dict
-            latest_video_id = \
-                youtube.playlistItems().list(playlistId=c['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
-                                             part='contentDetails').execute()['items'][0]['contentDetails'][
-                    'videoId']  # type: str
+        for data in channels:
+            latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(data[0])).videos[0]['id']
+
+            with contextlib.suppress(IndexError):
+                publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0]['publishedTime']
+            if not publish_time:
+                continue
+            if 'second' not in publish_time and 'seconds' not in publish_time and 'minute' not in publish_time and 'minutes' not in publish_time and 'hour' not in publish_time and 'hours' not in publish_time:
+                continue
 
             if data[1] != latest_video_id:
-                guild = discord.utils.get(self.bot.guilds, id=int(data[2]))  # type: discord.Guild
-                text_channel = discord.utils.get(guild.text_channels, id=int(data[3]))  # type: discord.TextChannel
-                ping_role = discord.utils.get(guild.roles, id=int(data[5])) if data[
-                                                                                   5] != 'None' else None  # type: discord.Role | None
+                guild = discord.utils.get(self.bot.guilds, id=int(data[2]))
+                text_channel = discord.utils.get(guild.text_channels, id=int(data[3]))
+                ping_role = discord.utils.get(guild.roles, id=int(data[5])) if data[5] != 'None' else None
 
                 webhooks = await text_channel.webhooks()
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
@@ -247,6 +282,8 @@ def setup(bot):
 
     :param bot: The bot object
     :type bot: discord.ext.commands.Bot
+
     :return: None
+    :rtype: None
     """
     bot.add_cog(Events(bot))

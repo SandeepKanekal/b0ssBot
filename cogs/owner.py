@@ -244,8 +244,8 @@ class Owner(commands.Cog):
                 
                 try:
                     self.bot.load_extension('cogs.eval')
-                except Exception as e:
-                    await interaction.response.send_message(f'**`ERROR:`** {type(e).__name__} - {e}')
+                except Exception as er:
+                    await interaction.response.send_message(f'**`ERROR:`** {type(er).__name__} - {er}')
                     return
 
                 await interaction.response.send_message('File created!')

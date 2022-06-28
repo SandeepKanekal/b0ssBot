@@ -4,14 +4,12 @@ import datetime
 import requests
 import os
 import asyncio
-from requests.exceptions import MissingSchema
-from PIL import UnidentifiedImageError
 from discord.ext import commands
 from discord.commands import Option
 from tools import convert_to_unix_time
 from sql_tools import SQL
 from googleapiclient.discovery import build
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, UnidentifiedImageError
 
 
 class Slash(commands.Cog):
@@ -518,7 +516,7 @@ class Slash(commands.Cog):
                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
                 sql.update(table='message_responses', column='response', value=f"'{response}'",
                            where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
-                await ctx.respond(embed=discord.Embed(description=f'Updated the response for **{original_message}**',
+                await ctx.respond(embed=discord.Embed(description=f'Updated the response for **{original_message}**[.](https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png)',
                                                       colour=discord.Colour.green()))
             else:
                 sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
@@ -1000,7 +998,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error.original, (ConnectionError, MissingSchema, UnidentifiedImageError)):
+        if isinstance(error.original, (ConnectionError, requests.exceptions.MissingSchema, UnidentifiedImageError)):
             await ctx.respond('Invalid URL', ephemeral=True)
             with contextlib.suppress(FileNotFoundError, IndexError):
                 os.remove(f'image_{ctx.author.id}.png')
