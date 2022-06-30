@@ -291,7 +291,7 @@ class Internet(commands.Cog):
 
             embed = discord.Embed(
                 title=f'Weather for {weather_data["name"]}',
-                description=f'{weather_data["weather"][0]["description"].capitalize()}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913545810575431/unknown.png)',
+                description=f'{weather_data["weather"][0]["description"].capitalize()}.',
                 colour=discord.Colour.blue(),
                 timestamp=datetime.datetime.now()
             )

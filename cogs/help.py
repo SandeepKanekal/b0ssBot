@@ -55,7 +55,7 @@ class Help(commands.Cog):
             # Response embed
             embed = discord.Embed(title='Help Page',
                                   description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
-                                  colour=discord.Colour.blue())
+                                  colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
             for cog in self.bot.cogs:
                 if cog in ['Help', 'Events', 'Owner', 'Slash']:
                     continue
@@ -70,7 +70,6 @@ class Help(commands.Cog):
                             inline=False)
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
-            embed.timestamp = datetime.datetime.now()
             await ctx.reply(embed=embed)
 
 

@@ -54,7 +54,7 @@ class Info(commands.Cog):
         joined_at = convert_to_unix_time(joined_at)  # type: str
         registered_at = convert_to_unix_time(registered_at)  # type: str
 
-        embed = discord.Embed(colour=member.colour)
+        embed = discord.Embed(colour=member.colour, timestamp=datetime.datetime.now())
         embed.set_author(name=str(member), icon_url=str(member.avatar)) if member.avatar else embed.set_author(
             name=str(member), icon_url=str(member.default_avatar))
         embed.add_field(name='Display Name', value=member.mention, inline=True)
@@ -71,7 +71,6 @@ class Info(commands.Cog):
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
         embed.set_footer(text=f'ID: {member.id}')
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     @userinfo.error
@@ -124,7 +123,7 @@ class Info(commands.Cog):
         emoji_string = f'Total: **{len(emojis)}**\n'
         animated_emojis_len = len(list(filter(lambda emoji: emoji.animated, emojis)))
         emoji_string += f'Animated: **{animated_emojis_len}**\n'
-        emoji_string += f'Non Animated[:](https://cdn.discordapp.com/attachments/984912794031894568/984914001664299079/unknown.png) **{len(emojis) - animated_emojis_len}**'
+        emoji_string += f'Non Animated: **{len(emojis) - animated_emojis_len}**'
 
         # Getting the creation date of the server relative unix time
         created_at = ctx.guild.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
@@ -134,7 +133,7 @@ class Info(commands.Cog):
         member_string = f'Total: **{user_count}**\nMembers: **{member_count}**\nBots: **{bot_count}**'  # type: str
         channel_string = f'Text Channels: **{text_channel_count}**\nVoice Channels **{voice_channel_count}**'  # type: str
 
-        embed = discord.Embed(color=discord.Color.blue())
+        embed = discord.Embed(color=discord.Color.blue(), timestamp=datetime.datetime.now())
         embed.set_thumbnail(url=ctx.guild.icon) if ctx.guild.icon else None
         embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon) if ctx.guild.icon else embed.set_author(
             name=ctx.guild.name)
@@ -152,7 +151,6 @@ class Info(commands.Cog):
         except AttributeError:
             embed.add_field(name='Muted Users', value=str(0))
         embed.set_footer(text=f'ID: {ctx.guild.id}')
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     # Botinfo command
@@ -229,7 +227,7 @@ class Info(commands.Cog):
         """
         await ctx.send(
             embed=discord.Embed(
-                description=f'The bot was started on {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913407964766288/unknown.png)',
+                description=f'The bot was started on {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}.',
                 colour=self.bot.user.colour
             )
         )

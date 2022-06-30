@@ -1,7 +1,6 @@
 # All misc commands stored here
 import datetime
 import discord
-import random
 from tools import send_error_embed
 from discord.ext import commands
 
@@ -83,11 +82,6 @@ class Misc(commands.Cog):
         embed.add_field(name='Download this image', value=f'[Click Here]({member.avatar or member.default_avatar})')
         await ctx.reply(embed=embed)
 
-        if random.choice([True, False]):
-            await ctx.author.send(embed=discord.Embed(
-                description='[OMG!](https://cdn.discordapp.com/attachments/984912794031894568/984913669290852392/unknown.png)',
-                colour=self.bot.user.colour))
-
     @avatar.error
     async def avatar_error(self, ctx, error):
         """
@@ -126,13 +120,12 @@ class Misc(commands.Cog):
             await send_error_embed(ctx, description='This server has no icon')
             return
         # Response embed
-        embed = discord.Embed(colour=discord.Colour.random())
+        embed = discord.Embed(colour=discord.Colour.random(), timestamp=datetime.datetime.now())
         embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
         embed.set_image(url=ctx.guild.icon)
         embed.add_field(name='Download this image', value=f'[Click Here]({ctx.guild.icon})')
         embed.set_footer(text=f'Requested by {ctx.author}',
                          icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     # Megaspam command

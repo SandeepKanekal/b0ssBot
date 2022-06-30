@@ -86,7 +86,6 @@ class Util(commands.Cog):
             # Response embed
             embed = discord.Embed(
                 title='Sniped a message!',
-                url='https://cdn.discordapp.com/attachments/984912794031894568/984914060602642442/unknown.png',
                 description=f'Author: {member.mention if isinstance(member, discord.Member) else member}\nDeleted message: {message[0][1]}\nChannel: {channel.mention}\nTime: {del_time}',
                 colour=discord.Colour.green()
             ).set_footer(
@@ -97,7 +96,7 @@ class Util(commands.Cog):
 
             await ctx.send(embed=embed)
         else:
-            await send_error_embed(ctx, 'There are no messages to snipe[.](https://cdn.discordapp.com/attachments/984912794031894568/984914060602642442/unknown.png)')
+            await send_error_embed(ctx, 'There are no messages to snipe.')
 
     @snipe.error
     async def snipe_error(self, ctx, error):
@@ -107,7 +106,7 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         :return: None"""
-        await send_error_embed(ctx, description=f'Error: `{error}`[!](https://cdn.discordapp.com/attachments/984912794031894568/984914060602642442/unknown.png)')
+        await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # AFK command
     @commands.command(name='afk', description='Marks the user as AFK', usage='afk <reason>')
@@ -134,11 +133,10 @@ class Util(commands.Cog):
                    values=[f'\'{member_details}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'',
                            f'\'{reason}\''])
 
-        embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour)
+        embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour, timestamp=datetime.datetime.now())
         embed.set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='AFK note', value=reason.replace("''", "'"))
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     @afk.error
@@ -165,7 +163,7 @@ class Util(commands.Cog):
         """
         latency = round(self.bot.latency * 1000)
         embed = discord.Embed(
-            description=f'**Pong[!!](https://cdn.discordapp.com/attachments/984912794031894568/984914090193465374/unknown.png)** Bot latency is {str(latency)}ms',
+            description=f'**Pong!!** Bot latency is {str(latency)}ms',
             colour=discord.Colour.yellow())
         await ctx.reply(embed=embed)
 
@@ -269,7 +267,7 @@ class Util(commands.Cog):
                 for index, embed in enumerate(message.embeds):
                     await ctx.send(f'Embed no. {index + 1}', embed=embed)
 
-            embed = discord.Embed(colour=message.author.colour)
+            embed = discord.Embed(colour=message.author.colour, timestamp=datetime.datetime.now())
             embed.set_author(name=message.author,
                              icon_url=str(message.author.avatar) if message.author.avatar else str(
                                  message.author.default_avatar))
@@ -278,7 +276,6 @@ class Util(commands.Cog):
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
                                  ctx.author.default_avatar))
-            embed.timestamp = datetime.datetime.now()
             await ctx.send(embed=embed)
         except discord.NotFound:
             await send_error_embed(ctx, description='Message not found')

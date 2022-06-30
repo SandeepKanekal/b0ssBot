@@ -576,7 +576,6 @@ class Moderation(commands.Cog):
         for embed in embeds:
             embed.set_author(name=before.name, icon_url=after.icon or discord.Embed.Empty)
             embed.set_footer(text=f'ID: {before.id}')
-            embed.timestamp = datetime.datetime.now()
 
         # Send webhook
         webhooks = await channel.webhooks()
@@ -734,14 +733,14 @@ class Moderation(commands.Cog):
             embed = discord.Embed(
                 title=f'Member Updated in {before.guild.name}',
                 description=f'Edited Member: {before.mention}\nNickname: {before.nick} -> {after.nick}',
-                colour=discord.Colour.green()
+                colour=discord.Colour.green(),
+                timestamp = datetime.datetime.now()
             )
             if before.guild.icon:
                 embed.set_author(name=before.guild.name, icon_url=before.guild.icon)
             else:
                 embed.set_author(name=before.guild.name)
             embed.set_footer(text=f'ID: {before.id}')
-            embed.timestamp = datetime.datetime.now()
 
             # Send webhook
             webhooks = await channel.webhooks()

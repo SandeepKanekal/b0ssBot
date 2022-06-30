@@ -100,6 +100,7 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=member.guild)
             if len(before.channel.members) == 1 and after != before:
                 await vc.disconnect()
+                self.volume.pop(member.guild.id)
                 self.sql.delete(table='queue', where=f"guild_id = '{member.guild.id}'")
                 self.sql.delete(table='loop', where=f"guild_id = '{member.guild.id}'")
 
@@ -404,7 +405,7 @@ class Music(commands.Cog):
 
         if track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             # If looping is enabled, show the looping track
-            embed = discord.Embed(colour=discord.Colour.blue())
+            embed = discord.Embed(colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.add_field(
                 name='Looping',
@@ -426,7 +427,6 @@ class Music(commands.Cog):
                         inline=False)
         for index, item in enumerate(queue):
             embed.add_field(name=f'Track Number {index + 1}', value=f'[{item[0]}]({item[1]})', inline=False)
-        embed.timestamp = datetime.datetime.now()
         await ctx.send(embed=embed)
 
     @queue.error
@@ -908,12 +908,9 @@ class Music(commands.Cog):
                 title, lyrics = song['title'], song['lyrics']
 
                 # Response embed
-                embed = discord.Embed(title=title, description=lyrics,
-                                      url='https://cdn.discordapp.com/attachments/984912794031894568/984913958693634158/unknown.png',
-                                      colour=discord.Colour.blue())
+                embed = discord.Embed(title=title, description=lyrics, colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
                 embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
                 embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
-                embed.timestamp = datetime.datetime.now()
                 await ctx.send(embed=embed)
 
             # Lyrics not found exception

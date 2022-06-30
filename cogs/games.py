@@ -51,24 +51,24 @@ class Games(commands.Cog):
 
         # Response list
         responses = [
-            'Yes[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'No[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Never[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Hell Yea[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Without a Doubt[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Highly doubt that[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Ask again later[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Maybe[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'I don\'t know[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'I\'m not sure[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'I don\'t think so[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)',
-            'Probably[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)'
+            'Yes.',
+            'No.',
+            'Never.',
+            'Hell Yea.',
+            'Without a Doubt.',
+            'Highly doubt that.',
+            'Ask again later.',
+            'Maybe.',
+            'I don\'t know.',
+            'I\'m not sure.',
+            'I don\'t think so.',
+            'Probably.'
         ]
 
         response = random.choice(responses)
         if 'tiktok' in question.lower() or 'tik tok' in question.lower():
             # TikTok is just horrible
-            response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS[.](https://cdn.discordapp.com/attachments/984912794031894568/984912850223005696/unknown.png)'
+            response = 'tiktok IS THE ABSOLUTE WORST, PLEASE STOP WASTING MY TIME ASKING SUCH OBVIOUS QUESTIONS.'
         embed = discord.Embed(title=f':8ball: {question}', description=response, colour=discord.Colour.random())
         await ctx.send(embed=embed)
 
@@ -390,6 +390,7 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        # OMG! You have found the egg! Here's your prize! https://imgur.com/pSB4AnR
 
     @commands.command(name='wouldyourather', aliases=['wyr'], description='Get a would you rather',
                       usage='wouldyourather <rating>')
@@ -747,7 +748,7 @@ class Games(commands.Cog):
             if interaction.user not in [ctx.author, player]:  # Prevent foreign users from cancelling
                 await interaction.response.send_message(content='You are not playing this game!', ephemeral=True)
                 return
-            
+
             confirm_cancel = Button(style=discord.ButtonStyle.green, label='Cancel!')
             dont_cancel = Button(style=discord.ButtonStyle.red, label='Don\'t cancel!')
 
@@ -757,11 +758,14 @@ class Games(commands.Cog):
 
             other_user = player if interaction.user == ctx.author else ctx.author  # The other user in the game
 
-            await interaction.response.edit_message(content=f'{other_user.mention}, {interaction.user.mention} would like to cancel this game!', view=cancel_view)
+            await interaction.response.edit_message(
+                content=f'{other_user.mention}, {interaction.user.mention} would like to cancel this game!',
+                view=cancel_view)
 
             async def cancel_callback(inter):
                 if inter.user != other_user:
-                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}', ephemeral=True)
+                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}',
+                                                      ephemeral=True)
                     return
 
                 for b in list(filter(lambda x: not x.disabled, buttons)):  # Disable all buttons
@@ -769,16 +773,18 @@ class Games(commands.Cog):
                 cancel.disabled = True
 
                 await inter.response.edit_message(content=f'{interaction.user.mention} has cancelled the game.',
-                                                        view=view)
-            
+                                                  view=view)
+
             async def dont_cancel_(inter):
                 if inter.user != other_user:
-                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}', ephemeral=True)
+                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}',
+                                                      ephemeral=True)
                     return
 
                 await inter.response.send_message('This game has not been cancelled!', delete_after=3)
 
-                await inter.followup.edit_message(content=f'It is {turn.mention}\'s turn!', view=view, message_id=msg.id)
+                await inter.followup.edit_message(content=f'It is {turn.mention}\'s turn!', view=view,
+                                                  message_id=msg.id)
 
             confirm_cancel.callback = cancel_callback
             dont_cancel.callback = dont_cancel_

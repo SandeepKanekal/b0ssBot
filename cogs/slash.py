@@ -89,7 +89,7 @@ class Slash(commands.Cog):
         joined_at = convert_to_unix_time(joined_at)  # type: str
         registered_at = convert_to_unix_time(registered_at)  # type: str
 
-        embed = discord.Embed(colour=member.colour)
+        embed = discord.Embed(colour=member.colour, timestamp=datetime.datetime.now())
         embed.set_author(name=str(member), icon_url=str(member.avatar)) if member.avatar else embed.set_author(
             name=str(member), icon_url=str(member.default_avatar))
         embed.add_field(name='Display Name', value=member.mention, inline=True)
@@ -104,7 +104,6 @@ class Slash(commands.Cog):
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
         embed.set_footer(text=f'ID: {member.id}')
-        embed.timestamp = datetime.datetime.now()
         await ctx.respond(embed=embed)
 
     @userinfo.error
@@ -494,7 +493,7 @@ class Slash(commands.Cog):
             sql.delete(table='message_responses',
                        where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
             await ctx.respond(embed=discord.Embed(
-                description=f'Removed the response for **{original_message}**[.](https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png)',
+                description=f'Removed the response for **{original_message}**.',
                 colour=discord.Colour.green()))
 
         elif mode == 'add':
@@ -516,14 +515,14 @@ class Slash(commands.Cog):
                           where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
                 sql.update(table='message_responses', column='response', value=f"'{response}'",
                            where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'")
-                await ctx.respond(embed=discord.Embed(description=f'Updated the response for **{original_message}**[.](https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png)',
+                await ctx.respond(embed=discord.Embed(description=f'Updated the response for **{original_message}**.',
                                                       colour=discord.Colour.green()))
             else:
                 sql.insert(table='message_responses', columns=['guild_id', 'message', 'response'],
                            values=[f"'{ctx.guild.id}'", f"'{message}'", f"'{response}'"])
                 await ctx.respond(
                     embed=discord.Embed(
-                        description=f'Added the response for **{original_message}**[.](https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png)',
+                        description=f'Added the response for **{original_message}**.',
                         colour=discord.Colour.green()))
 
         else:
@@ -533,9 +532,7 @@ class Slash(commands.Cog):
                 return
 
             if message is None and response is None:
-                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
-                                      url='https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png',
-                                      colour=discord.Colour.green())
+                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}', colour=discord.Colour.green())
                 responses = sql.select(elements=['message', 'response'], table='message_responses',
                                        where=f"guild_id = '{ctx.guild.id}'")
                 for row in responses:
@@ -544,11 +541,11 @@ class Slash(commands.Cog):
                 try:
                     await ctx.respond(embed=embed)
                 except discord.HTTPException:
-                    with open('responses.txt', 'w') as f:
+                    with open(f'responses_{ctx.guild.id}', 'w') as f:
                         for row in responses:
                             f.write(f'Message: {row[0]}\nResponse: {row[1]}\n\n')
-                    await ctx.respond(file=discord.File('responses.txt'))
-                    os.remove('responses.txt')
+                    await ctx.respond(file=discord.File(f'responses_{ctx.guild.id}'))
+                    os.remove(f'responses_{ctx.guild.id}')
 
             else:
                 text = message.replace("'", "''").lower() if message else response.replace("'", "''")
@@ -557,9 +554,7 @@ class Slash(commands.Cog):
                 if not elements:
                     await ctx.respond('No chat triggers found', ephemeral=True)
                     return
-                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}',
-                                      url='https://cdn.discordapp.com/attachments/984912794031894568/984914029082472498/unknown.png',
-                                      colour=discord.Colour.green())
+                embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}', colour=discord.Colour.green())
                 for row in elements:
                     embed.add_field(name=f'Message: {row[0]}', value=f'Response: {row[1]}', inline=False)
                 try:
@@ -891,7 +886,7 @@ class Slash(commands.Cog):
         permissions = [permission[0].replace('_', ' ').title() for permission in role.permissions if
                        permission[1]]  # type: list[str]
 
-        embed = discord.Embed(colour=role.colour)
+        embed = discord.Embed(colour=role.colour, timestamp=datetime.datetime.now())
         if role.guild.icon:
             embed.set_author(name=role.name, icon_url=role.guild.icon)
         else:
@@ -908,7 +903,6 @@ class Slash(commands.Cog):
         embed.add_field(name='Permissions', value=', '.join(permissions) or 'None', inline=False)
 
         embed.set_footer(text=f'ID: {role.id}')
-        embed.timestamp = datetime.datetime.now()
 
         if role.icon:
             embed.set_thumbnail(url=role.icon)

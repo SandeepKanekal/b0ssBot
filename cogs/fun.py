@@ -216,7 +216,7 @@ class Fun(commands.Cog):
         async with ctx.typing():
             response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
 
-            embed = discord.Embed(description=f'{response["activity"]}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913029625950289/unknown.png)', timestamp=datetime.datetime.now(), colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
+            embed = discord.Embed(description=f'{response["activity"]}.', timestamp=datetime.datetime.now(), colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
 
             next_activity = Button(emoji='➡️', style=discord.ButtonStyle.green)
             end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
@@ -233,7 +233,7 @@ class Fun(commands.Cog):
                 return
 
             new_response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
-            embed.description = f'{new_response["activity"]}[.](https://cdn.discordapp.com/attachments/984912794031894568/984913029625950289/unknown.png)'
+            embed.description = f'{new_response["activity"]}.'
             embed.timestamp = datetime.datetime.now()
             embed.set_footer(text=f'Type: {new_response["type"].upper()}')
 
@@ -359,6 +359,20 @@ class Fun(commands.Cog):
 
         next_cat.callback = next_cat_trigger
         end_interaction.callback = end_interaction_trigger
+    
+    @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
+    async def egg(self, ctx):
+        """
+        Gives information about the egghunt
+
+        :param ctx: The context of the command
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.reply(f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
 
 
 def setup(bot):
