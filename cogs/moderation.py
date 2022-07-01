@@ -734,7 +734,7 @@ class Moderation(commands.Cog):
                 title=f'Member Updated in {before.guild.name}',
                 description=f'Edited Member: {before.mention}\nNickname: {before.nick} -> {after.nick}',
                 colour=discord.Colour.green(),
-                timestamp = datetime.datetime.now()
+                timestamp=datetime.datetime.now()
             )
             if before.guild.icon:
                 embed.set_author(name=before.guild.name, icon_url=before.guild.icon)

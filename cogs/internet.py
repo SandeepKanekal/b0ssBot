@@ -94,6 +94,7 @@ class Internet(commands.Cog):
             previous_video = Button(emoji='⏮️', style=discord.ButtonStyle.green)
             end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
             watch_video = Button(label='Watch Video', style=discord.ButtonStyle.green)
+            play = Button(label='Play audio in VC', style=discord.ButtonStyle.green)
 
             view = View(timeout=None)
 
@@ -101,6 +102,7 @@ class Internet(commands.Cog):
             view.add_item(next_video)
             view.add_item(end_interaction)
             view.add_item(watch_video)
+            view.add_item(play)
 
         await ctx.send(embed=embed, view=view)
 
@@ -174,12 +176,23 @@ class Internet(commands.Cog):
             previous_video.disabled = True
             end_interaction.disabled = True
             watch_video.disabled = True
+            play.disabled = True
             await interaction.response.edit_message(view=view)
+
+        async def play_callback(interaction):
+            nonlocal index
+            await interaction.response.defer()
+            try:
+                await ctx.invoke(self.bot.get_command('play'), query=titles[index])
+                await interaction.followup.send('Audio added to queue!')
+            except Exception as e:
+                await send_error_embed(ctx, description=f'Error: {e}')
 
         next_video.callback = next_video_trigger
         previous_video.callback = previous_video_trigger
         end_interaction.callback = end_interaction_trigger
         watch_video.callback = watch_video_trigger
+        play.callback = play_callback
 
     @youtubesearch.error
     async def youtubesearch_error(self, ctx, error):

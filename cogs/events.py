@@ -247,7 +247,6 @@ class Events(commands.Cog):
         notifiable_channels = [channel for channel in channels if
                                channel[1] != youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
                                    'id']]
-        print(notifiable_channels)
 
         for channel in notifiable_channels:
             latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0]['id']

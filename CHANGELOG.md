@@ -21,6 +21,7 @@
 
 # MISC #
 + Since a member can be of multiple strings, the `member` argument in the avatar command now is a multiline string.
++ Addition of a QR SCAN application context command.
 
 # Info #
 + Addition of a roleinfo command.
@@ -30,7 +31,7 @@
 + The weather command is more informative.
 + Removal of the hourlyweather command since it is no longer needed.
 + Addition of a GitHub command.
-+ The youtubenotification command has a new mode `update`.
++ The youtubesearch command now has a button to play the audio in VC.
 
 # Music #
 + The lyrics command's response's title now is the title of the song instead of the query. However, the query is visible as the footer.
@@ -47,6 +48,7 @@
 + Addition of a roleinfo command.
 + Addition of an embed command.
 + Addition of a datetime command.
++ The youtubenotification command has a new mode `update`.
 
 # Games #
 + The cancel button in the tictactoe command now asks for the other player's permission.

@@ -226,7 +226,7 @@ class Slash(commands.Cog):
                                 'ping_role'],
                        values=[f"'{ctx.guild.id}'", f"'{text_channel.id}'", f"'{channel['items'][0]['id']}'",
                                f"'{channel_name}'", f"'{latest_video_id}'",
-                               f"'{ping_role.id}'" if ping_role else 'None'])
+                               f"'{ping_role.id}'" if ping_role else "'None'"])
             await ctx.respond(
                 f'NOTE: This command requires **Send Webhooks** to be enabled in {text_channel.mention}',
                 embed=discord.Embed(

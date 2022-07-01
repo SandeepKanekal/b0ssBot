@@ -171,7 +171,7 @@ class Info(commands.Cog):
         created_at = convert_to_unix_time(created_at)  # type: str
 
         embed = discord.Embed(
-            description=f'I am {self.bot.user.name}! I was created by Dose#7204. I was coded using the [pycord](https://github.com/Pycord-Development/pycord) library and my code is available [here](https://github.com/SandeepKanekal/b0ssBot). Though I am a multipurpose bot, my bet feature is the internet commands. Use the help command to get to know all my commands.',
+            description=f'I am {self.bot.user.name}! I was created by Dose#7204. I was coded using the [pycord](https://github.com/Pycord-Development/pycord) library and my code is available [here](https://github.com/SandeepKanekal/b0ssBot). Though I am a multipurpose bot, my best feature is the internet commands. Use the help command to get to know all my commands.',
             colour=self.bot.user.colour, timestamp=datetime.datetime.now())
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='Bot Username', value=str(self.bot.user.name), inline=True)

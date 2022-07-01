@@ -140,12 +140,12 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if self.sql.select(elements=['*'], table='queue', where=f"guild_id = '{ctx.guild.id}'"):
-            track = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")[0]
+        if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
+            track = self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'")[0]
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
-        elif self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            track = self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'")[0]
+        elif self.sql.select(elements=['*'], table='queue', where=f"guild_id = '{ctx.guild.id}'"):
+            track = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")[0]
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
         else:
@@ -167,10 +167,7 @@ class Music(commands.Cog):
         """
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
         asyncio.run_coroutine_threadsafe(self._send_embed_after_track(ctx), self.bot.loop)  # Send the embed
-        if self.sql.select(['title'], 'queue',
-                           f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks in the queue
-            self._play_next(ctx, vc)
-        elif self.sql.select(['title'], 'loop', f"guild_id = '{ctx.guild.id}'"):  # Check if there are any loops
+        if self.sql.select(['title'], 'queue', f"guild_id = '{ctx.guild.id}'") or self.sql.select(['title'], 'loop', f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks queued or looped
             self._play_next(ctx, vc)
         else:
             # If no track is present to play, all the variables store None
@@ -621,7 +618,6 @@ class Music(commands.Cog):
 
         embed = discord.Embed(description='Stopped', colour=discord.Colour.green())
         await ctx.send(embed=embed)
-        vc.stop()  # Stopping the player
 
         # Clearing the queue variables
         self.now_playing[ctx.guild.id] = None
@@ -630,6 +626,9 @@ class Music(commands.Cog):
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
         self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
+
+        # Stopping the player
+        vc.stop()
 
     @stop.error
     async def stop_error(self, ctx, error):

@@ -1,8 +1,12 @@
 # All misc commands stored here
 import datetime
 import discord
+import requests
+import os
 from tools import send_error_embed
 from discord.ext import commands
+from PIL import Image
+from pyzbar.pyzbar import decode
 
 
 class Misc(commands.Cog):
@@ -177,6 +181,59 @@ class Misc(commands.Cog):
             return
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
+    @commands.message_command(name='Scan QR codes')
+    async def scan_qr(self, ctx, message: discord.Message):
+        """
+        Scans a QR code and returns the result
+
+        :param ctx: The context of where the message was sent
+        :param message: The message to scan
+
+        :type ctx: discord.ApplicationContext
+        :type message: discord.Message
+
+        :return: None
+        :rtype: None
+        """
+        if message.attachments:
+            embed = discord.Embed(title='QR Scan results', colour=0x848585).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
+            await ctx.interaction.response.defer()
+
+            for index, attachment in enumerate(message.attachments):
+                if attachment.filename.endswith('.png'):
+                    with open(f'{attachment.filename}_{message.id}', 'wb') as f:
+                        f.write(requests.get(attachment.url).content)
+                    try:
+                        data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
+                        for code in data:
+                            embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```', inline=False)
+                    except Exception as e:
+                        embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
+                    os.remove(f'{attachment.filename}_{message.id}')
+                    
+            if embed.fields:
+                await ctx.respond(embed=embed)
+            else:
+                await ctx.respond('No QR codes found')
+            return
+            
+        await ctx.respond('No attachment found')
+
+    @scan_qr.error
+    async def scan_qr_error(self, ctx, error):
+        """
+        Error handler for the scan_qr command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: `{error}`')
 
 # Setup
 def setup(bot):

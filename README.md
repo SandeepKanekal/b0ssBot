@@ -13,6 +13,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [psycopg2](https://pypi.org/project/psycopg2/)
 + [pillow](https://pypi.org/project/Pillow/)
 + [youtube-search-python](https://pypi.org/project/youtube-search-python/)
++ [pyzbar](https://pypi.org/project/pyzbar/)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics
