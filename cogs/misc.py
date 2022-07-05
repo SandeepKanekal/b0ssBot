@@ -3,6 +3,7 @@ import datetime
 import discord
 import requests
 import os
+import qrcode
 from tools import send_error_embed
 from discord.ext import commands
 from PIL import Image
@@ -200,16 +201,15 @@ class Misc(commands.Cog):
             await ctx.interaction.response.defer()
 
             for index, attachment in enumerate(message.attachments):
-                if attachment.filename.endswith('.png'):
-                    with open(f'{attachment.filename}_{message.id}', 'wb') as f:
-                        f.write(requests.get(attachment.url).content)
-                    try:
-                        data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
-                        for code in data:
-                            embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```', inline=False)
-                    except Exception as e:
-                        embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
-                    os.remove(f'{attachment.filename}_{message.id}')
+                with open(f'{attachment.filename}_{message.id}', 'wb') as f:
+                    f.write(requests.get(attachment.url).content)
+                try:
+                    data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
+                    for code in data:
+                        embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```', inline=False)
+                except Exception as e:
+                    embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
+                os.remove(f'{attachment.filename}_{message.id}')
                     
             if embed.fields:
                 await ctx.respond(embed=embed)
@@ -234,6 +234,50 @@ class Misc(commands.Cog):
         :rtype: None
         """
         await ctx.respond(f'Error: `{error}`')
+    
+    @commands.message_command(name='Generate QR Code')
+    async def generate_qr(self, ctx, message: discord.Message):
+        """
+        Generates a QR code from a message
+
+        :param ctx: The context of where the message was sent
+        :param message: The message to generate a QR code from
+
+        :type ctx: discord.ApplicationContext
+        :type message: discord.Message
+
+        :return: None
+        :rtype: None
+        """
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4
+        )
+        qr.add_data(message.content)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        img.save(f'QR_{message.id}.png')
+        await ctx.respond(file=discord.File(f'QR_{message.id}.png'))
+        os.remove(f'QR_{message.id}.png')
+    
+    @generate_qr.error
+    async def generate_qr_error(self, ctx, error):
+        """
+        Error handler for the generate_qr command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: `{error}`')
+
 
 # Setup
 def setup(bot):

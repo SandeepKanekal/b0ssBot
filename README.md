@@ -14,6 +14,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [pillow](https://pypi.org/project/Pillow/)
 + [youtube-search-python](https://pypi.org/project/youtube-search-python/)
 + [pyzbar](https://pypi.org/project/pyzbar/)
++ [qrcode](https://pypi.org/project/qrcode/)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics

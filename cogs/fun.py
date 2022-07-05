@@ -254,9 +254,19 @@ class Fun(commands.Cog):
         next_activity.callback = next_activity_trigger
         end_interaction.callback = end_interaction_trigger
     
-    @commands.command(name='egg', description='Get information on the egghunt!', usage='egg')
+    @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx):
-        await ctx.reply(embed=discord.Embed(description='The bot has 9 accessible modules. Each module except `moderation` has 1 to 2 command(s) which will give you a character along with the position of the character[.](https://cdn.discordapp.com/attachments/984912794031894568/984913331540348938/unknown.png) By concatenating the 11 characters in the right order, you will get a YouTube video ID! After concatenation, you can visit https://www.youtube.com/watch?v=<ID> to watch the video! This video is the bot developer\'s favorite song!\n\nUse the help command to see the list of modules and commands!\n\n**HINT: YOU ARE SUPPOSED TO FIND URL REDIRECTS TO GET THE CHARACTERS!**\n\nYou can DM Dose#7204 for details if you did not understand.'))
+        """
+        Gives information about the egghunt
+
+        :param ctx: The context of the command
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.reply(f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
     
     @commands.command(name='dog', description='Get a random dog picture', usage='dog')
     @commands.cooldown(1, 1, commands.BucketType.user)

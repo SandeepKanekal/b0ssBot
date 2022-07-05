@@ -229,7 +229,7 @@ class Events(commands.Cog):
         """
         os.system('youtube-dl --rm-cache-dir')  # Clearing cache to prevent 403 errors
 
-    @tasks.loop(minutes=3)
+    @tasks.loop(minutes=5)
     async def check_for_videos(self) -> None:
         """
         Check for new videos every few minutes
@@ -237,43 +237,51 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')  # type: SQL
-        print('Checking for videos...')
+        status: str = ''
+        try:
+            sql = SQL('b0ssbot')  # type: SQL
+            status += 'Checking for videos...'
 
-        channels = sql.select(
-            elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name', 'ping_role'],
-            table='youtube')
+            channels = sql.select(
+                elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name', 'ping_role'],
+                table='youtube')
 
-        notifiable_channels = [channel for channel in channels if
-                               channel[1] != youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
-                                   'id']]
+            notifiable_channels = [channel for channel in channels if
+                                   channel[1] != youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
+                                       'id']]
 
-        for channel in notifiable_channels:
-            latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0]['id']
+            for channel in notifiable_channels:
+                latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0]['id']
 
-            with contextlib.suppress(IndexError):
-                publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0]['publishedTime']
-                if not publish_time:
+                with contextlib.suppress(IndexError):
+                    publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0]['publishedTime']
+                    if not publish_time:
+                        continue
+                if 'second' not in publish_time and 'seconds' not in publish_time and 'minute' not in publish_time and 'minutes' not in publish_time and 'hour' not in publish_time and 'hours' not in publish_time:
                     continue
-            if 'second' not in publish_time and 'seconds' not in publish_time and 'minute' not in publish_time and 'minutes' not in publish_time and 'hour' not in publish_time and 'hours' not in publish_time:
-                continue
 
-            guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))
-            text_channel = discord.utils.get(guild.text_channels, id=int(channel[3]))
-            ping_role = discord.utils.get(guild.roles, id=int(channel[5])) if channel[5] != 'None' else None
+                guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))
+                text_channel = discord.utils.get(guild.text_channels, id=int(channel[3]))
+                ping_role = discord.utils.get(guild.roles, id=int(channel[5])) if channel[5] != 'None' else None
 
-            webhooks = await text_channel.webhooks()
-            webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
-            if webhook is None:
-                webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
+                webhooks = await text_channel.webhooks()
+                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
+                if webhook is None:
+                    webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
 
-            await webhook.send(
-                f'{f"Hey {ping_role.mention}" if ping_role else "Hey everyone"}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
-                username=f'{self.bot.user.name} YouTube Notifier',
-                avatar_url=self.bot.user.avatar)  # Send the message to the webhook
+                await webhook.send(
+                    f'{f"Hey {ping_role.mention}" if ping_role else "Hey everyone"}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
+                    username=f'{self.bot.user.name} YouTube Notifier',
+                    avatar_url=self.bot.user.avatar)  # Send the message to the webhook
 
-            sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
-                       where=f'channel_id = \'{channel[0]}\'')  # Update the latest video id
+                sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
+                           where=f'channel_id = \'{channel[0]}\'')  # Update the latest video id
+        except Exception as e:
+            status = f'An error occured in check_for_videos: {e}'
+        else:
+            status += " Function executed without errors!"
+        finally:
+            print(status)
 
 
 # Setup
