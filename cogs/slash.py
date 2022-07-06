@@ -541,11 +541,11 @@ class Slash(commands.Cog):
                 try:
                     await ctx.respond(embed=embed)
                 except discord.HTTPException:
-                    with open(f'responses_{ctx.guild.id}', 'w') as f:
+                    with open(f'responses_{ctx.guild.id}.txt', 'w') as f:
                         for row in responses:
                             f.write(f'Message: {row[0]}\nResponse: {row[1]}\n\n')
-                    await ctx.respond(file=discord.File(f'responses_{ctx.guild.id}'))
-                    os.remove(f'responses_{ctx.guild.id}')
+                    await ctx.respond(file=discord.File(f'responses_{ctx.guild.id}.txt', filename='responses.txt'))
+                    os.remove(f'responses_{ctx.guild.id}.txt')
 
             else:
                 text = message.replace("'", "''").lower() if message else response.replace("'", "''")
@@ -817,7 +817,7 @@ class Slash(commands.Cog):
                             description='Code for the modules of the bot', usage='code <module>')
     async def code(self, ctx,
                    module: Option(str, description='The module to get the code for', required=True,
-                                  choices=['events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'moderation',
+                                  choices=['context', 'events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'moderation',
                                            'util', 'owner', 'slash', 'games', 'main', 'keep_alive', 'sql_tools',
                                            'tools'])
                    ):

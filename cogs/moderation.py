@@ -793,6 +793,9 @@ class Moderation(commands.Cog):
                 colour=discord.Colour.green()
             )
             embeds.append(embed)
+        
+        if not embeds:
+            return
 
         for guild in list(filter(lambda g: before in g.members, self.bot.guilds)):
             if not modlog_enabled(guild.id):

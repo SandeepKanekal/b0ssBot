@@ -213,7 +213,6 @@ class Events(commands.Cog):
         sql.delete(table='afks', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='message_responses', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='youtube', where=f'guild_id = \'{guild.id}\'')
-        sql.delete(table='hourlyweather', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='snipes', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='warns', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='queue', where=f'guild_id = \'{guild.id}\'')

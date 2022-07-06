@@ -35,7 +35,7 @@ class Help(commands.Cog):
                     for alias in cmd.aliases:
                         aliases += f'{alias}, '
                     aliases = aliases[:-2]
-                    param_string = ""  # Parameter string
+                    param_string: str = ""  # Parameter string
                     if len(cmd.clean_params) == 0:
                         param_string = 'None'
                     else:
@@ -51,13 +51,13 @@ class Help(commands.Cog):
                     await ctx.reply(embed=embed)
         else:
             # Command string
-            cmds = ''
+            cmds: str = ''
             # Response embed
             embed = discord.Embed(title='Help Page',
                                   description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
                                   colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
             for cog in self.bot.cogs:
-                if cog in ['Help', 'Events', 'Owner', 'Slash']:
+                if cog in ['Help', 'Events', 'Owner', 'Slash', 'Context']:
                     continue
                 for cmd in self.bot.commands:
                     if cmd.cog and cmd.cog.qualified_name == cog and not cmd.hidden:
@@ -68,6 +68,7 @@ class Help(commands.Cog):
             embed.add_field(name='Slash Commands',
                             value='`avatar` `userinfo` `youtubenotification` `prefix` `warn` `mute` `unmute` `timeout` `code` `roleinfo` `invert` `embed` `datetime`',
                             inline=False)
+            embed.add_field(name='Application Context Commands', value='`Generate QR Code` `Scan QR Codes` `User Information`')
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
             await ctx.reply(embed=embed)

@@ -73,10 +73,24 @@ class Music(commands.Cog):
         self.start_time = {}  # type: dict[int, datetime.datetime | None] # Stores the start time for each guild
         self.source = {}  # type: dict[int, str | None] # Stores the source for each guild
         self.volume = {}  # type: dict[int, int] # Stores the volume for each guild
-        self._ydl_options = {'format': 'bestaudio', 'noplaylist': 'True'}  # Options for youtube_dl
-        self._ffmpeg_options = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-                                'options': '-vn'}  # type: dict[str, str] # Options for ffmpeg
         self.sql = SQL('b0ssbot')  # type: SQL
+        self._ydl_options = {
+            "format": "bestaudio/best",
+            "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
+            "restrictfilenames": True,
+            "noplaylist": True,
+            "nocheckcertificate": True,
+            "ignoreerrors": False,
+            "logtostderr": False,
+            "quiet": True,
+            "no_warnings": True,
+            "default_search": "auto",
+            "source_address": "0.0.0.0",
+        }  # type: dict[str, bool | str] # Options for youtube_dl
+        self._ffmpeg_options = {
+            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+            'options': '-vn'
+        }  # type: dict[str, str] # Options for ffmpeg
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState,
@@ -167,7 +181,8 @@ class Music(commands.Cog):
         """
         vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
         asyncio.run_coroutine_threadsafe(self._send_embed_after_track(ctx), self.bot.loop)  # Send the embed
-        if self.sql.select(['title'], 'queue', f"guild_id = '{ctx.guild.id}'") or self.sql.select(['title'], 'loop', f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks queued or looped
+        if self.sql.select(['title'], 'queue', f"guild_id = '{ctx.guild.id}'") or self.sql.select(['title'], 'loop',
+                                                                                                  f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks queued or looped
             self._play_next(ctx, vc)
         else:
             # If no track is present to play, all the variables store None
@@ -907,7 +922,8 @@ class Music(commands.Cog):
                 title, lyrics = song['title'], song['lyrics']
 
                 # Response embed
-                embed = discord.Embed(title=title, description=lyrics, colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
+                embed = discord.Embed(title=title, description=lyrics, colour=discord.Colour.blue(),
+                                      timestamp=datetime.datetime.now())
                 embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
                 embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
                 await ctx.send(embed=embed)
