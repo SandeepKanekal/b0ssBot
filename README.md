@@ -15,6 +15,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [youtube-search-python](https://pypi.org/project/youtube-search-python/)
 + [pyzbar](https://pypi.org/project/pyzbar/)
 + [qrcode](https://pypi.org/project/qrcode/)
++ [imgurpython](https://pypi.org/project/imgurpython/)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics
@@ -33,7 +34,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 # Database 
 PostgreSQL is used. You can change the database details (username, host, database) to your convinience. 
 
-Currently, there are 10 tables:
+Currently, there are 9 tables:
 + afks (columns: SN, member, member_id, guild_id, reason)
 + snipes (columns: SN, author_id, message, channel_id, time, 'guild_id', 'attachments')
 + prefixes (columns: SN, guild_id, prefix)

@@ -3,6 +3,7 @@ import random
 import requests
 import time
 import asyncio
+import view
 from discord.ext import commands
 from discord.ui import Button, View
 from tools import send_error_embed
@@ -106,45 +107,11 @@ class Games(commands.Cog):
         :rtype: None
         """
 
-        async def callback(interaction):
-            if interaction.user != ctx.author:  # Prevent foreign users from interacting with the button
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            await interaction.response.edit_message(content='**Rolling**')
-            await interaction.followup.edit_message(content='**Rolling.**', message_id=msg.id)
-            await interaction.followup.edit_message(content='**Rolling..**', message_id=msg.id)
-            await interaction.followup.edit_message(content='**Rolling...**', message_id=msg.id)
-            await interaction.followup.edit_message(content=f'**You rolled a {random.randint(1, 6)}!** :game_die:',
-                                                    message_id=msg.id)
-
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:  # Prevent foreign users from interacting with the button
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            # Disable buttons
-            roll.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
         msg = await ctx.send('**Rolling**')
         await msg.edit('**Rolling.**')
         await msg.edit('**Rolling..**')
         await msg.edit('**Rolling...**')
-
-        roll = Button(label='Roll again', style=discord.ButtonStyle.green)
-        end_interaction = Button(label='Stop Rolling', style=discord.ButtonStyle.red)
-
-        view = View()
-        view.add_item(roll)
-        view.add_item(end_interaction)
-        await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**', view=view)
-
-        roll.callback = callback
-        end_interaction.callback = end_interaction_trigger
+        await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**', view=view.RollView(ctx=ctx, message_id=msg.id, timeout=None))
 
     # Coinflip command
     @commands.command(aliases=['cf'], description='Heads or Tails?', usage='coinflip')
@@ -160,48 +127,11 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-
-        async def callback(interaction):
-            if interaction.user != ctx.author:  # Prevent foreign users from interacting with the button
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            await interaction.response.edit_message(content='**Flipping**')
-            await interaction.followup.edit_message(content='**Flipping.**', message_id=msg.id)
-            await interaction.followup.edit_message(content='**Flipping..**', message_id=msg.id)
-            await interaction.followup.edit_message(content='**Flipping...**', message_id=msg.id)
-            await interaction.followup.edit_message(
-                content=f'**You flipped a {random.choice(["Heads", "Tails"])}!** :coin:',
-                message_id=msg.id)
-
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:  # Prevent foreign users from interacting with the button
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            # Disable buttons
-            flip.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
         msg = await ctx.send('**Flipping**')
         await msg.edit('**Flipping.**')
         await msg.edit('**Flipping..**')
         await msg.edit('**Flipping...**')
-
-        flip = Button(label='Flip again', style=discord.ButtonStyle.green)
-        end_interaction = Button(label='Stop Flipping', style=discord.ButtonStyle.red)
-
-        view = View()
-        view.add_item(flip)
-        view.add_item(end_interaction)
-
-        await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**', view=view)
-
-        flip.callback = callback
-        end_interaction.callback = end_interaction_trigger
+        await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**', view=view.FlipView(ctx=ctx, message_id=msg.id, timeout=None))
 
     @commands.command(name='truth', description='Get a truth question', usage='truth <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -240,6 +170,7 @@ class Games(commands.Cog):
         async def next_truth_trigger(interaction):
             next_truth.disabled = True
             await interaction.response.edit_message(view=view)
+            view.stop()
             await self.truth(ctx, rating) if rating else await self.truth(ctx)
 
         await ctx.send(embed=embed, view=view)
@@ -300,7 +231,8 @@ class Games(commands.Cog):
         async def next_dare_trigger(interaction):
             next_dare.disabled = True
             await interaction.response.edit_message(view=view)
-
+            view.stop()
+            
             await self.dare(ctx, rating) if rating else await self.dare(ctx)
 
         await ctx.send(embed=embed, view=view)
@@ -366,7 +298,8 @@ class Games(commands.Cog):
         async def next_trigger(interaction):
             next_question.disabled = True
             await interaction.response.edit_message(view=view)
-
+            view.stop()
+            
             await self.truthordare(ctx, rating, truthordare) if rating else await self.truthordare(ctx,
                                                                                                    truthordare=truthordare)
 
@@ -430,7 +363,8 @@ class Games(commands.Cog):
         async def next_trigger(interaction):
             next_wyr.disabled = True
             await interaction.response.edit_message(view=view)
-
+            view.stop()
+            
             await self.wouldyourather(ctx, rating) if rating else await self.wouldyourather(ctx)
 
         await ctx.send(embed=embed, view=view)
@@ -492,7 +426,8 @@ class Games(commands.Cog):
         async def next_trigger(interaction):
             next_nhie.disabled = True
             await interaction.response.edit_message(view=view)
-
+            view.stop()
+            
             await self.neverhaveiever(ctx, rating) if rating else await self.neverhaveiever(ctx)
 
         await ctx.send(embed=embed, view=view)
@@ -552,7 +487,8 @@ class Games(commands.Cog):
         async def next_trigger(interaction):
             next_paranoia.disabled = True
             await interaction.response.edit_message(view=view)
-
+            view.stop()
+            
             await self.paranoia(ctx, rating) if rating else await self.paranoia(ctx)
 
         await ctx.send(embed=embed, view=view)
@@ -671,127 +607,8 @@ class Games(commands.Cog):
             await send_error_embed(ctx, description='You cannot play against a bot!')
             return
 
-        button_one = Button(label=' ', style=discord.ButtonStyle.gray, row=0, custom_id='1')
-        button_two = Button(label=' ', style=discord.ButtonStyle.gray, row=0, custom_id='2')
-        button_three = Button(label=' ', style=discord.ButtonStyle.gray, row=0, custom_id='3')
-        button_four = Button(label=' ', style=discord.ButtonStyle.gray, row=1, custom_id='4')
-        button_five = Button(label=' ', style=discord.ButtonStyle.gray, row=1, custom_id='5')
-        button_six = Button(label=' ', style=discord.ButtonStyle.gray, row=1, custom_id='6')
-        button_seven = Button(label=' ', style=discord.ButtonStyle.gray, row=2, custom_id='7')
-        button_eight = Button(label=' ', style=discord.ButtonStyle.gray, row=2, custom_id='8')
-        button_nine = Button(label=' ', style=discord.ButtonStyle.gray, row=2, custom_id='9')
-        buttons = [button_one, button_two, button_three, button_four, button_five, button_six, button_seven,
-                   button_eight, button_nine]
-
-        cancel = Button(label='Cancel', style=discord.ButtonStyle.red, row=3)
-
-        view = View(timeout=None)
-        view.add_item(button_one)
-        view.add_item(button_two)
-        view.add_item(button_three)
-        view.add_item(button_four)
-        view.add_item(button_five)
-        view.add_item(button_six)
-        view.add_item(button_seven)
-        view.add_item(button_eight)
-        view.add_item(button_nine)
-        view.add_item(cancel)
-
         turn = random.choice([ctx.author, player])  # type: discord.Member
-        first_turn = turn  # type: discord.Member
-        msg = await ctx.send(f'It is {turn.mention}\'s turn!', view=view)
-
-        async def button_callback(interaction):
-            # sourcery skip: low-code-quality
-            nonlocal turn
-            if interaction.user != turn:
-                await interaction.response.send_message(content=f'This interaction is for {turn.mention}',
-                                                        ephemeral=True)
-                return
-
-            clicked_button = buttons[int(interaction.custom_id) - 1]
-            clicked_button.style = discord.ButtonStyle.blurple if first_turn == turn else discord.ButtonStyle.red
-            clicked_button.emoji = '<:TTTX:980118345774923838>' if first_turn == turn else '<:TTTO:980118346144038942>'
-            clicked_button.disabled = True
-
-            if ((button_one.style == button_two.style == button_three.style) and (
-                    button_one.style != discord.ButtonStyle.gray) or
-                    (button_four.style == button_five.style == button_six.style) and (
-                            button_four.style != discord.ButtonStyle.gray) or
-                    (button_seven.style == button_eight.style == button_nine.style) and (
-                            button_seven.style != discord.ButtonStyle.gray) or
-                    (button_one.style == button_four.style == button_seven.style) and (
-                            button_one.style != discord.ButtonStyle.gray) or
-                    (button_two.style == button_five.style == button_eight.style) and (
-                            button_two.style != discord.ButtonStyle.gray) or
-                    (button_three.style == button_six.style == button_nine.style) and (
-                            button_three.style != discord.ButtonStyle.gray) or
-                    (button_one.style == button_five.style == button_nine.style) and (
-                            button_one.style != discord.ButtonStyle.gray) or
-                    (button_three.style == button_five.style == button_seven.style) and (
-                            button_three.style != discord.ButtonStyle.gray)):  # Check if the player has won
-                for b in list(filter(lambda x: not x.disabled, buttons)):
-                    b.disabled = True
-                cancel.disabled = True
-
-                await interaction.response.edit_message(content=f'{turn.mention} has won!', view=view)
-
-            elif not list(filter(lambda x: not x.disabled, buttons)):  # Check if the game is a draw
-                cancel.disabled = True
-                await interaction.response.edit_message(content='It\'s a draw!', view=view)
-
-            else:
-                turn = player if turn == ctx.author else ctx.author
-                await interaction.response.edit_message(content=f'It is {turn.mention}\'s turn!', view=view)
-
-        async def cancel_(interaction):
-            if interaction.user not in [ctx.author, player]:  # Prevent foreign users from cancelling
-                await interaction.response.send_message(content='You are not playing this game!', ephemeral=True)
-                return
-
-            confirm_cancel = Button(style=discord.ButtonStyle.green, label='Cancel!')
-            dont_cancel = Button(style=discord.ButtonStyle.red, label='Don\'t cancel!')
-
-            cancel_view = View(timeout=None)
-            cancel_view.add_item(confirm_cancel)
-            cancel_view.add_item(dont_cancel)
-
-            other_user = player if interaction.user == ctx.author else ctx.author  # The other user in the game
-
-            await interaction.response.edit_message(
-                content=f'{other_user.mention}, {interaction.user.mention} would like to cancel this game!',
-                view=cancel_view)
-
-            async def cancel_callback(inter):
-                if inter.user != other_user:
-                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}',
-                                                      ephemeral=True)
-                    return
-
-                for b in list(filter(lambda x: not x.disabled, buttons)):  # Disable all buttons
-                    b.disabled = True
-                cancel.disabled = True
-
-                await inter.response.edit_message(content=f'{interaction.user.mention} has cancelled the game.',
-                                                  view=view)
-
-            async def dont_cancel_(inter):
-                if inter.user != other_user:
-                    await inter.response.send_message(content=f'This interaction is for {other_user.mention}',
-                                                      ephemeral=True)
-                    return
-
-                await inter.response.send_message('This game has not been cancelled!', delete_after=3)
-
-                await inter.followup.edit_message(content=f'It is {turn.mention}\'s turn!', view=view,
-                                                  message_id=msg.id)
-
-            confirm_cancel.callback = cancel_callback
-            dont_cancel.callback = dont_cancel_
-
-        for button in buttons:
-            button.callback = button_callback
-        cancel.callback = cancel_
+        await ctx.send(f'It is {turn.mention}\'s turn!', view=view.TicTacToeView(ctx=ctx, initiator=ctx.author, other_player=player, turn=turn, bot=self.bot, timeout=None))
 
     @tictactoe.error
     async def tictactoe_error(self, ctx, error):

@@ -819,7 +819,7 @@ class Slash(commands.Cog):
                    module: Option(str, description='The module to get the code for', required=True,
                                   choices=['context', 'events', 'fun', 'help', 'info', 'internet', 'misc', 'music', 'moderation',
                                            'util', 'owner', 'slash', 'games', 'main', 'keep_alive', 'sql_tools',
-                                           'tools'])
+                                           'tools', 'view'])
                    ):
         """
         Gets the code for the specified module

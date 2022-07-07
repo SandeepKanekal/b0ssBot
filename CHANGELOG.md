@@ -33,6 +33,7 @@
 + Removal of the hourlyweather command since it is no longer needed.
 + Addition of a GitHub command.
 + The youtubesearch command now has a button to play the audio in VC.
++ Addition of an Imgur Command.
 
 # Music #
 + The lyrics command's response's title now is the title of the song instead of the query. However, the query is visible as the footer.
@@ -53,3 +54,6 @@
 
 # Games #
 + The cancel button in the tictactoe command now asks for the other player's permission.
+
+# Context #
++ Addition of the first commands.

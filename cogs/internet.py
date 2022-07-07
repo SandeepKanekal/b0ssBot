@@ -5,8 +5,9 @@ import time
 import requests
 import wikipedia
 import asyncprawcore
+import view
+import imgurpython as imgur
 from googleapiclient.discovery import build
-from discord.ui import Button, View
 from discord.ext import commands
 from tools import send_error_embed, get_posts, get_quote, convert_to_unix_time
 
@@ -83,116 +84,25 @@ class Internet(commands.Cog):
             stats = youtube.videos().list(id=video_ids[0], part='statistics, contentDetails').execute()
 
             embed = discord.Embed(colour=0xff0000)
-            embed.add_field(name=f'Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
+            embed.add_field(name='Result:', value=f'[{titles[0]}](https://www.youtube.com/watch?v={video_ids[0]})')
             embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
             embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
             embed.set_image(url=thumbnails[0])
             embed.set_author(name='YouTube', icon_url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj', url='https://www.youtube.com/')
             embed.set_footer(
                 text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"] if "likeCount" in stats["items"][0]["statistics"].keys() else "Could not fetch likes"}\nResult {index + 1} out of 50')
-            next_video = Button(emoji='⏭️', style=discord.ButtonStyle.green)
-            previous_video = Button(emoji='⏮️', style=discord.ButtonStyle.green)
-            end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-            watch_video = Button(label='Watch Video', style=discord.ButtonStyle.green)
-            play = Button(label='Play audio in VC', style=discord.ButtonStyle.green)
 
-            view = View(timeout=None)
 
-            view.add_item(previous_video)
-            view.add_item(next_video)
-            view.add_item(end_interaction)
-            view.add_item(watch_video)
-            view.add_item(play)
+            items = {
+                'titles': titles,
+                'thumbnails': thumbnails,
+                'video_ids': video_ids,
+                'publish_dates': publish_dates,
+                'authors': authors,
+                'channel_ids': channel_ids
+            }
 
-        await ctx.send(embed=embed, view=view)
-
-        # Gets the next video
-        async def next_video_trigger(interaction):
-            nonlocal index
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            embed.clear_fields()
-
-            if index == len(video_ids) - 1:
-                index = 0  # Resetting the index
-            else:
-                index += 1
-
-            statistics = youtube.videos().list(part='statistics, contentDetails', id=video_ids[index]).execute()
-
-            embed.add_field(name='Result:',
-                            value=f'[{titles[index]}](https://www.youtube.com/watch?v={video_ids[index]})')
-            embed.add_field(name='Video Author:',
-                            value=f'[{authors[index]}](https://youtube.com/channel/{channel_ids[index]})')
-            embed.add_field(name='Publish Date:', value=f'{publish_dates[index]}')
-            embed.set_image(url=thumbnails[index])
-            embed.set_footer(
-                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"] if "likeCount" in statistics["items"][0]["statistics"].keys() else "Could not fetch likes"}\nResult {index + 1} out of 50')
-            await interaction.response.edit_message(embed=embed)
-
-        # Gets the previous video
-        async def previous_video_trigger(interaction):
-            nonlocal index
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            embed.clear_fields()
-
-            if index == 0:
-                index = len(video_ids) - 1
-            else:
-                index -= 1
-
-            statistics = youtube.videos().list(part='statistics, contentDetails', id=video_ids[index]).execute()
-
-            embed.add_field(name='Result:',
-                            value=f'[{titles[index]}](https://www.youtube.com/watch?v={video_ids[index]})')
-            embed.add_field(name='Video Author:',
-                            value=f'[{authors[index]}](https://youtube.com/channel/{channel_ids[index]})')
-            embed.add_field(name='Publish Date:', value=f'{publish_dates[index]}')
-            embed.set_image(url=thumbnails[index])
-            embed.set_footer(
-                text=f'Duration: {statistics["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {statistics["items"][0]["statistics"]["viewCount"]}, 👍: {statistics["items"][0]["statistics"]["likeCount"]}\nResult {index + 1} out of 50')
-            await interaction.response.edit_message(embed=embed)
-
-        # Replies with the link of the video
-        async def watch_video_trigger(interaction):
-            nonlocal index
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'https://youtube.com/watch?v={video_ids[index]}', ephemeral=True)
-            else:
-                await interaction.response.send_message(f'https://youtube.com/watch?v={video_ids[index]}')
-
-        # Ends the interaction
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            next_video.disabled = True
-            previous_video.disabled = True
-            end_interaction.disabled = True
-            watch_video.disabled = True
-            play.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        async def play_callback(interaction):
-            nonlocal index
-            await interaction.response.defer()
-            try:
-                await ctx.invoke(self.bot.get_command('play'), query=titles[index])
-                await interaction.followup.send('Audio added to queue!')
-            except Exception as e:
-                await send_error_embed(ctx, description=f'Error: {e}')
-
-        next_video.callback = next_video_trigger
-        previous_video.callback = previous_video_trigger
-        end_interaction.callback = end_interaction_trigger
-        watch_video.callback = watch_video_trigger
-        play.callback = play_callback
+        await ctx.send(embed=embed, view=view.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed, bot=self.bot, timeout=None))
 
     @youtubesearch.error
     async def youtubesearch_error(self, ctx, error):
@@ -388,15 +298,6 @@ class Internet(commands.Cog):
                 embed.set_footer(
                     text=f'⬆️ {submissions[0].ups} | ⬇️ {submissions[0].downs} | 💬 {submissions[0].num_comments}\nPost {index + 1} out of {len(submissions)}')
 
-                next_post = Button(emoji='⏭️', style=discord.ButtonStyle.green)
-                previous_post = Button(emoji='⏮️', style=discord.ButtonStyle.green)
-                end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-
-                view = View(timeout=None)
-                view.add_item(previous_post)
-                view.add_item(next_post)
-                view.add_item(end_interaction)
-
                 # Checking if the submission is text-only
                 if not submissions[0].is_self:
                     if submissions[0].is_video:
@@ -405,10 +306,10 @@ class Internet(commands.Cog):
                         embed.set_image(url=submissions[0].url)
 
                 try:
-                    await ctx.send(embed=embed, view=view)
+                    await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed, timeout=None))
                 except discord.HTTPException:
                     embed = discord.Embed(description='The post content was too long to be sent', colour=0xff4300)
-                    await ctx.send(embed=embed, view=view)
+                    await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed, timeout=None))
 
             except AttributeError:
                 # Could not get a post
@@ -416,90 +317,6 @@ class Internet(commands.Cog):
 
             except asyncprawcore.exceptions.AsyncPrawcoreException as e:
                 await send_error_embed(ctx, description=str(e))
-
-        async def next_post_trigger(interaction):
-            nonlocal index
-            # Callback to next_post triggers this function
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            if index == len(submissions) - 1:
-                index = 0
-            else:
-                index += 1  # Increment index
-
-            embed.title = submissions[index].title
-            embed.description = submissions[index].selftext
-            embed.url = f'https://reddit.com{submissions[index].permalink}'
-            embed.set_footer(
-                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nPost {index + 1} out of {len(submissions)}')
-
-            # Checking if the submission is text-only
-            if submissions[index].is_self:
-                embed.set_image(url=discord.Embed.Empty)
-
-            elif submissions[index].is_video:
-                embed.description += f'\n[Video Link]({submissions[index].url})'
-                embed.set_image(url=submissions[index].thumbnail)
-
-            else:
-                embed.set_image(url=submissions[index].url)
-                embed.description = ''
-
-            try:
-                await interaction.response.edit_message(embed=embed)
-            except discord.HTTPException:
-                embed.description = 'The post content was too long to be sent'
-                await interaction.response.edit_message(embed=embed)
-
-        async def previous_post_trigger(interaction):
-            nonlocal index
-            # Callback to previous_post triggers this function
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            if index == 0:
-                index = len(submissions) - 1
-            else:
-                index -= 1
-
-            embed.title = submissions[index].title
-            embed.description = submissions[index].selftext if submissions[index].is_self else ''
-            embed.url = f'https://reddit.com{submissions[index].permalink}'
-            embed.set_footer(
-                text=f'⬆️ {submissions[index].ups} | ⬇️ {submissions[index].downs} | 💬 {submissions[index].num_comments}\nPost {index + 1} out of {len(submissions)}')
-
-            if submissions[index].is_video:
-                embed.description += f'\n[Video Link]({submissions[index].url})'
-                embed.set_image(url=submissions[index].thumbnail)
-            else:
-                embed.set_image(url=submissions[index].url)
-
-            try:
-                await interaction.response.edit_message(embed=embed)
-            except discord.HTTPException:
-                embed.description = 'The post content was too long to be sent'
-                await interaction.response.edit_message(embed=embed)
-
-        async def end_interaction_trigger(interaction):
-            # Callback to end_interaction triggers this function
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            next_post.disabled = True
-            previous_post.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        next_post.callback = next_post_trigger
-        end_interaction.callback = end_interaction_trigger
-        previous_post.callback = previous_post_trigger
 
     @redditpost.error
     async def post_error(self, ctx, error):
@@ -538,77 +355,19 @@ class Internet(commands.Cog):
         :return: None
         :rtype: None
         """
-
-        async def next_trivia_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            nonlocal index
-            index += 1
-            if index >= len(trivia['results']):
-                index = 0
-
-            embed.title = trivia['results'][index]['question']
-            embed.description = f'**Answer: {trivia["results"][index]["correct_answer"]}**'
-            await interaction.response.edit_message(embed=embed)
-
-        async def previous_trivia_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            nonlocal index
-            index -= 1
-            if index < 0:
-                index = len(trivia['results']) - 1
-
-            embed.title = trivia['results'][index]['question']
-            embed.description = f'**Answer: {trivia["results"][index]["correct_answer"]}**'
-            await interaction.response.edit_message(embed=embed)
-
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            next_trivia.disabled = True
-            previous_trivia.disabled = True
-            end_interaction.disabled = True
-
-            await interaction.response.edit_message(view=view)
-
         async with ctx.typing():
             trivia = requests.get('https://opentdb.com/api.php?amount=100').json()  # type: dict
             if not trivia['results']:
                 await send_error_embed(ctx, description='Could not retrieve a trivia question')
                 return
 
-            for item in trivia['results']:
-                item['question'] = item['question'].replace('&quot;', '"').replace('&#039;', "'")
-                item['correct_answer'] = item['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
+            question = trivia['results'][0]['question'].replace('&quot;', '"').replace('&#039;', "'")
+            answer = trivia['results'][0]['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
 
-            index = 0  # type: int
+            embed = discord.Embed(title=question, description=f'**Answer:** ||**{answer}**||', colour=0xff4300)
+            embed.set_footer(text=f'Question 1 out of {len(trivia["results"])}')
 
-            next_trivia = Button(emoji='⏭️', style=discord.ButtonStyle.green)
-            previous_trivia = Button(emoji='⏮️', style=discord.ButtonStyle.green)
-            end_interaction = Button(label='End Interaction', style=discord.ButtonStyle.red)
-
-            question = trivia['results'][index]['question'].replace('&quot;', '"').replace('&#039;', "'")
-            answer = trivia['results'][index]['correct_answer'].replace('&quot;', '"').replace('&#039;', "'")
-
-            embed = discord.Embed(title=question, description=f'**Answer: {answer}**', colour=0xff4300)
-
-            view = View(timeout=None)
-            view.add_item(previous_trivia)
-            view.add_item(next_trivia)
-            view.add_item(end_interaction)
-
-        await ctx.send(embed=embed, view=view)
-
-        next_trivia.callback = next_trivia_trigger
-        previous_trivia.callback = previous_trivia_trigger
-        end_interaction.callback = end_interaction_trigger
+        await ctx.send(embed=embed, view=view.TriviaView(ctx=ctx, items=trivia, embed=embed, timeout=None))
 
     @trivia.error
     async def trivia_error(self, ctx, error):
@@ -644,30 +403,6 @@ class Internet(commands.Cog):
         :return: None
         :rtype: None
         """
-
-        async def next_quote_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            q = get_quote()
-            if q[0]['a'] == 'zenquotes.io':
-                await interaction.response.send_message('Please wait for a few seconds', ephemeral=True)
-                return
-
-            embed.description = f'> **{q[0]["q"]}**'
-            embed.set_author(name=q[0]['a'])
-            await interaction.response.edit_message(embed=embed)
-
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(f'This interaction is for {ctx.author.mention}', ephemeral=True)
-                return
-
-            next_quote.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
         async with ctx.typing():
             quote = get_quote()  # type: list[dict[str, str]]
 
@@ -681,17 +416,7 @@ class Internet(commands.Cog):
             )
             embed.set_author(name=quote[0]['a'])
 
-            next_quote = Button(emoji='⏭️', style=discord.ButtonStyle.green)
-            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
-
-            view = View(timeout=None)
-            view.add_item(next_quote)
-            view.add_item(end_interaction)
-
-        await ctx.send(embed=embed, view=view)
-
-        next_quote.callback = next_quote_trigger
-        end_interaction.callback = end_interaction_trigger
+        await ctx.send(embed=embed, view=view.QuoteView(ctx=ctx, url='https://zenquotes.io/api/random', embed=embed, timeout=None))
 
     @quote.error
     async def quote_error(self, ctx, error):
@@ -808,6 +533,47 @@ class Internet(commands.Cog):
     async def github_error(self, ctx, error):
         """
         Error handler for the github command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
+            return
+        await send_error_embed(ctx, description=f'Error: `{error}`')
+    
+    @commands.command(name='imgur', description='Get an image from imgur', usage='imgur <query>')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def imgur(self, ctx, *, query: str):
+        """
+        Get the images on the imgur frontpage library
+        
+        :param ctx: The context of the command
+
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """
+        async with ctx.typing():
+            client = imgur.ImgurClient(client_id='03482b4803edf31', client_secret=os.getenv('imgur_client_secret'))
+            images = client.gallery_search(q=query, sort='top', window='all', page=0)
+            if not images:
+                await send_error_embed(ctx, description='No images found')
+                return
+
+            await ctx.send(content=f'Image 1 out of {len(images)}\n{images[0].link}', view=view.ImgurView(ctx=ctx, items=images, timeout=None))
+    
+    @imgur.error
+    async def imgur_error(self, ctx, error):
+        """
+        Error handler for the imgur command
 
         :param ctx: The context of the command
         :param error: The error that occurred
