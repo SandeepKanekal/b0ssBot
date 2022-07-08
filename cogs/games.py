@@ -153,28 +153,19 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
+        
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+            await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
+            return
 
-        data = requests.get(
-            f'https://api.truthordarebot.xyz/v1/truth?rating={rating}').json() if rating else requests.get(
-            f'https://api.truthordarebot.xyz/v1/truth').json()  # type: dict
+        data = requests.get(f'https://api.truthordarebot.xyz/v1/truth?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/truth').json()
+
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Truth', icon_url=self.bot.user.avatar)
 
-        next_truth = Button(label='Next truth', style=discord.ButtonStyle.green)
-
-        view = View(timeout=None)
-        view.add_item(next_truth)
-
-        async def next_truth_trigger(interaction):
-            next_truth.disabled = True
-            await interaction.response.edit_message(view=view)
-            view.stop()
-            await self.truth(ctx, rating) if rating else await self.truth(ctx)
-
-        await ctx.send(embed=embed, view=view)
-        next_truth.callback = next_truth_trigger
+        await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @truth.error
     async def truth_error(self, ctx, error):
@@ -215,28 +206,17 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        data = requests.get(
-            f'https://api.truthordarebot.xyz/v1/dare?rating={rating}').json() if rating else requests.get(
-            f'https://api.truthordarebot.xyz/v1/dare').json()  # type: dict
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+            await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
+            return
+
+        data = requests.get(f'https://api.truthordarebot.xyz/v1/dare?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/dare').json()
+
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Dare', icon_url=self.bot.user.avatar)
-
-        next_dare = Button(label='Next Dare', style=discord.ButtonStyle.green)
-
-        view = View(timeout=None)
-        view.add_item(next_dare)
-
-        async def next_dare_trigger(interaction):
-            next_dare.disabled = True
-            await interaction.response.edit_message(view=view)
-            view.stop()
-            
-            await self.dare(ctx, rating) if rating else await self.dare(ctx)
-
-        await ctx.send(embed=embed, view=view)
-        next_dare.callback = next_dare_trigger
+        await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @dare.error
     async def dare_error(self, ctx, error):
@@ -279,6 +259,10 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
+        
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+            await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
+            return
 
         truthordare = random.choice(['truth', 'dare']) if truthordare is None else truthordare
 
@@ -289,22 +273,7 @@ class Games(commands.Cog):
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Truth or Dare', icon_url=self.bot.user.avatar)
-
-        next_question = Button(label=f'Next {truthordare}', style=discord.ButtonStyle.green)
-
-        view = View(timeout=None)
-        view.add_item(next_question)
-
-        async def next_trigger(interaction):
-            next_question.disabled = True
-            await interaction.response.edit_message(view=view)
-            view.stop()
-            
-            await self.truthordare(ctx, rating, truthordare) if rating else await self.truthordare(ctx,
-                                                                                                   truthordare=truthordare)
-
-        await ctx.send(embed=embed, view=view)
-        next_question.callback = next_trigger
+        await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @truthordare.error
     async def truthordare_error(self, ctx, error):
@@ -347,28 +316,17 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        data = requests.get(
-            f'https://api.truthordarebot.xyz/v1/wyr?rating={rating}').json() if rating else requests.get(
-            f'https://api.truthordarebot.xyz/v1/wyr').json()  # type: dict
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+            await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
+            return
+
+        data = requests.get(f'https://api.truthordarebot.xyz/v1/wyr?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/wyr').json()
+
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Would You Rather', icon_url=self.bot.user.avatar)
-
-        next_wyr = Button(label='Next would you rather', style=discord.ButtonStyle.green)
-
-        view = View(timeout=None)
-        view.add_item(next_wyr)
-
-        async def next_trigger(interaction):
-            next_wyr.disabled = True
-            await interaction.response.edit_message(view=view)
-            view.stop()
-            
-            await self.wouldyourather(ctx, rating) if rating else await self.wouldyourather(ctx)
-
-        await ctx.send(embed=embed, view=view)
-        next_wyr.callback = next_trigger
+        await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @wouldyourather.error
     async def wouldyourather_error(self, ctx, error):
@@ -410,28 +368,17 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        data = requests.get(
-            f'https://api.truthordarebot.xyz/v1/nhie?rating={rating}').json() if rating else requests.get(
-            f'https://api.truthordarebot.xyz/v1/nhie').json()  # type: dict
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+            await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
+            return
+
+        data = requests.get(f'https://api.truthordarebot.xyz/v1/nhie?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/nhie').json()
+
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Never Have I Ever', icon_url=self.bot.user.avatar)
-
-        next_nhie = Button(label='Next never have I ever', style=discord.ButtonStyle.green)
-
-        view = View(timeout=None)
-        view.add_item(next_nhie)
-
-        async def next_trigger(interaction):
-            next_nhie.disabled = True
-            await interaction.response.edit_message(view=view)
-            view.stop()
-            
-            await self.neverhaveiever(ctx, rating) if rating else await self.neverhaveiever(ctx)
-
-        await ctx.send(embed=embed, view=view)
-        next_nhie.callback = next_trigger
+        await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @neverhaveiever.error
     async def neverhaveiever_error(self, ctx, error):
@@ -472,27 +419,16 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        data = requests.get(
-            f'https://api.truthordarebot.xyz/v1/paranoia?rating={rating}').json() if rating else requests.get(
-            f'https://api.truthordarebot.xyz/v1/paranoia').json()
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+            await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
+            return
+
+        data = requests.get(f'https://api.truthordarebot.xyz/v1/paranoia?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/paranoia').json()
+
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Paranoia', icon_url=self.bot.user.avatar)
-
-        next_paranoia = Button(label='Next paranoia', style=discord.ButtonStyle.green)
-
-        view = View(timeout=None)
-        view.add_item(next_paranoia)
-
-        async def next_trigger(interaction):
-            next_paranoia.disabled = True
-            await interaction.response.edit_message(view=view)
-            view.stop()
-            
-            await self.paranoia(ctx, rating) if rating else await self.paranoia(ctx)
-
-        await ctx.send(embed=embed, view=view)
-        next_paranoia.callback = next_trigger
+        await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @paranoia.error
     async def paranoia_error(self, ctx, error):

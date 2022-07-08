@@ -1,5 +1,6 @@
 import discord
 import random
+import requests
 from discord.ext import commands
 from tools import send_error_embed, get_quote
 
@@ -83,7 +84,7 @@ class YouTubeSearchView(discord.ui.View):
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
         else:
-            await interaction.response.send_message('Audio added to queue!')
+            await interaction.followup.send('Audio added to queue!')
 
     @discord.ui.button(label='End Interaction', style=discord.ButtonStyle.red)
     async def end(self, button: discord.Button, interaction: discord.Interaction):
@@ -193,7 +194,7 @@ class QuoteView(discord.ui.View):
             return
 
         self.embed.description = f'> {quote_data[0]["q"]}'
-        self.embed.set_author(name=quote_data[0]["q"])
+        self.embed.set_author(name=quote_data[0]["a"])
 
         await interaction.response.edit_message(embed=self.embed)
 
@@ -549,3 +550,65 @@ class TicTacToeView(discord.ui.View):
 
         await message.delete()
         await interaction.delete_original_message()
+
+
+class FunView(discord.ui.View):
+    def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.ctx = ctx
+        self.url = url
+        self.embed = embed
+    
+    def edit_embed(self):
+        if self.url.startswith('https://dog.ceo'):
+            response = requests.get(self.url).json()
+            self.embed.url = response['message']
+            self.embed.set_image(url=response['message'])
+    
+        elif self.url.startswith('https://api.thecatapi.com'):
+            response = requests.get(self.url).json()
+            self.embed.url = response[0]['url']
+            self.embed.set_image(url=response[0]['url'])
+        
+        elif self.url.startswith('https://icanhazdadjoke.com'):
+            response = requests.get(self.url, headers={'Accept': 'application/json'}).json()
+            self.embed.description = response['joke']
+        
+        else:
+            response = requests.get(self.url, verify=False).json()
+            self.embed.description = response['activity']
+            self.embed.set_footer(text=f'Type: {response["type"].upper()}')
+    
+    @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.green)
+    async def next(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message(f'This interaction is for {self.ctx.author.mention}', ephemeral=True)
+            return
+        
+        self.edit_embed()
+        await interaction.response.edit_message(embed=self.embed)
+    
+    @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
+    async def end(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message(f'This interaction is for {self.ctx.author.mention}', ephemeral=True)
+            return
+        
+        for item in self.children:
+            item.disabled = True
+        
+        await interaction.response.edit_message(view=self)
+        self.stop()
+
+class TruthOrDareView(discord.ui.View):
+    def __init__(self, ctx: commands.Context, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.ctx = ctx
+
+    @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.green)
+    async def next(self, button: discord.Button, interaction: discord.Interaction):
+        button.disabled = True
+        await interaction.response.edit_message(view=self)
+        self.stop()
+
+        await self.ctx.reinvoke()

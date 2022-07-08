@@ -3,6 +3,7 @@ import discord
 import datetime
 import requests
 import os
+import view
 from discord.ext import commands
 from tools import send_error_embed, get_random_post
 from discord.ui import Button, View
@@ -168,39 +169,8 @@ class Fun(commands.Cog):
         """
         async with ctx.typing():
             embed = discord.Embed(description=requests.get('https://icanhazdadjoke.com/', headers={'Accept': 'application/json'}).json()['joke'], colour=discord.Colour.random(), timestamp=datetime.datetime.now())
-        
-        next_joke = Button(emoji='➡️', style=discord.ButtonStyle.green)
-        end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
 
-        view = View(timeout=None)
-        view.add_item(next_joke)
-        view.add_item(end_interaction)
-
-        await ctx.send(embed=embed, view=view)
-
-        async def next_joke_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            # Callback to button1 triggers this function
-            embed.description = requests.get('https://icanhazdadjoke.com/', headers={'Accept': 'application/json'}).json()['joke']
-            embed.timestamp = datetime.datetime.now()
-            await interaction.response.edit_message(embed=embed)
-        
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            next_joke.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        next_joke.callback = next_joke_trigger
-        end_interaction.callback = end_interaction_trigger
+        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed, timeout=None))
     
     @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
     async def bored(self, ctx):
@@ -218,41 +188,7 @@ class Fun(commands.Cog):
 
             embed = discord.Embed(description=f'{response["activity"]}.', timestamp=datetime.datetime.now(), colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
 
-            next_activity = Button(emoji='➡️', style=discord.ButtonStyle.green)
-            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
-
-            view = View(timeout=None)
-
-            view.add_item(next_activity)
-            view.add_item(end_interaction)
-        
-        async def next_activity_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            new_response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
-            embed.description = f'{new_response["activity"]}.'
-            embed.timestamp = datetime.datetime.now()
-            embed.set_footer(text=f'Type: {new_response["type"].upper()}')
-
-            await interaction.response.edit_message(embed=embed)
-        
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            next_activity.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        await ctx.send(embed=embed, view=view)
-
-        next_activity.callback = next_activity_trigger
-        end_interaction.callback = end_interaction_trigger
+        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed, timeout=None))
     
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx):
@@ -284,40 +220,8 @@ class Fun(commands.Cog):
         async with ctx.typing():
             response = requests.get('https://dog.ceo/api/breeds/image/random').json()
             embed = discord.Embed(title=':dog: woof!', url=response['message'], colour=discord.Colour.blurple()).set_image(url=response['message'])
-
-            next_dog = Button(emoji='➡️', style=discord.ButtonStyle.green)
-            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
-
-            view = View(timeout=None)
-            view.add_item(next_dog)
-            view.add_item(end_interaction)
-
-        async def next_dog_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            new_response = requests.get('https://dog.ceo/api/breeds/image/random').json()
-            embed.url = new_response['message']
-            embed.set_image(url=new_response['message'])
-
-            await interaction.response.edit_message(embed=embed)
-        
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            next_dog.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        await ctx.send(embed=embed, view=view)
-
-        next_dog.callback = next_dog_trigger
-        end_interaction.callback = end_interaction_trigger
+            
+        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed, timeout=None))
     
     @commands.command(name='cat', description='Get a random cat picture', usage='cat')
     @commands.cooldown(1, 1, commands.BucketType.user)
@@ -335,40 +239,8 @@ class Fun(commands.Cog):
         async with ctx.typing():
             response = requests.get('https://api.thecatapi.com/v1/images/search').json()
             embed = discord.Embed(title=':cat: meow!', url=response[0]['url'], colour=discord.Colour.blurple()).set_image(url=response[0]['url'])
-
-            next_cat = Button(emoji='➡️', style=discord.ButtonStyle.green)
-            end_interaction = Button(emoji='❌', style=discord.ButtonStyle.gray)
-
-            view = View(timeout=None)
-            view.add_item(next_cat)
-            view.add_item(end_interaction)
-
-        async def next_cat_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            new_response = requests.get('https://api.thecatapi.com/v1/images/search').json()
-            embed.url = new_response[0]['url']
-            embed.set_image(url=new_response[0]['url'])
-
-            await interaction.response.edit_message(embed=embed)
-
-        async def end_interaction_trigger(interaction):
-            if interaction.user != ctx.author:
-                await interaction.response.send_message(content=f'This interaction is for {ctx.author.mention}',
-                                                        ephemeral=True)
-                return
-
-            next_cat.disabled = True
-            end_interaction.disabled = True
-            await interaction.response.edit_message(view=view)
-
-        await ctx.send(embed=embed, view=view)
-
-        next_cat.callback = next_cat_trigger
-        end_interaction.callback = end_interaction_trigger
+            
+        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search', embed=embed, timeout=None))
     
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx):
