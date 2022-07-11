@@ -252,10 +252,11 @@ class Events(commands.Cog):
             for channel in notifiable_channels:
                 latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0]['id']
 
-                with contextlib.suppress(IndexError):
-                    publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0]['publishedTime']
-                    if not publish_time:
-                        continue
+                publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0]['publishedTime']
+                
+                if not publish_time:
+                    continue
+
                 if 'second' not in publish_time and 'seconds' not in publish_time and 'minute' not in publish_time and 'minutes' not in publish_time and 'hour' not in publish_time and 'hours' not in publish_time:
                     continue
 

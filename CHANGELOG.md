@@ -10,6 +10,7 @@
 + Addition of a dadjoke command.
 + Addition of a bored command.
 + Addition of dog and cat commands.
++ Addition of a httpcat command.
 
 # Help #
 + The command usage field now calls the `command.usage` for its value.

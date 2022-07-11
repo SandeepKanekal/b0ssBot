@@ -73,6 +73,7 @@ class Music(commands.Cog):
         self.start_time = {}  # type: dict[int, datetime.datetime | None] # Stores the start time for each guild
         self.source = {}  # type: dict[int, str | None] # Stores the source for each guild
         self.volume = {}  # type: dict[int, int] # Stores the volume for each guild
+        self.pause_time = {}  #type: dict[int, datetime.datetime | None] # Stores the time when the track was paused for each guild
         self.sql = SQL('b0ssbot')  # type: SQL
         self._ydl_options = {
             "format": "bestaudio/best",
@@ -114,9 +115,16 @@ class Music(commands.Cog):
             vc = discord.utils.get(self.bot.voice_clients, guild=member.guild)
             if len(before.channel.members) == 1 and after != before:
                 await vc.disconnect()
-                self.volume.pop(member.guild.id)
                 self.sql.delete(table='queue', where=f"guild_id = '{member.guild.id}'")
                 self.sql.delete(table='loop', where=f"guild_id = '{member.guild.id}'")
+
+                # Delete all the keys storing the guild's information
+                del self.now_playing[member.guild.id]
+                del self.now_playing_url[member.guild.id]
+                del self.start_time[member.guild.id]
+                del self.source[member.guild.id]
+                del self.volume[member.guild.id]
+                del self.pause_time[member.guild.id]
 
     # Searches YouTube for the item.
     # Possible errors:
@@ -190,6 +198,7 @@ class Music(commands.Cog):
             self.now_playing_url[ctx.guild.id] = None
             self.start_time[ctx.guild.id] = None
             self.source[ctx.guild.id] = None
+            self.pause_time[ctx.guild.id] = None
 
     def _play_next(self, ctx, vc):
         """
@@ -484,6 +493,8 @@ class Music(commands.Cog):
         if ctx.author.voice.channel != vc.channel:
             raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
 
+        self.pause_time[ctx.guild.id] = datetime.datetime.now()
+
         vc.pause()
         # Response embed
         embed = discord.Embed(
@@ -530,6 +541,8 @@ class Music(commands.Cog):
 
         if ctx.author.voice.channel != vc.channel:
             raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+        self.start_time[ctx.guild.id] += datetime.datetime.now() - self.pause_time[ctx.guild.id]
 
         vc.resume()
         # Response embed
@@ -634,10 +647,6 @@ class Music(commands.Cog):
         embed = discord.Embed(description='Stopped', colour=discord.Colour.green())
         await ctx.send(embed=embed)
 
-        # Clearing the queue variables
-        self.now_playing[ctx.guild.id] = None
-        self.now_playing_url[ctx.guild.id] = None
-
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
         self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
@@ -691,10 +700,13 @@ class Music(commands.Cog):
         await vc.disconnect()  # Disconnecting the player
 
         with contextlib.suppress(KeyError):
-            # Clearing the queue variables
-            self.now_playing.pop(ctx.guild.id)
-            self.now_playing_url.pop(ctx.guild.id)
-            self.volume.pop(ctx.guild.id)
+            # Delete all the keys storing the guild's information
+            del self.now_playing[ctx.guild.id]
+            del self.now_playing_url[ctx.guild.id]
+            del self.start_time[ctx.guild.id]
+            del self.source[ctx.guild.id]
+            del self.volume[ctx.guild.id]
+            del self.pause_time[ctx.guild.id]
 
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")

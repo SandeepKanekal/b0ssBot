@@ -449,90 +449,100 @@ class TicTacToeView(discord.ui.View):
         if content:
             for button in self.children:
                 button.disabled = True
-            await interaction.response.edit_message(content=content, view=self)
+            await interaction.followup.edit_message(content=content, view=self, message_id=interaction.message.id)
             self.stop()
         else:
-            await interaction.response.edit_message(content=f'It is {self.turn.mention}\'s turn!', view=self)
+            await interaction.followup.edit_message(content=f'It is {self.turn.mention}\'s turn!', view=self, message_id=interaction.message.id)
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=0, custom_id='one')
     async def one(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=0, custom_id='two')
     async def two(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=0, custom_id='three')
     async def three(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=1, custom_id='four')
     async def four(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=1, custom_id='five')
     async def five(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=1, custom_id='six')
     async def six(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=2, custom_id='seven')
     async def seven(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=2, custom_id='eight')
     async def eight(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label=' ', style=discord.ButtonStyle.gray, row=2, custom_id='nine')
     async def nine(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id != self.turn.id:
-            await interaction.response.send_message(f'This interaction is for {self.turn.mention}', ephemeral=True)
+            await interaction.followup.send(f'This interaction is for {self.turn.mention}', ephemeral=True)
             return
         button = self.edit_button(button, self.turn)
         await self.handle_board(interaction, self.check())
 
     @discord.ui.button(label='Cancel Game', style=discord.ButtonStyle.red, row=3, custom_id='cancel')
     async def cancel(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         if interaction.user.id not in (self.initiator.id, self.other_player.id):
-            await interaction.response.send_message('This interaction is not for you', ephemeral=True)
+            await interaction.followup.send('This interaction is not for you', ephemeral=True)
             return
         response_player = self.initiator if interaction.user.id != self.initiator.id else self.other_player
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'{interaction.user.mention} would like to cancel this game. {response_player.mention}, respond with `yes` if you would like to cancel the game. Replying with anything other than yes will not cancel the game.')
         message = await self.bot.wait_for('message', check=lambda
             m: m.author.id == response_player.id and m.channel.id == interaction.channel.id, timeout=None)

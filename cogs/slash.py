@@ -35,7 +35,7 @@ class Slash(commands.Cog):
         :param ctx: The context of the message
         :param new_prefix: The new prefix
 
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type new_prefix: str
 
         :return: None
@@ -57,7 +57,7 @@ class Slash(commands.Cog):
         :param ctx: The context of the message
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         """
         await ctx.respond(f'Error: `{error}`', ephemeral=True)
@@ -74,7 +74,7 @@ class Slash(commands.Cog):
         :param ctx: The context of the message
         :param member: The user to get info on
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type member: discord.Member
         
         :return: None
@@ -114,7 +114,7 @@ class Slash(commands.Cog):
         :param ctx: The context of the message
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -132,7 +132,7 @@ class Slash(commands.Cog):
         :param ctx: The context of the message
         :param member: The user to get the avatar of
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type member: discord.Member
         
         :return: None
@@ -154,7 +154,7 @@ class Slash(commands.Cog):
         :param ctx: The context of the message
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -358,7 +358,7 @@ class Slash(commands.Cog):
         :param member: The member to warn
         :param reason: The reason for the warning
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type subcommand: str
         :type member: discord.Member
         :type reason: str
@@ -442,7 +442,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -468,7 +468,7 @@ class Slash(commands.Cog):
         :param message: The message to trigger on
         :param response: The response to be sent
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type mode: str
         :type message: str
         :type response: str
@@ -573,7 +573,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -598,7 +598,7 @@ class Slash(commands.Cog):
         :param duration: The duration of the mute in minutes. Leave blank for permanent mute
         :param reason: The reason for the mute
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type member: discord.Member
         :type duration: int
         :type reason: str
@@ -658,7 +658,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -675,7 +675,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param member: The member to be unmuted
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type member: discord.Member
         
         :return: None
@@ -710,7 +710,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -738,7 +738,7 @@ class Slash(commands.Cog):
         :param minutes: The duration of the timeout in seconds
         :param reason: The reason for the timeout
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type member: discord.Member
         :type mode: str
         :type minutes: int
@@ -804,7 +804,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None
@@ -827,7 +827,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param module: The module to get the code for
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type module: str
         
         :return: None
@@ -848,7 +848,7 @@ class Slash(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
         
-        type ctx: discord.ApplicationContext
+        :type ctx: discord.ApplicationContext
         :type error: commands.CommandError
         
         :return: None

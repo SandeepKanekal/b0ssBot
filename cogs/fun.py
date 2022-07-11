@@ -255,6 +255,30 @@ class Fun(commands.Cog):
         :rtype: None
         """
         await ctx.reply(f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
+    
+    @commands.command(name='httpcat', description='Learn more about status codes with cats!', usage='httpcat <status_code>')
+    async def httpcat(self, ctx, status_code: int = None):
+        """
+        Learn more about status codes with cats!
+        
+        :param ctx: command
+        :param status_code: The status code to get information about
+        
+        :type ctx: commands.Context
+        :type status_code: int
+        
+        :return: None
+        :rtype: None
+        """
+        status_codes = [100, 101, 102, 200, 201, 202, 203, 204, 206, 207, 300, 301, 302, 303, 304, 305, 307, 308, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 420, 421, 422, 423, 424, 425, 426, 429, 431, 444, 450, 451, 497, 498, 499, 500, 501,502, 503, 504, 506, 507, 508, 509, 510, 511, 521, 522, 523, 525, 599]
+        if status_code and status_code not in status_codes:
+            await send_error_embed(ctx, description=f'Please provide a valid status code.\nValid status codes are: {", ".join([f"`{code}`" for code in status_codes])}')
+            return
+        status_code = status_code or random.choice(status_codes)
+
+        picture_url = f'https://http.cat/{status_code}.jpg'
+        embed = discord.Embed(title=f'HTTP {status_code}', url=picture_url, colour=discord.Colour.blurple()).set_image(url=picture_url)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
