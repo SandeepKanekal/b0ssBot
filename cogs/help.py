@@ -68,7 +68,7 @@ class Help(commands.Cog):
             embed.add_field(name='Slash Commands',
                             value='`avatar` `userinfo` `youtubenotification` `prefix` `warn` `mute` `unmute` `timeout` `code` `roleinfo` `invert` `embed` `datetime`',
                             inline=False)
-            embed.add_field(name='Application Context Commands', value='`Generate QR Code` `Scan QR Codes` `User Information`')
+            embed.add_field(name='Application Context Commands', value='`Generate QR Code` `Scan QR Codes` `User Information` `Invert Attachments`')
             embed.set_footer(text=f'Requested by {ctx.author}',
                              icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
             await ctx.reply(embed=embed)

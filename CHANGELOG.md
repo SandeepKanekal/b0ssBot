@@ -57,4 +57,4 @@
 + The cancel button in the tictactoe command now asks for the other player's permission.
 
 # Context #
-+ Addition of the first commands.
++ Addition of a `invert` command.

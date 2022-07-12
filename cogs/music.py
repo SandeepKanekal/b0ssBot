@@ -261,7 +261,6 @@ class Music(commands.Cog):
             vc = await voice_channel.connect()
         except discord.ClientException:
             await vc.move_to(voice_channel)
-        print(track)  # Print the track that is being played
 
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
         vc.source = discord.PCMVolumeTransformer(vc.source, volume=self.volume[ctx.guild.id] / 100)

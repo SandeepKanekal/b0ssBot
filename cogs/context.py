@@ -4,7 +4,8 @@ import os
 import qrcode
 import requests
 import datetime
-from PIL import Image
+import asyncio  
+from PIL import Image, ImageChops
 from pyzbar.pyzbar import decode
 from discord.ext import commands
 from tools import convert_to_unix_time
@@ -63,7 +64,7 @@ class Context(commands.Cog):
         :param error: The error that occurred
 
         :type ctx: discord.ApplicationContext
-        :type error: commands.CommandError
+        :type error: discord.ApplicationCommandInvokeError
 
         :return: None
         :rtype: None
@@ -116,7 +117,7 @@ class Context(commands.Cog):
         :param error: The error that occurred
 
         :type ctx: discord.ApplicationContext
-        :type error: commands.CommandError
+        :type error: discord.ApplicationCommandInvokeError
 
         :return: None
         :rtype: None
@@ -164,6 +165,68 @@ class Context(commands.Cog):
 
         await ctx.respond(embed=embed)
     
+    @commands.message_command(name='Invert Attachments')
+    async def invert_attachments(self, ctx, message: discord.Message):
+        """
+        Inverts the colors of the attachments of a message
+
+        :param ctx: The context of where the message was sent
+        :param message: The message to invert the attachments of
+
+        :type ctx: discord.ApplicationContext
+        :type message: discord.Message
+
+        :return: None
+        :rtype: None
+        """
+        if not message.attachments:
+            await ctx.respond('No attachment found', ephemeral=True)
+            return
+        
+        await ctx.interaction.response.defer()
+
+        content = ''
+        files: list[discord.File] | None = []
+
+        for index, image in enumerate(message.attachments):
+            with open(f'{index}_{message.id}.png', 'wb') as f:
+                f.write(requests.get(image.url).content)
+            
+            if os.path.getsize(f'{index}_{message.id}.png') > 8000000:
+                content += f'Image {index + 1} is larger than 8 megabytes.'
+                os.remove(f'{index}_{message.id}.png')
+                continue
+            
+            img = Image.open(f'{index}_{message.id}.png')
+            invert = ImageChops.invert(img.convert('RGB'))
+            invert.save(f'{index}_{message.id}_inverted.png')
+
+            files.append(discord.File(f'{index}_{message.id}_inverted.png', filename='invert.png'))
+
+        await ctx.respond(content, files=files)
+
+        files = None  # Raises PermissionError if not set to None before deletion of files.
+
+        for index in range(len(message.attachments)):
+            os.remove(f'{index}_{message.id}.png')
+            os.remove(f'{index}_{message.id}_inverted.png')
+    
+    @invert_attachments.error
+    async def invert_attachments_error(self, ctx, error):
+        """
+        Error handler for the invert_attachments command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: `{error}`')
+
 
 def setup(bot):
     """
