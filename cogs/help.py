@@ -13,7 +13,7 @@ class Help(commands.Cog):
                       description='Shows the list of all commands or the information about one command if specified',
                       usage='help <command>',
                       hidden=True)
-    async def help(self, ctx, command: str = None):  # sourcery skip: low-code-quality
+    async def help(self, ctx, *, command: str = None):
         """
         Shows the list of all commands or the information about one command if specified
         
@@ -27,51 +27,51 @@ class Help(commands.Cog):
         :rtype: None
         """
         sql = SQL('b0ssbot')
-        command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
-        if command is not None:
-            for cmd in self.bot.commands:
-                if (command.lower() == cmd.name.lower() or command.lower() in cmd.aliases) and not cmd.hidden:
-                    aliases = f'{cmd.name}, '
-                    for alias in cmd.aliases:
-                        aliases += f'{alias}, '
-                    aliases = aliases[:-2]
-                    param_string: str = ""  # Parameter string
-                    if len(cmd.clean_params) == 0:
-                        param_string = 'None'
-                    else:
-                        for param in cmd.clean_params:
-                            param_string += f'`{param}`, '
-                        param_string = param_string[:-2]
-                    embed = discord.Embed(title=f'Help - {cmd.name}',
-                                          description=cmd.description,
-                                          colour=discord.Colour.blue())
-                    embed.add_field(name='Aliases', value=f'`{aliases}`', inline=False)
-                    embed.add_field(name='Parameters', value=param_string, inline=False)
-                    embed.add_field(name='Usage', value=f'`{command_prefix}{cmd.usage}`', inline=False)
-                    await ctx.reply(embed=embed)
-        else:
-            # Command string
-            cmds: str = ''
-            # Response embed
-            embed = discord.Embed(title='Help Page',
-                                  description=f'Shows the list of all commands\nUse `{command_prefix}help <command>` to get more information about a command',
-                                  colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
+        prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
+
+        if command is None:
+            embed = discord.Embed(
+                title='Help Page', 
+                description=f'Shows the list of all commands\nUse `{prefix}help <command>` to get more information about a command', 
+                colour=discord.Colour.blurple(),
+                timestamp=datetime.datetime.now()
+            )
+
+            embed.set_footer(text='Help Page', icon_url=self.bot.user.avatar)
+
             for cog in self.bot.cogs:
-                if cog in ['Help', 'Events', 'Owner', 'Slash', 'Context']:
+                if cog in ['Eval', 'Help', 'Events', 'Owner']:
                     continue
-                for cmd in self.bot.commands:
-                    if cmd.cog and cmd.cog.qualified_name == cog and not cmd.hidden:
-                        cmds += f'`{str(cmd)}` '
-                cmds = cmds[:-1]
-                embed.add_field(name=cog.upper(), value=cmds, inline=False)
-                cmds = ''
-            embed.add_field(name='Slash Commands',
-                            value='`avatar` `userinfo` `youtubenotification` `prefix` `warn` `mute` `unmute` `timeout` `code` `roleinfo` `invert` `embed` `datetime`',
-                            inline=False)
-            embed.add_field(name='Application Context Commands', value='`Generate QR Code` `Scan QR Codes` `User Information` `Invert Attachments`')
-            embed.set_footer(text=f'Requested by {ctx.author}',
-                             icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
-            await ctx.reply(embed=embed)
+
+                commands_str = ''.join(f'`{command.name}` ' for command in self.bot.cogs[cog].get_commands())
+                embed.add_field(name=cog, value=commands_str[:-1], inline=False)
+
+        else:
+            cmd = self.bot.get_command(command) or self.bot.get_application_command(command, type=discord.ApplicationCommand)
+            if cmd is None:
+                await ctx.reply(f'Command {command} not found')
+                return
+
+            embed = discord.Embed(
+                title=f'Help - {cmd}',
+                description=cmd.description,
+                colour=discord.Colour.blurple(),
+                timestamp=datetime.datetime.now()
+            )
+            embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
+
+            if not isinstance(cmd, discord.ApplicationCommand):
+                embed.add_field(name='Aliases', value=f"`{', '.join(cmd.aliases)}`", inline=False) if cmd.aliases else embed.add_field(name='Aliases', value='`None`', inline=False)
+                param_str = ''.join(f'`{param}` ' for param in cmd.clean_params)
+                param_str = param_str[:-1]
+                embed.add_field(name='Parameters', value=param_str or '`None`', inline=False)
+                embed.add_field(name='Usage', value=f'`{prefix}{cmd.usage}`', inline=False)
+            elif isinstance(cmd, discord.SlashCommand):
+                embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
+            else:
+                embed.add_field(name='Usage', value='This is an application command. Click on a message/user to get the command', inline=False)
+
+        await ctx.reply(embed=embed)
 
 
 # Setup
