@@ -5,6 +5,7 @@ from discord.ext import commands
 from tools import send_error_embed, get_quote
 
 
+# noinspection PyUnusedLocal
 class YouTubeSearchView(discord.ui.View):
     def __init__(self, ctx: commands.Context, items: dict[str, list[str | int]], youtube, embed: discord.Embed,
                  bot: commands.Bot, timeout: float | None = None):
@@ -101,6 +102,7 @@ class YouTubeSearchView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class RedditPostView(discord.ui.View):
     def __init__(self, ctx: commands.Context, submissions: list, embed: discord.Embed, timeout: float | None = None):
         super().__init__(timeout=timeout)
@@ -173,6 +175,7 @@ class RedditPostView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class QuoteView(discord.ui.View):
     def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout: float | None = None):
         super().__init__(timeout=timeout)
@@ -213,6 +216,7 @@ class QuoteView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class TriviaView(discord.ui.View):
     def __init__(self, ctx: commands.Context, items: dict[str, int | list[dict[str, str]]], embed: discord.Embed,
                  timeout: float | None = None):
@@ -275,6 +279,7 @@ class TriviaView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class ImgurView(discord.ui.View):
     def __init__(self, ctx: commands.Context, items: list, timeout: float | None = None):
         super().__init__(timeout=timeout)
@@ -327,6 +332,7 @@ class ImgurView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class FlipView(discord.ui.View):
     def __init__(self, ctx: commands.Context, message_id: int, timeout: float | None = None):
         super().__init__(timeout=timeout)
@@ -363,6 +369,7 @@ class FlipView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class RollView(discord.ui.View):
     def __init__(self, ctx: commands.Context, message_id: int, timeout: float | None = None):
         super().__init__(timeout=timeout)
@@ -398,6 +405,7 @@ class RollView(discord.ui.View):
         self.stop()
 
 
+# noinspection PyUnusedLocal
 class TicTacToeView(discord.ui.View):
     def __init__(self, ctx: commands.Context, initiator: discord.Member, other_player: discord.Member,
                  turn: discord.Member, bot: commands.Bot, timeout: float | None = None):
@@ -562,6 +570,7 @@ class TicTacToeView(discord.ui.View):
         await interaction.delete_original_message()
 
 
+# noinspection PyUnusedLocal
 class FunView(discord.ui.View):
     def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout: float | None = None):
         super().__init__(timeout=timeout)

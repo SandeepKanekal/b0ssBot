@@ -2,6 +2,7 @@
 
 # Overall #
 + A new egghunt is now available!
++ Addition of a verification and a history system.
 
 # Events #
 + Markdown syntax detection.

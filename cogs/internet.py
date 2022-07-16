@@ -9,7 +9,7 @@ import view
 import imgurpython as imgur
 from googleapiclient.discovery import build
 from discord.ext import commands
-from tools import send_error_embed, get_posts, get_quote, convert_to_unix_time
+from tools import send_error_embed, get_posts, get_quote, convert_to_unix_time, log_history
 
 
 class Internet(commands.Cog):
@@ -103,6 +103,8 @@ class Internet(commands.Cog):
             }
 
         await ctx.send(embed=embed, view=view.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed, bot=self.bot, timeout=None))
+    
+        log_history(ctx.author.id, query, 'YouTube', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @youtubesearch.error
     async def youtubesearch_error(self, ctx, error):
@@ -155,6 +157,8 @@ class Internet(commands.Cog):
                                       colour=discord.Colour.random())
                 embed.set_thumbnail(url=thumbnail)
             await ctx.send(embed=embed)
+    
+            log_history(ctx.author.id, query, 'Wikipedia', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
         except wikipedia.exceptions.WikipediaException as e:
             await send_error_embed(ctx, description=str(e))
@@ -236,6 +240,8 @@ class Internet(commands.Cog):
             embed.set_footer(text=f'Powered by OpenWeatherMap | ID: {weather_data["id"]}')
 
         await ctx.send(embed=embed)
+    
+        log_history(ctx.author.id, location, 'Weather', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @weather.error
     async def weather_error(self, ctx, error):
@@ -310,6 +316,8 @@ class Internet(commands.Cog):
                 except discord.HTTPException:
                     embed = discord.Embed(description='The post content was too long to be sent', colour=0xff4300)
                     await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed, timeout=None))
+    
+                log_history(ctx.author.id, subreddit, 'Reddit', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
             except AttributeError:
                 # Could not get a post
@@ -528,6 +536,8 @@ class Internet(commands.Cog):
             embed.add_field(name='Open Issues', value=repo_information['open_issues_count'])
 
             await ctx.send(embed=embed)
+    
+        log_history(ctx.author.id, repository, 'GitHub', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @github.error
     async def github_error(self, ctx, error):
@@ -569,6 +579,8 @@ class Internet(commands.Cog):
                 return
 
             await ctx.send(content=f'Image 1 out of {len(images)}\n{images[0].link}', view=view.ImgurView(ctx=ctx, items=images, timeout=None))
+        
+        log_history(ctx.author.id, query, 'Imgur', int(datetime.datetime.now().timestamp()), ctx.guild.id)
     
     @imgur.error
     async def imgur_error(self, ctx, error):

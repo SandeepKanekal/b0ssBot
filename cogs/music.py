@@ -10,7 +10,7 @@ import lyrics_extractor
 from sql_tools import SQL
 from discord.ext import commands
 from discord.ext.commands import CommandError
-from tools import send_error_embed, get_video_stats, format_time
+from tools import send_error_embed, get_video_stats, format_time, log_history
 from youtube_dl import YoutubeDL
 
 
@@ -380,6 +380,8 @@ class Music(commands.Cog):
         if not ctx.voice_client.is_playing():
             # Plays the music
             await self.play_music(ctx)
+    
+        log_history(ctx.author.id, query, 'Music', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     # Sometimes, videos are not available, a response is required to inform the user
     @play.error

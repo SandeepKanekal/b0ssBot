@@ -35,11 +35,9 @@ class Help(commands.Cog):
                 description=f'Shows the list of all commands\nUse `{prefix}help <command>` to get more information about a command', 
                 colour=discord.Colour.blurple(),
                 timestamp=datetime.datetime.now()
-            )
+            ).set_footer(text='Help Page', icon_url=self.bot.user.avatar)
 
-            embed.set_footer(text='Help Page', icon_url=self.bot.user.avatar)
-
-            for cog in self.bot.cogs:
+            for cog in sorted(self.bot.cogs):
                 if cog in ['Eval', 'Help', 'Events', 'Owner']:
                     continue
 
@@ -67,9 +65,12 @@ class Help(commands.Cog):
                 embed.add_field(name='Parameters', value=param_str or '`None`', inline=False)
                 embed.add_field(name='Usage', value=f'`{prefix}{cmd.usage}`', inline=False)
             elif isinstance(cmd, discord.SlashCommand):
+                param_str = ''.join(f'`{param.name}` ' for param in cmd.options)
+                param_str = param_str[:-1]
+                embed.add_field(name='Parameters', value=param_str, inline=False)
                 embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
             else:
-                embed.add_field(name='Usage', value='This is an application command. Click on a message/user to get the command', inline=False)
+                embed.add_field(name='Usage', value='This is an application command. Right click on a message/user to get the command', inline=False)
 
         await ctx.reply(embed=embed)
 

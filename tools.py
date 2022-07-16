@@ -7,6 +7,7 @@ import os
 from asyncpraw.reddit import Submission
 from typing import List, Dict
 from googleapiclient.discovery import build
+from sql_tools import SQL
 
 
 # A function to send embeds when there are false calls or errors
@@ -146,3 +147,41 @@ def format_time(seconds: int) -> str:
         return f'{minutes}M{seconds}S'
     else:
         return f'{seconds}S'
+
+
+def log_history(member_id: int, query: str, type_: str, timestamp: int, guild_id: int) -> None:
+    """
+    Logs the history of the internet search
+
+    Parameters
+    ----------
+    member_id : int
+        The member id
+    query : str
+        The query
+    type_ : str
+        The type of the query
+    timestamp : int
+        The timestamp of the query
+    guild_id : int
+        The guild id
+    
+    Returns
+    -------
+    None
+    """
+    sql = SQL('b0ssbot')
+    sql.insert('history', ['member_id', 'query', 'type', 'timestamp', 'guild_id'], [f"'{member_id}'", f"'{query}'", f"'{type_}'", f"'{timestamp}'", f"'{guild_id}'"])
+
+    history = sql.select(['*'], 'history', f"member_id = '{member_id}' AND guild_id = '{guild_id}'")
+    if len(history) > 50:
+        i = len(history)
+        dump_history = []
+        while i > len(history) - 50:
+            i -= 1
+            dump_history.append(history[i])
+
+        sql.delete('history', f"member_id = '{member_id}'")
+
+        for item in dump_history:
+            sql.insert('history', ['member_id', 'query', 'type', 'timestamp', 'guild_id'], [f"'{member_id}'", f"'{item[2]}'", f"'{item[3]}'", f"'{item[4]}'", f"'{guild_id}'"])

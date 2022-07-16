@@ -217,6 +217,47 @@ class Events(commands.Cog):
         sql.delete(table='warns', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='queue', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='loop', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='verifications', where=f'guild_id = \'{guild.id}\'')
+    
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """
+        Bot activity on receiving a reaction
+
+        :param payload: The payload
+
+        :type payload: discord.RawReactionActionEvent
+
+        :return: None
+        :rtype: None
+        """
+        if payload.user_id == self.bot.user.id:
+            return
+        
+        sql = SQL('b0ssbot')
+        if not sql.select(elements=['message_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\''):
+            return
+        
+        if payload.emoji.name != '✅':
+            return
+        
+        role_id = sql.select(elements=['role_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\'')
+        if not role_id:
+            return
+        guild = self.bot.get_guild(payload.guild_id)
+        role = discord.utils.get(guild.roles, id=int(role_id[0][0]))
+        
+        if unverified_role_id := sql.select(elements=['unverified_role_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\'')[0][0] != 'None':
+            unverified_role = discord.utils.get(guild.roles, id=int(unverified_role_id))
+            await payload.member.remove_roles(unverified_role)
+        
+        await payload.member.add_roles(role)
+
+        channel = discord.utils.get(guild.channels, id=int(sql.select(elements=['channel_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\'')[0][0]))
+        message = await channel.fetch_message(payload.message_id)
+        await message.remove_reaction('✅', payload.member)
+
+        await payload.member.send(f'You are now verified in {guild.name}')
 
     @tasks.loop(minutes=60)
     async def clear_ytdl_cache(self):

@@ -4,7 +4,6 @@ import os
 import qrcode
 import requests
 import datetime
-import asyncio  
 from PIL import Image, ImageChops
 from pyzbar.pyzbar import decode
 from discord.ext import commands
@@ -146,8 +145,7 @@ class Context(commands.Cog):
         registered_at = convert_to_unix_time(registered_at)  # type: str
 
         embed = discord.Embed(colour=member.colour, timestamp=datetime.datetime.now())
-        embed.set_author(name=str(member), icon_url=str(member.avatar)) if member.avatar else embed.set_author(
-            name=str(member), icon_url=str(member.default_avatar))
+        embed.set_author(name=str(member), icon_url=member.display_avatar)
         embed.add_field(name='Display Name', value=member.mention, inline=True)
         embed.add_field(name='Top Role', value=member.top_role.mention, inline=True)
 
@@ -156,9 +154,10 @@ class Context(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
+        
+        embed.add_field(name='Permissions', value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]), inline=False)
 
-        embed.set_thumbnail(url=str(member.avatar)) if member.avatar else embed.set_thumbnail(
-            url=str(member.default_avatar))
+        embed.set_thumbnail(url=member.display_avatar)
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
         embed.set_footer(text=f'ID: {member.id}')

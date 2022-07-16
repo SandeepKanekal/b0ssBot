@@ -6,7 +6,6 @@ import os
 import view
 from discord.ext import commands
 from tools import send_error_embed, get_random_post
-from discord.ui import Button, View
 from PIL import Image, ImageChops
 
 
@@ -44,7 +43,7 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        if not subreddit: 
+        if not subreddit:
             subreddit = random.choice(['dankmemes', 'memes', 'meme'])
         elif subreddit.lower() in ['dankmemes', 'memes', 'meme', 'me_irl', 'wholesomememes']:
             subreddit = subreddit.lower()
@@ -71,7 +70,8 @@ class Fun(commands.Cog):
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # Dankvideo command
-    @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from the dankest subreddits', usage='dankvideo')
+    @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from the dankest subreddits',
+                      usage='dankvideo')
     async def dankvideo(self, ctx):
         """
         Posts a random dank video from the dankest subreddits
@@ -83,7 +83,8 @@ class Fun(commands.Cog):
         :rtype: None
         """
         async with ctx.typing():
-            submission = await get_random_post(random.choice(['dankvideos', 'cursed_videomemes', 'MemeVideos']))  # Gets a random post from the dankest subreddits
+            submission = await get_random_post(random.choice(
+                ['dankvideos', 'cursed_videomemes', 'MemeVideos']))  # Gets a random post from the dankest subreddits
 
             if submission.over_18 and not ctx.channel.is_nsfw():
                 await self.dankvideo.reinvoke(ctx)
@@ -106,7 +107,7 @@ class Fun(commands.Cog):
         :rtype: None
         """
         await send_error_embed(ctx, description=f'Error: `{error}`')
-    
+
     @commands.command(name='invert', description='Invert your or another user\'s avatar', usage='invert <member>')
     async def invert(self, ctx, member: discord.Member = None):
         """
@@ -131,7 +132,7 @@ class Fun(commands.Cog):
             image = Image.open(f'avatar_{member.id}.png')
             invert = ImageChops.invert(image.convert('RGB'))
             invert.save(f'{member.id}_inverted.png')
-        
+
         await ctx.send(file=discord.File(f'{member.id}_inverted.png', 'invert.png'))
 
         os.remove(f'avatar_{member.id}.png')
@@ -155,7 +156,7 @@ class Fun(commands.Cog):
             await send_error_embed(ctx, description='Please provide a valid member.')
         else:
             await send_error_embed(ctx, description=f'Error: `{error}`')
-    
+
     @commands.command(name='dadjoke', description='Posts a dad joke', usage='dadjoke')
     async def dadjoke(self, ctx):
         """
@@ -168,10 +169,13 @@ class Fun(commands.Cog):
         :rtype: None
         """
         async with ctx.typing():
-            embed = discord.Embed(description=requests.get('https://icanhazdadjoke.com/', headers={'Accept': 'application/json'}).json()['joke'], colour=discord.Colour.random(), timestamp=datetime.datetime.now())
+            embed = discord.Embed(
+                description=requests.get('https://icanhazdadjoke.com/', headers={'Accept': 'application/json'}).json()[
+                    'joke'], colour=discord.Colour.random(), timestamp=datetime.datetime.now())
 
-        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed, timeout=None))
-    
+        await ctx.send(embed=embed,
+                       view=view.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed, timeout=None))
+
     @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
     async def bored(self, ctx):
         """
@@ -182,14 +186,17 @@ class Fun(commands.Cog):
         
         :return: None
         :rtype: None
-        """ 
+        """
         async with ctx.typing():
             response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
 
-            embed = discord.Embed(description=f'{response["activity"]}.', timestamp=datetime.datetime.now(), colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
+            embed = discord.Embed(description=f'{response["activity"]}.', timestamp=datetime.datetime.now(),
+                                  colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
 
-        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed, timeout=None))
-    
+        await ctx.send(embed=embed,
+                       view=view.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed,
+                                         timeout=None))
+
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx):
         """
@@ -202,8 +209,9 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.reply(f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
-    
+        await ctx.reply(
+            f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
+
     @commands.command(name='dog', description='Get a random dog picture', usage='dog')
     @commands.cooldown(1, 1, commands.BucketType.user)
     async def dog(self, ctx):
@@ -219,10 +227,13 @@ class Fun(commands.Cog):
         """
         async with ctx.typing():
             response = requests.get('https://dog.ceo/api/breeds/image/random').json()
-            embed = discord.Embed(title=':dog: woof!', url=response['message'], colour=discord.Colour.blurple()).set_image(url=response['message'])
-            
-        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed, timeout=None))
-    
+            embed = discord.Embed(title=':dog: woof!', url=response['message'],
+                                  colour=discord.Colour.blurple()).set_image(url=response['message'])
+
+        await ctx.send(embed=embed,
+                       view=view.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed,
+                                         timeout=None))
+
     @commands.command(name='cat', description='Get a random cat picture', usage='cat')
     @commands.cooldown(1, 1, commands.BucketType.user)
     async def cat(self, ctx):
@@ -238,10 +249,13 @@ class Fun(commands.Cog):
         """
         async with ctx.typing():
             response = requests.get('https://api.thecatapi.com/v1/images/search').json()
-            embed = discord.Embed(title=':cat: meow!', url=response[0]['url'], colour=discord.Colour.blurple()).set_image(url=response[0]['url'])
-            
-        await ctx.send(embed=embed, view=view.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search', embed=embed, timeout=None))
-    
+            embed = discord.Embed(title=':cat: meow!', url=response[0]['url'],
+                                  colour=discord.Colour.blurple()).set_image(url=response[0]['url'])
+
+        await ctx.send(embed=embed,
+                       view=view.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search', embed=embed,
+                                         timeout=None))
+
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx):
         """
@@ -254,9 +268,11 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.reply(f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
-    
-    @commands.command(name='httpcat', description='Learn more about status codes with cats!', usage='httpcat <status_code>')
+        await ctx.reply(
+            f'Hey there {ctx.author.mention}! The egg is hidden somewhere in the code of the bot. The egg is not visible in the frontend User Interface. Use the /code command to check the code of each and every module, where you can find the egg!')
+
+    @commands.command(name='httpcat', description='Learn more about status codes with cats!',
+                      usage='httpcat <status_code>')
     async def httpcat(self, ctx, status_code: int = None):
         """
         Learn more about status codes with cats!
@@ -270,14 +286,19 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        status_codes = [100, 101, 102, 200, 201, 202, 203, 204, 206, 207, 300, 301, 302, 303, 304, 305, 307, 308, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 420, 421, 422, 423, 424, 425, 426, 429, 431, 444, 450, 451, 497, 498, 499, 500, 501,502, 503, 504, 506, 507, 508, 509, 510, 511, 521, 522, 523, 525, 599]
+        status_codes = [100, 101, 102, 200, 201, 202, 203, 204, 206, 207, 300, 301, 302, 303, 304, 305, 307, 308, 400,
+                        401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 420,
+                        421, 422, 423, 424, 425, 426, 429, 431, 444, 450, 451, 497, 498, 499, 500, 501, 502, 503, 504,
+                        506, 507, 508, 509, 510, 511, 521, 522, 523, 525, 599]
         if status_code and status_code not in status_codes:
-            await send_error_embed(ctx, description=f'Please provide a valid status code.\nValid status codes are: {", ".join([f"`{code}`" for code in status_codes])}')
+            await send_error_embed(ctx,
+                                   description=f'Please provide a valid status code.\nValid status codes are: {", ".join([f"`{code}`" for code in status_codes])}')
             return
         status_code = status_code or random.choice(status_codes)
 
         picture_url = f'https://http.cat/{status_code}.jpg'
-        embed = discord.Embed(title=f'HTTP {status_code}', url=picture_url, colour=discord.Colour.blurple()).set_image(url=picture_url)
+        embed = discord.Embed(title=f'HTTP {status_code}', url=picture_url, colour=discord.Colour.blurple()).set_image(
+            url=picture_url)
         await ctx.send(embed=embed)
 
 

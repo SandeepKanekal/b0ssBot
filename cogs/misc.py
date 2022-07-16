@@ -77,8 +77,8 @@ class Misc(commands.Cog):
         member = member or ctx.author  # type: discord.Member
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=member.name, icon_url=member.avatar or member.default_avatar)
-        embed.set_image(url=member.avatar or member.default_avatar)
+        embed.set_author(name=member.name, icon_url=member.default_avatar)
+        embed.set_image(url=member.default_avatar)
         embed.add_field(name='Download this image', value=f'[Click Here]({member.avatar or member.default_avatar})')
         await ctx.reply(embed=embed)
 
@@ -131,7 +131,7 @@ class Misc(commands.Cog):
     # Megaspam command
     @commands.command(aliases=['ms'], description='Spams a message 25 times', usage='megaspam <message>')
     @commands.has_permissions(manage_messages=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def megaspam(self, ctx, *, message):
         """
         Spams a message 25 times
@@ -150,8 +150,7 @@ class Misc(commands.Cog):
             return
 
         await ctx.message.delete()
-        for _ in range(25):
-            await ctx.send(message)
+        await ctx.send('\n'.join(message for _ in range(25)))
 
     @megaspam.error
     async def megaspam_error(self, ctx, error):
@@ -170,12 +169,13 @@ class Misc(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown. Try again in {error.retry_after:.2f} seconds')
-            return
-        if isinstance(error, commands.MissingRequiredArgument):
+        elif isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        elif isinstance(error, discord.HTTPException):
+            await send_error_embed(ctx, description='Your message is too long!')  
+        else:
+            await send_error_embed(ctx, description=f'Error: `{error}`')
 
 
 # Setup
