@@ -77,9 +77,9 @@ class Misc(commands.Cog):
         member = member or ctx.author  # type: discord.Member
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=member.name, icon_url=member.default_avatar)
-        embed.set_image(url=member.default_avatar)
-        embed.add_field(name='Download this image', value=f'[Click Here]({member.avatar or member.default_avatar})')
+        embed.set_author(name=member.name, icon_url=member.display_avatar)
+        embed.set_image(url=member.display_avatar)
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar})')
         await ctx.reply(embed=embed)
 
     @avatar.error

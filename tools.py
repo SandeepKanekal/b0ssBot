@@ -175,13 +175,7 @@ def log_history(member_id: int, query: str, type_: str, timestamp: int, guild_id
 
     history = sql.select(['*'], 'history', f"member_id = '{member_id}' AND guild_id = '{guild_id}'")
     if len(history) > 50:
-        i = len(history)
-        dump_history = []
-        while i > len(history) - 50:
-            i -= 1
-            dump_history.append(history[i])
-
-        sql.delete('history', f"member_id = '{member_id}'")
-
-        for item in dump_history:
-            sql.insert('history', ['member_id', 'query', 'type', 'timestamp', 'guild_id'], [f"'{member_id}'", f"'{item[2]}'", f"'{item[3]}'", f"'{item[4]}'", f"'{guild_id}'"])
+        timestamp = history[0][4]
+        for index, _ in enumerate(range(len(history) - 50)):
+            sql.delete('history', f"timestamp = {timestamp}")
+            timestamp = history[index][4]

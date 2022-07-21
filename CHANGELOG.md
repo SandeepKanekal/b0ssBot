@@ -3,6 +3,7 @@
 # Overall #
 + A new egghunt is now available!
 + Addition of a verification and a history system.
++ Addition of a configuration system where a role is added to member/bots when they join the guild.
 
 # Events #
 + Markdown syntax detection.

@@ -73,3 +73,28 @@ Stores the YouTube channels that the guild wants to be notified when a video is 
 + channel_id: Channel ID (Not Null, VARCHAR(24))
 + channel_name: Channel name (Not Null, VARCHAR(2000))
 + latest_video_id: Latest video ID (Not Null, VARCHAR(11))
+
+# verifications
+Stores the verification system of the guilds
++ SN: Serial number (Not Null, Primary Key)
++ message_id: Message ID (Not Null, VARCHAR(18))
++ role_id: Role ID (Not Null, VARCHAR(18))
++ unverified_role_id: The ID of the unverified role (Not Null, VARCHAR(18))
++ channel_id: Channel ID (Not Null, VARCHAR(18))
++ guild_id: Guild ID (Not Null, VARCHAR(18))
+
+# history
+Stores the search history a user has with b0ssBot
++ SN: Serial number (Not Null, Primary Key)
++ member_id: Member ID (Not Null, VARCHAR(18))
++ query: The query (Not Null, VARCHAR(2000))
++ type: The type of service used  (Not Null, VARCHAR(20))
++ timestamp: The timestamp of when the service was used (Not Null, integer)
++ guild_id: Guild ID (Not Null, VARCHAR(18))
+
+# serverjoin
+Stores role addition configurations for members/bots of the guilds
++ SN: Serial number (Not Null, Primary Key)
++ guild_id: Guild ID (Not Null, VARCHAR(18))
++ member_role_id: Role ID for members (Not Null, VARCHAR(18))
++ bot_role_id: Role ID for bots (Not Null, VARCHAR(18))

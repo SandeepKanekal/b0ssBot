@@ -144,7 +144,7 @@ class Slash(commands.Cog):
         embed = discord.Embed(colour=member.colour)
         embed.set_author(name=member.name, icon_url=member.display_avatar)
         embed.set_image(url=member.display_avatar)
-        embed.add_field(name='Download this image', value=f'[Click Here]({member.avatar or member.default_avatar})')
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar})')
         await ctx.respond(embed=embed)
 
     @avatar.error
@@ -1614,6 +1614,184 @@ class Slash(commands.Cog):
         embed.description = embed.description[:-1]
 
         await ctx.respond(embed=embed)
+
+    serverjoin = SlashCommandGroup('serverjoin', 'Roles to be added when a member/bot joins the server')
+
+    @serverjoin.command(name='add', description='Add a role to be added when a member/bot joins the server')
+    @commands.has_permissions(manage_roles=True)
+    async def serverjoin_add(self, ctx, user: Option(str, description='The type of user', required=True, choices=['member', 'bot', 'all']), role: Option(discord.Role, description='The role to add', required=True)):
+        """
+        Add a role to be added when a member/bot joins the server
+        
+        :param ctx: The context of where the message was sent
+        :param user: The type of user
+        :param role: The role to add
+        
+        :type ctx: discord.ApplicationContext
+        :type user: str
+        :type role: discord.Role
+        
+        :return: None
+        :rtype: None
+        """
+        sql = SQL('b0ssbot')
+
+        roles = sql.select(['member_role_id', 'bot_role_id'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'")
+        if roles and not roles[0][0] and not roles[0][1]:
+            await ctx.respond('Server join already exists, use the update subcommand instead', ephemeral=True)
+            return
+        
+        if user == 'all':
+            sql.insert('serverjoin', ['guild_id', 'member_role_id', 'bot_role_id'], [f"'{ctx.guild.id}'", f"'{role.id}'", f"'{role.id}'"])
+        else:
+            sql.insert('serverjoin', ['guild_id', f'{user}_role_id'], [f"'{ctx.guild.id}'", f"'{role.id}'"])
+
+        await ctx.respond('Role has been added')
+    
+    @serverjoin_add.error
+    async def serverjoin_add_error(self, ctx, error):
+        """
+        Error handler for the serverjoin add command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: {error}', ephemeral=True)
+    
+    @serverjoin.command(name='remove', description='Remove the serverjoin configurations')
+    @commands.has_permissions(manage_roles=True)
+    async def serverjoin_remove(self, ctx):
+        """
+        Remove a role to be added when a member/bot joins the server
+        
+        :param ctx: The context of where the message was sent
+        
+        :type ctx: discord.ApplicationContext
+        
+        :return: None
+        :rtype: None
+        """
+        sql = SQL('b0ssbot')
+
+        if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Server join does not exist', ephemeral=True)
+            return
+        
+        sql.delete('serverjoin', where=f"guild_id = '{ctx.guild.id}'")
+
+        await ctx.respond('Role has been removed')
+    
+    @serverjoin_remove.error
+    async def serverjoin_remove_error(self, ctx, error):
+        """
+        Error handler for the serverjoin remove command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: {error}', ephemeral=True)
+    
+    @serverjoin.command(name='update', description='Update the role to be added when a member/bot joins the server')
+    @commands.has_permissions(manage_roles=True)
+    async def serverjoin_update(self, ctx, user: Option(str, description='The type of user', required=True, choices=['member', 'bot', 'all']), role: Option(discord.Role, description='The role to add', required=True)):
+        """
+        Update the role to be added when a member/bot joins the server
+        
+        :param ctx: The context of where the message was sent
+        :param user: The type of user
+        :param role: The role to add
+        
+        :type ctx: discord.ApplicationContext
+        :type user: str
+        :type role: discord.Role
+        
+        :return: None
+        :rtype: None
+        """
+        sql = SQL('b0ssbot')
+
+        if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Server join does not exist', ephemeral=True)
+            return
+        
+        if user == 'all':
+            sql.update('serverjoin', 'bot_role_id', f"'{role.id}'", where=f"guild_id = '{ctx.guild.id}'")
+            sql.update('serverjoin', 'member_role_id', f"'{role.id}'", where=f"guild_id = '{ctx.guild.id}'")
+        else:
+            sql.update('serverjoin', f'{user}_role_id', f"'{role.id}'", where=f"guild_id = '{ctx.guild.id}'")
+
+        await ctx.respond('Role has been updated')
+    
+    @serverjoin_update.error
+    async def serverjoin_update_error(self, ctx, error):
+        """
+        Error handler for the serverjoin update command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: {error}', ephemeral=True)
+    
+    @serverjoin.command(name='list', description='List the roles to be added when a member/bot joins the server')
+    async def serverjoin_list(self, ctx):
+        """
+        List the roles to be added when a member/bot joins the server
+        
+        :param ctx: The context of where the message was sent
+        
+        :type ctx: discord.ApplicationContext
+        
+        :return: None
+        :rtype: None
+        """
+        sql = SQL('b0ssbot')
+
+        if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Server join does not exist', ephemeral=True)
+            return
+        
+        roles = sql.select(['member_role_id', 'bot_role_id'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'")
+
+        member_role = discord.utils.get(ctx.guild.roles, id=int(roles[0][0])) if roles[0][0] else None
+        bot_role = discord.utils.get(ctx.guild.roles, id=int(roles[0][1])) if roles[0][1] else None
+
+        embed = discord.Embed(title='Server Join Roles', description=f'Members: {member_role.mention if member_role else member_role}\nBots: {bot_role.mention if bot_role else bot_role}', color=discord.Colour.blurple())
+
+        await ctx.respond(embed=embed)
+    
+    @serverjoin_list.error
+    async def serverjoin_list_error(self, ctx, error):
+        """
+        Error handler for the serverjoin list command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(f'Error: {error}', ephemeral=True)
 
 
 def setup(bot):

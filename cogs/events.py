@@ -218,6 +218,7 @@ class Events(commands.Cog):
         sql.delete(table='queue', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='loop', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='verifications', where=f'guild_id = \'{guild.id}\'')
+        sql.delete(table='serverjoin', where=f'guild_id = \'{guild.id}\'')
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -247,7 +248,8 @@ class Events(commands.Cog):
         guild = self.bot.get_guild(payload.guild_id)
         role = discord.utils.get(guild.roles, id=int(role_id[0][0]))
         
-        if unverified_role_id := sql.select(elements=['unverified_role_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\'')[0][0] != 'None':
+        unverified_role_id = sql.select(['unverified_role_id'], 'verifications', f"guild_id = '{payload.guild_id}' AND message_id = '{payload.message_id}'")[0][0]
+        if unverified_role_id != 'None':
             unverified_role = discord.utils.get(guild.roles, id=int(unverified_role_id))
             await payload.member.remove_roles(unverified_role)
         
@@ -258,6 +260,33 @@ class Events(commands.Cog):
         await message.remove_reaction('✅', payload.member)
 
         await payload.member.send(f'You are now verified in {guild.name}')
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member) -> None:
+        """
+        Bot activity on a member joining a server
+
+        :param member: The member
+
+        :type member: discord.Member
+
+        :return: None
+        :rtype: None
+        """
+        sql = SQL('b0ssbot')
+
+        if not sql.select(['*'], 'serverjoin', f"guild_id = '{member.guild.id}'"):
+            return
+
+        member_role_id = sql.select(['member_role_id'], 'serverjoin', f"guild_id = '{member.guild.id}'")[0][0]
+        bot_role_id = sql.select(['bot_role_id'], 'serverjoin', f"guild_id = '{member.guild.id}'")[0][0]
+        
+        if member.bot and bot_role_id:
+            bot_role = discord.utils.get(member.guild.roles, id=int(bot_role_id))
+            await member.add_roles(bot_role)
+        else:
+            member_role = discord.utils.get(member.guild.roles, id=int(member_role_id))
+            await member.add_roles(member_role)
 
     @tasks.loop(minutes=60)
     async def clear_ytdl_cache(self):

@@ -941,6 +941,8 @@ class Music(commands.Cog):
                 embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
                 await ctx.send(embed=embed)
 
+                log_history(ctx.author.id, query, 'Lyrics', int(datetime.datetime.now().timestamp()), ctx.guild.id)
+
             # Lyrics not found exception
             except lyrics_extractor.lyrics.LyricScraperException:
                 await send_error_embed(ctx,
@@ -954,6 +956,8 @@ class Music(commands.Cog):
                     f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
                 await ctx.send(file=discord.File(f'lyrics_{ctx.author.id}.txt', 'lyrics.txt'))
                 os.remove(f'lyrics_{ctx.author.id}.txt')
+
+                log_history(ctx.author.id, query, 'Lyrics', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     # Error in lyrics command
     @lyrics.error
