@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # All misc commands stored here
 import datetime
 import discord

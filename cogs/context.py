@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # Contains all application context commands.
 import discord
 import os

@@ -1,3 +1,5 @@
+# Copyright (c) 2022 Sandeep Kanekal
+# Contains all game commands
 import discord
 import random
 import requests

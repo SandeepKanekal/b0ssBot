@@ -1,3 +1,5 @@
+# Copyright (c) 2022 Sandeep Kanekal
+# Tools for making complex tasks easier
 import discord
 import datetime
 import time
@@ -171,6 +173,7 @@ def log_history(member_id: int, query: str, type_: str, timestamp: int, guild_id
     None
     """
     sql = SQL('b0ssbot')
+    query = query.replace("'", "''")
     sql.insert('history', ['member_id', 'query', 'type', 'timestamp', 'guild_id'], [f"'{member_id}'", f"'{query}'", f"'{type_}'", f"'{timestamp}'", f"'{guild_id}'"])
 
     history = sql.select(['*'], 'history', f"member_id = '{member_id}' AND guild_id = '{guild_id}'")

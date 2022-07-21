@@ -1,3 +1,5 @@
+# Copyright (c) 2022 Sandeep Kanekal
+# Contains the help commands
 import discord
 import datetime
 from sql_tools import SQL
@@ -50,6 +52,10 @@ class Help(commands.Cog):
                 await ctx.reply(f'Command {command} not found')
                 return
 
+            if 'hidden' in cmd.__dict__['__original_kwargs__']:
+                await ctx.reply('This command is only for the owner!')
+                return
+
             embed = discord.Embed(
                 title=f'Help - {cmd}',
                 description=cmd.description,
@@ -58,7 +64,7 @@ class Help(commands.Cog):
             )
             embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
 
-            if not isinstance(cmd, discord.ApplicationCommand):
+            if isinstance(cmd, commands.Command):
                 embed.add_field(name='Aliases', value=f"`{', '.join(cmd.aliases)}`", inline=False) if cmd.aliases else embed.add_field(name='Aliases', value='`None`', inline=False)
                 param_str = ''.join(f'`{param}` ' for param in cmd.clean_params)
                 param_str = param_str[:-1]
@@ -69,6 +75,8 @@ class Help(commands.Cog):
                 param_str = param_str[:-1]
                 embed.add_field(name='Parameters', value=param_str, inline=False)
                 embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
+            elif isinstance(cmd, discord.SlashCommandGroup):
+                embed.add_field(name='Usage', value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
             else:
                 embed.add_field(name='Usage', value='This is an application command. Right click on a message/user to get the command', inline=False)
 

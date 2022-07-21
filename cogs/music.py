@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # Requirements for running this module:
 # Linux/Mac - Install in terminal
 # Windows - Add FFmpeg to PATH (https://windowsloop.com/install-ffmpeg-windows-10/)

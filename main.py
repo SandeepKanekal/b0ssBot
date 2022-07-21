@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # Main module
 import discord
 import keep_alive

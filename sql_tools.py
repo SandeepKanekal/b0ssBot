@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 import psycopg2
 import os
 from typing import Any

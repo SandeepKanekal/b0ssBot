@@ -1,3 +1,5 @@
+# Copyright (c) 2022 Sandeep Kanekal
+# Contains all internet commands
 import discord
 import os
 import datetime

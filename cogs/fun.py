@@ -1,3 +1,5 @@
+# Copyright (c) 2022 Sandeep Kanekal
+# Contains all fun commands
 import random
 import discord
 import datetime

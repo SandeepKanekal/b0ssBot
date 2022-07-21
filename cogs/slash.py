@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 import contextlib
 import discord
 import datetime
@@ -1609,7 +1610,8 @@ class Slash(commands.Cog):
         history = sql.select(['type', 'query', 'timestamp'], 'history', f'member_id = \'{member.id}\' AND guild_id = \'{ctx.guild.id}\'')
 
         for h in history:
-            embed.description += f'{h[0]}: {h[1]} - <t:{h[2]}:R>\n'
+            query = h[1].replace("''", "'")
+            embed.description += f'{h[0]}: {query} - <t:{h[2]}:R>\n'
         
         embed.description = embed.description[:-1]
 

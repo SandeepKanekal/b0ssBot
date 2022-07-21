@@ -1,3 +1,5 @@
+# Copyright (c) 2022 Sandeep Kanekal
+# Subclasses of discord.ui.View
 import discord
 import random
 import requests

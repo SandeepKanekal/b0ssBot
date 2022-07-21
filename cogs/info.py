@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # Information commands defined here
 import discord
 import datetime

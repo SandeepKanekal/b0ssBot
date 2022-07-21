@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # Contains all bot events
 import contextlib
 import os

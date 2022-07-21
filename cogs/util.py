@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # All Util commands stored here
 import asyncio
 import contextlib

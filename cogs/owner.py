@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 import discord
 import os
 from sql_tools import SQL
@@ -202,7 +203,7 @@ class Owner(commands.Cog):
         """
         await ctx.send(embed=discord.Embed(description=str(e)))
 
-    @commands.slash_command(name='eval', guild_ids=[930715526441885696])
+    @commands.slash_command(name='eval', guild_ids=[930715526441885696], hidden=True)
     @commands.is_owner()
     async def eval_(self, ctx, *, mode: Option(str, description='The mode to run the code in', required=True, choices=['single', 'file']), code: Option(str, description='Code for single line', required=False, default=None)):
         """
@@ -267,6 +268,37 @@ class Owner(commands.Cog):
         :rtype: None
         """
         await ctx.respond(f'**`ERROR:`** {type(e).__name__} - {e}', ephemeral=True)
+
+    @commands.command(name='vc', hidden=True)
+    @commands.is_owner()
+    async def vc(self, ctx):
+        """
+        Sends the length of voice clients
+
+        :param ctx: The context of the command
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.reply(len(self.bot.voice_clients))
+
+    @vc.error
+    async def vc_error(self, ctx, e):
+        """
+        Handles errors for the vc command
+
+        :param ctx: The context of the command
+        :param e: The error raised
+
+        :type ctx: commands.Context
+        :type e: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.send(embed=disord.Embed(description=str(e)))
 
 
 def setup(bot):

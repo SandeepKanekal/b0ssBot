@@ -1,3 +1,4 @@
+# Copyright (c) 2022 Sandeep Kanekal
 # Moderation commands defined here
 import contextlib
 import discord
