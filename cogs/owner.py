@@ -298,7 +298,7 @@ class Owner(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.send(embed=disord.Embed(description=str(e)))
+        await ctx.send(embed=discord.Embed(description=str(e)))
 
 
 def setup(bot):

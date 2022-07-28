@@ -24,22 +24,27 @@ class Util(commands.Cog):
         """
         sql = SQL('b0ssbot')
 
+        content = message.content.replace("'", "''")
+
+        if not isinstance(message.author, discord.Member):
+            return
+
         if message.attachments:
             attachment_str = ''.join(f"'{attachment.url}', " for attachment in message.attachments)
             attachment_str = attachment_str[:-2]
-            values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
+            values = [f'\'{message.author.id}\'', f'\'{content}\'', f'\'{message.channel.id}\'',
                       f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'",
                       f"ARRAY[{attachment_str}]"]
 
         else:
-            values = [f'\'{message.author.id}\'', f'\'{message.content}\'', f'\'{message.channel.id}\'',
+            values = [f'\'{message.author.id}\'', f'\'{content}\'', f'\'{message.channel.id}\'',
                       f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'",
                       "ARRAY['None']"]
             attachment_str = "ARRAY['None']"
 
         if sql.select(elements=['*'], table='snipes',
                       where=f'guild_id = \'{message.guild.id}\' AND channel_id = \'{message.channel.id}\''):
-            sql.update(table='snipes', column='message', value=f'\'{message.content}\'',
+            sql.update(table='snipes', column='message', value=f'\'{content}\'',
                        where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
             sql.update(table='snipes', column='author_id', value=f'\'{message.author.id}\'',
                        where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
@@ -78,7 +83,7 @@ class Util(commands.Cog):
             del_time = convert_to_unix_time(del_time)
             channel = discord.utils.get(ctx.guild.channels, id=int(message[0][2]))
             member = discord.utils.get(ctx.guild.members, id=int(message[0][0]))
-            member = member or 'Unknown'
+            content = message[0][1].replace("''", "'")
 
             # Get the prefix
             command_prefix = sql.select(elements=["prefix"], table="prefixes", where=f"guild_id = '{ctx.guild.id}'")[0][
@@ -87,7 +92,7 @@ class Util(commands.Cog):
             # Response embed
             embed = discord.Embed(
                 title='Sniped a message!',
-                description=f'Author: {member.mention if isinstance(member, discord.Member) else member}\nDeleted message: {message[0][1]}\nChannel: {channel.mention}\nTime: {del_time}',
+                description=f'Author: {member.mention if isinstance(member, discord.Member) else member}\nDeleted message: {content}\nChannel: {channel.mention}\nTime: {del_time}',
                 colour=discord.Colour.green()
             ).set_footer(
                 text=f'Enable modlogs for more information. Type {command_prefix}help modlogs for more information')

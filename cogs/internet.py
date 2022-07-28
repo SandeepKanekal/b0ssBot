@@ -520,16 +520,20 @@ class Internet(commands.Cog):
             embed.set_author(name=repo_information['owner']['login'], icon_url=repo_information['owner']['avatar_url'],
                              url=repo_information['owner']['html_url'])
             embed.set_thumbnail(url=repo_information['owner']['avatar_url'])
-            embed.set_footer(text='Information retrieved using the GitHub API')
+
+            if repository.lower() == 'sandeepkanekal/b0ssbot':
+                embed.set_footer(text='This is my source code 😂')
+            else:
+                embed.set_footer(text='Information retrieved using the GitHub API')
 
             embed.add_field(name='Language', value=repo_information['language'])
             embed.add_field(name='Forks', value=repo_information['forks'])
             embed.add_field(name='Watchers', value=repo_information['watchers_count'])
-            embed.add_field(name='Created at', value=convert_to_unix_time(
-                repo_information['created_at'].replace('T', ' ').replace('Z', '')))
-            embed.add_field(name='Updated at', value=convert_to_unix_time(
+            embed.add_field(name='Created on', value=convert_to_unix_time(
+                repo_information['created_at'].replace('T', ' ').replace('Z', ''), 'D'))
+            embed.add_field(name='Last Update', value=convert_to_unix_time(
                 repo_information['updated_at'].replace('T', ' ').replace('Z', '')))
-            embed.add_field(name='Pushed at', value=convert_to_unix_time(
+            embed.add_field(name='Last Push', value=convert_to_unix_time(
                 repo_information['pushed_at'].replace('T', ' ').replace('Z', '')))
             embed.add_field(name='License',
                             value=repo_information['license']['name'] if repo_information['license'] else
@@ -537,7 +541,7 @@ class Internet(commands.Cog):
             embed.add_field(name='Default Branch', value=repo_information['default_branch'])
             embed.add_field(name='Open Issues', value=repo_information['open_issues_count'])
 
-            await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
     
         log_history(ctx.author.id, repository, 'GitHub', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 

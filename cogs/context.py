@@ -52,7 +52,7 @@ class Context(commands.Cog):
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
         img.save(f'QR_{message.id}.png')
-        await ctx.respond(file=discord.File(f'QR_{message.id}.png', 'QR.png'))
+        await ctx.respond(content=f'Message: {message.jump_url}', file=discord.File(f'QR_{message.id}.png', 'QR.png'))
         os.remove(f'QR_{message.id}.png')
     
     @generate_qr.error
@@ -86,7 +86,7 @@ class Context(commands.Cog):
         :rtype: None
         """
         if message.attachments:
-            embed = discord.Embed(title='QR Scan results', colour=0x848585).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
+            embed = discord.Embed(title='QR Scan results', description=f'[Jump to message]({message.jump_url})', colour=0x848585).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
             await ctx.interaction.response.defer()
 
             for index, attachment in enumerate(message.attachments):
@@ -203,7 +203,7 @@ class Context(commands.Cog):
 
             files.append(discord.File(f'{index}_{message.id}_inverted.png', filename='invert.png'))
 
-        await ctx.respond(content, files=files)
+        await ctx.respond(f'Message: {message.jump_url}{content}', files=files)
 
         files = None  # Raises PermissionError if not set to None before deletion of files.
 

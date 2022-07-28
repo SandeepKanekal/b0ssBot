@@ -4,6 +4,7 @@
 + A new egghunt is now available!
 + Addition of a verification and a history system.
 + Addition of a configuration system where a role is added to member/bots when they join the guild.
++ Addition of buttons to the music system.
 
 # Events #
 + Markdown syntax detection.
@@ -41,6 +42,7 @@
 # Music #
 + The lyrics command's response's title now is the title of the song instead of the query. However, the query is visible as the footer.
 + Custom error classes.
++ Lyrics command now translates non-english lyrics.
 
 # Util #
 + The clear command now does not purge pinned messages.

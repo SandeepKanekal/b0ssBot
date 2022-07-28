@@ -100,7 +100,7 @@ class Slash(commands.Cog):
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
         
-        embed.add_field(name='Permissions', value='\n'.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]), inline=False)
+        embed.add_field(name='Permissions', value=', '.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]), inline=False)
 
         embed.set_thumbnail(url=member.display_avatar)
         embed.add_field(name='Joined', value=joined_at, inline=True)

@@ -73,8 +73,7 @@ class Events(commands.Cog):
         if message.author.bot:  # Ignore bots
             return
 
-        if "'" in message.content:
-            message.content = message.content.replace("'", "''")  # Replace single quotes with double quotes
+        message.content = message.content.replace("'", "''")  # Replace single quotes with double quotes
 
         # AFKs
         if sql.select(elements=['member_id', 'guild_id', 'reason'], table='afks',
@@ -167,7 +166,7 @@ class Events(commands.Cog):
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
         if random.choice([True, False, False, False, False, False, False, False, False,
                           False]) and ctx.command != self.bot.get_command('clear'):
-            await ctx.send(f'Hey there {ctx.author.mention}! Check out the new commands: {prefix}(commands here)')
+            await ctx.send(f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.')
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild) -> None:
@@ -339,14 +338,19 @@ class Events(commands.Cog):
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
                 if webhook is None:
                     webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
+                
+                if isinstance(ping_role, discord.Role):
+                    ping_string = "@everyone" if 'everyone' in ping_role.name else ping_role.mention
+                else:
+                    ping_string = "everyone"
 
                 await webhook.send(
-                    f'{f"Hey {ping_role.mention}" if ping_role else "Hey everyone"}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
+                    f'Hey {ping_string}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
                     username=f'{self.bot.user.name} YouTube Notifier',
                     avatar_url=self.bot.user.avatar)  # Send the message to the webhook
 
                 sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
-                           where=f'channel_id = \'{channel[0]}\'')  # Update the latest video id
+                           where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
         except Exception as e:
             status = f'An error occured in check_for_videos: {e}'
         else:

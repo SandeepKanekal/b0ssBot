@@ -81,13 +81,12 @@ class YouTubeSearchView(discord.ui.View):
 
     @discord.ui.button(label='Play Audio in VC', style=discord.ButtonStyle.green)
     async def play(self, button: discord.Button, interaction: discord.Interaction):
-        await interaction.response.defer()
         try:
             await self.ctx.invoke(self.bot.get_command('play'), query=self.items.get('titles')[self.index])
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        else:
-            await interaction.followup.send('Audio added to queue!')
+        finally:
+            await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label='End Interaction', style=discord.ButtonStyle.red)
     async def end(self, button: discord.Button, interaction: discord.Interaction):
@@ -633,3 +632,63 @@ class TruthOrDareView(discord.ui.View):
         self.stop()
 
         await self.ctx.reinvoke()
+
+
+class MusicView(discord.ui.View):
+    def __init__(self, ctx: commands.Context, bot: commands.Bot, vc: discord.VoiceClient, query: str, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.ctx = ctx
+        self.bot = bot
+        self.vc = vc
+        self.query = query
+    
+    @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.green)
+    async def skip(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            await self.ctx.invoke(self.bot.get_command('skip'))
+        except Exception as e:
+            await send_error_embed(self.ctx, str(e))
+
+        for item in self.children:
+            item.disabled = True
+        
+        await interaction.response.edit_message(view=self)
+        self.stop()
+    
+    @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
+    async def end(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            await self.ctx.invoke(self.bot.get_command('stop'))
+        except Exception as e:
+            await send_error_embed(self.ctx, str(e))
+
+        for item in self.children:
+            item.disabled = True
+        
+        await interaction.response.edit_message(view=self)
+        self.stop()
+    
+    @discord.ui.button(emoji='⏯️', style=discord.ButtonStyle.red)
+    async def pause(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            await self.ctx.invoke(self.bot.get_command('pause') if self.vc.is_playing() else self.bot.get_command('resume'))
+        except Exception as e:
+            await send_error_embed(self.ctx, str(e))
+        await interaction.response.edit_message(view=self)
+    
+    @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple)
+    async def lyrics(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            await self.ctx.invoke(self.bot.get_command('lyrics'), query=self.query)
+        except Exception as e:
+            await send_error_embed(self.ctx, str(e))
+        await interaction.response.edit_message(view=self)
+    
+    @discord.ui.button(label='Add to queue', style=discord.ButtonStyle.blurple)
+    async def add(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            await self.ctx.invoke(self.bot.get_command('play'), query=self.query)
+        except Exception as e:
+            await send_error_embed(self.ctx, str(e))
+        await interaction.response.edit_message(view=self)
+

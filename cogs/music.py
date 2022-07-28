@@ -13,6 +13,9 @@ from discord.ext import commands
 from discord.ext.commands import CommandError
 from tools import send_error_embed, get_video_stats, format_time, log_history
 from youtube_dl import YoutubeDL
+from view import MusicView
+from langdetect import detect
+from googletrans import Translator
 
 
 class AuthorNotConnectedToVoiceChannel(CommandError):
@@ -74,7 +77,8 @@ class Music(commands.Cog):
         self.start_time = {}  # type: dict[int, datetime.datetime | None] # Stores the start time for each guild
         self.source = {}  # type: dict[int, str | None] # Stores the source for each guild
         self.volume = {}  # type: dict[int, int] # Stores the volume for each guild
-        self.pause_time = {}  #type: dict[int, datetime.datetime | None] # Stores the time when the track was paused for each guild
+        self.pause_time = {}  # type: dict[int, datetime.datetime | None] # Stores the time when the track was paused for each guild
+        self.music_view = {}  # type dict[int, MusicView | None] # Stores the view object for each guild
         self.sql = SQL('b0ssbot')  # type: SQL
         self._ydl_options = {
             "format": "bestaudio/best",
@@ -111,13 +115,15 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        with contextlib.suppress(AttributeError):
+        with contextlib.suppress(AttributeError, KeyError):
             # The player is disconnected when there is no one in the voice channel
             vc = discord.utils.get(self.bot.voice_clients, guild=member.guild)
             if len(before.channel.members) == 1 and after != before:
-                await vc.disconnect()
                 self.sql.delete(table='queue', where=f"guild_id = '{member.guild.id}'")
                 self.sql.delete(table='loop', where=f"guild_id = '{member.guild.id}'")
+                
+                vc.stop()
+                await vc.disconnect()
 
                 # Delete all the keys storing the guild's information
                 del self.now_playing[member.guild.id]
@@ -126,6 +132,7 @@ class Music(commands.Cog):
                 del self.source[member.guild.id]
                 del self.volume[member.guild.id]
                 del self.pause_time[member.guild.id]
+                del self.music_view[member.guild.id]
 
     # Searches YouTube for the item.
     # Possible errors:
@@ -163,19 +170,59 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
+        self.music_view[ctx.guild.id].stop()
         if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             track = self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'")[0]
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
+            view = MusicView(ctx, self.bot, ctx.guild.voice_client, track[0][0], timeout=None)
         elif self.sql.select(elements=['*'], table='queue', where=f"guild_id = '{ctx.guild.id}'"):
             track = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")[0]
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
+            view = MusicView(ctx, self.bot, ctx.guild.voice_client, track[0][0], timeout=None)
         else:
             embed = discord.Embed(description='Queue is over', colour=discord.Colour.red())
             embed.set_footer(text='Use the play command to add tracks')
+            view = None
 
-        await ctx.send(embed=embed)
+        self.music_view[ctx.guild.id] = view
+        await ctx.send(embed=embed, view=view)
+
+    async def _send_confirmation(self, ctx, song: dict):
+        """
+        Sends a confirmation message to the channel.
+        
+        :param ctx: The context of the command.
+        :param song: The details of the track
+        
+        :type ctx: commands.Context
+        :type song: dict
+        
+        :return: None
+        :rtype: None
+        """
+        embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
+            url=song['thumbnail'])
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.add_field(
+            name='Song added to queue',
+            value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
+        )
+        embed.set_footer(
+            text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
+        )
+
+        if not ctx.voice_client.is_playing():
+            view = MusicView(ctx, self.bot, ctx.guild.voice_client, song['title'], timeout=None)
+            self.music_view[ctx.guild.id] = view
+        else:
+            view = None
+
+        await ctx.send(
+            'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
+            embed=embed, view=view
+        )
 
     def play_next(self, ctx):
         """
@@ -362,21 +409,10 @@ class Music(commands.Cog):
                     f"'{song['url']}'"
                 ]
             )
-            song["title"] = song["title"].replace("''", "'")  # Replace the single quotes back for the response
-            embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
-                url=song['thumbnail'])
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-            embed.add_field(
-                name='Song added to queue',
-                value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
-            )
-            embed.set_footer(
-                text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
-            )
-        await ctx.send(
-            'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
-            embed=embed
-        )
+
+            song['title'] = song['title'].replace("''", "'")
+            
+        await self._send_confirmation(ctx, song)
 
         if not ctx.voice_client.is_playing():
             # Plays the music
@@ -709,6 +745,7 @@ class Music(commands.Cog):
             del self.source[ctx.guild.id]
             del self.volume[ctx.guild.id]
             del self.pause_time[ctx.guild.id]
+            del self.music_view[ctx.guild.id]
 
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
@@ -940,6 +977,11 @@ class Music(commands.Cog):
                                       timestamp=datetime.datetime.now())
                 embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
                 embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
+
+                if detect(lyrics) != 'en':
+                    translator = Translator()
+                    embed.add_field(name='Translation', value=translator.translate(lyrics, src=detect(lyrics), dest='en').text)
+
                 await ctx.send(embed=embed)
 
                 log_history(ctx.author.id, query, 'Lyrics', int(datetime.datetime.now().timestamp()), ctx.guild.id)
@@ -954,7 +996,12 @@ class Music(commands.Cog):
                 with open(f'lyrics_{ctx.author.id}.txt', 'w') as f:
                     f.write(f'{title}\n\n')
                     f.write(lyrics)
+
+                    if detect(lyrics) != 'en':
+                        f.write(f'\n\nTranslation:\n {translator.translate(lyrics, src=detect(lyrics), dest="en").text}')
+
                     f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
+                
                 await ctx.send(file=discord.File(f'lyrics_{ctx.author.id}.txt', 'lyrics.txt'))
                 os.remove(f'lyrics_{ctx.author.id}.txt')
 

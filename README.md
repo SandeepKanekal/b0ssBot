@@ -16,6 +16,8 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [pyzbar](https://pypi.org/project/pyzbar/)
 + [qrcode](https://pypi.org/project/qrcode/)
 + [imgurpython](https://pypi.org/project/imgurpython/)
++ [googletrans](https://pypi.org/project/googletrans/)
++ [langdetect](https://pypi.org/project/langdetect/)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics
