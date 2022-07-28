@@ -42,7 +42,6 @@
 # Music #
 + The lyrics command's response's title now is the title of the song instead of the query. However, the query is visible as the footer.
 + Custom error classes.
-+ Lyrics command now translates non-english lyrics.
 
 # Util #
 + The clear command now does not purge pinned messages.

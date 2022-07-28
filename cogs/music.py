@@ -14,8 +14,6 @@ from discord.ext.commands import CommandError
 from tools import send_error_embed, get_video_stats, format_time, log_history
 from youtube_dl import YoutubeDL
 from view import MusicView
-from langdetect import detect
-from googletrans import Translator
 
 
 class AuthorNotConnectedToVoiceChannel(CommandError):
@@ -978,10 +976,6 @@ class Music(commands.Cog):
                 embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
                 embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
 
-                if detect(lyrics) != 'en':
-                    translator = Translator()
-                    embed.add_field(name='Translation', value=translator.translate(lyrics, src=detect(lyrics), dest='en').text)
-
                 await ctx.send(embed=embed)
 
                 log_history(ctx.author.id, query, 'Lyrics', int(datetime.datetime.now().timestamp()), ctx.guild.id)
@@ -996,10 +990,6 @@ class Music(commands.Cog):
                 with open(f'lyrics_{ctx.author.id}.txt', 'w') as f:
                     f.write(f'{title}\n\n')
                     f.write(lyrics)
-
-                    if detect(lyrics) != 'en':
-                        f.write(f'\n\nTranslation:\n {translator.translate(lyrics, src=detect(lyrics), dest="en").text}')
-
                     f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
                 
                 await ctx.send(file=discord.File(f'lyrics_{ctx.author.id}.txt', 'lyrics.txt'))
