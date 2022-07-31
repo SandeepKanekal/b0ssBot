@@ -3,6 +3,7 @@
 import discord
 import random
 import requests
+import contextlib
 from discord.ext import commands
 from tools import send_error_embed, get_quote
 
@@ -665,7 +666,8 @@ class MusicView(discord.ui.View):
         for item in self.children:
             item.disabled = True
         
-        await interaction.response.edit_message(view=self)
+        with contextlib.suppress(discord.NotFound):
+            await interaction.response.edit_message(view=self)
         self.stop()
     
     @discord.ui.button(emoji='⏯️', style=discord.ButtonStyle.red)
@@ -674,7 +676,8 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('pause') if self.vc.is_playing() else self.bot.get_command('resume'))
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        await interaction.response.edit_message(view=self)
+        with contextlib.suppress(discord.NotFound):
+            await interaction.response.edit_message(view=self)
     
     @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple)
     async def lyrics(self, button: discord.Button, interaction: discord.Interaction):
@@ -682,7 +685,8 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('lyrics'), query=self.query)
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        await interaction.response.edit_message(view=self)
+        with contextlib.suppress(discord.NotFound):
+            await interaction.response.edit_message(view=self)
     
     @discord.ui.button(label='Add to queue', style=discord.ButtonStyle.blurple)
     async def add(self, button: discord.Button, interaction: discord.Interaction):
@@ -690,5 +694,6 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('play'), query=self.query)
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        await interaction.response.edit_message(view=self)
+        with contextlib.suppress(discord.NotFound):
+            await interaction.response.edit_message(view=self)
 

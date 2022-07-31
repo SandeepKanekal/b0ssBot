@@ -20,7 +20,11 @@ class Util(commands.Cog):
         Event listener which is called when a message is deleted.
 
         :param message: The message that was deleted
+
+        :type message: discord.Message
+
         :return: None
+        :rtype: None
         """
         sql = SQL('b0ssbot')
 
@@ -70,7 +74,11 @@ class Util(commands.Cog):
         Snipes the most recently deleted message in the channel.
 
         :param ctx: The context of where the command was used
+
+        :type ctx: commands.Context
+
         :return: None
+        :rtype: None
         """
         sql = SQL('b0ssbot')
         if message := sql.select(
@@ -96,8 +104,7 @@ class Util(commands.Cog):
                 colour=discord.Colour.green()
             ).set_footer(
                 text=f'Enable modlogs for more information. Type {command_prefix}help modlogs for more information')
-            if ctx.guild.icon:
-                embed.set_thumbnail(url=ctx.guild.icon)
+            embed.set_thumbnail(url=ctx.guild.icon or discord.Embed.Empty)
             embed.add_field(name='Attachments', value='\n\n'.join(message[0][4]))
 
             await ctx.send(embed=embed)
@@ -111,7 +118,13 @@ class Util(commands.Cog):
         
         :param ctx: The context of where the command was used
         :param error: The error that occurred
-        :return: None"""
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
     # AFK command
@@ -122,8 +135,12 @@ class Util(commands.Cog):
         
         :param ctx: The context of where the command was used
         :param reason: The reason for being AFK
+
+        :type ctx: commands.Context
+        :type reason: str
         
         :return: None
+        :rtype: None
         """
         member = ctx.author
         reason = reason.replace("'", "''")
@@ -140,7 +157,7 @@ class Util(commands.Cog):
                            f'\'{reason}\''])
 
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour, timestamp=datetime.datetime.now())
-        embed.set_thumbnail(url=str(member.avatar) if member.avatar else str(member.default_avatar))
+        embed.set_thumbnail(url=member.display_avatar)
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='AFK note', value=reason.replace("''", "'"))
         await ctx.send(embed=embed)
@@ -152,8 +169,12 @@ class Util(commands.Cog):
         
         :param ctx: The context of where the command was used
         :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
         
         :return: None
+        :rtype: None
         """
         await send_error_embed(ctx, description=f'Error: `{error}`')
 
@@ -164,8 +185,11 @@ class Util(commands.Cog):
         Replies with the latency of the bot.
         
         :param ctx: The context of where the command was used
+
+        :type ctx: commands.Context
         
         :return: None
+        :rtype: None
         """
         latency = round(self.bot.latency * 1000)
         embed = discord.Embed(
@@ -184,8 +208,12 @@ class Util(commands.Cog):
         
         :param ctx: The context of where the command was used
         :param limit: The amount of messages to purge
-        a
+        
+        :type ctx: commands.Context
+        :type limit: int
+
         :return: None
+        :rtype: None
         """
         await ctx.message.delete()
         await ctx.channel.purge(limit=limit, check=lambda m: not m.pinned)
@@ -203,7 +231,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
 
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
         :return: None
+        :rtype: None
         """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
@@ -224,7 +256,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param question: The question for the poll
 
+        :type ctx: commands.Context
+        :type question: str
+
         :return: None
+        :rtype: None
         """
         embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.random())
         msg = await ctx.send(embed=embed)
@@ -240,7 +276,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
 
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
         :return: None
+        :rtype: None
         """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
@@ -260,7 +300,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param message_reference: The message ID or link to refer to
 
-        :return: None 
+        :type ctx: commands.Context
+        :type message_reference: str
+
+        :return: None
+        :rtype: None
         """
         message_id = message_reference
         if message_reference.startswith('https://discord.com/channels/'):  # Message ID
@@ -268,23 +312,18 @@ class Util(commands.Cog):
 
         try:
             message = await ctx.fetch_message(message_id)
-
-            if message.embeds:  # Send the embeds in the original message
-                for index, embed in enumerate(message.embeds):
-                    await ctx.send(f'Embed no. {index + 1}', embed=embed)
-
-            embed = discord.Embed(colour=message.author.colour, timestamp=datetime.datetime.now())
-            embed.set_author(name=message.author,
-                             icon_url=str(message.author.avatar) if message.author.avatar else str(
-                                 message.author.default_avatar))
-            embed.add_field(name=message.content or "Message does not contain content",
-                            value=f'\n[Jump to message]({message.jump_url})')
-            embed.set_footer(text=f'Requested by {ctx.author}',
-                             icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(
-                                 ctx.author.default_avatar))
-            await ctx.send(embed=embed)
         except discord.NotFound:
             await send_error_embed(ctx, description='Message not found')
+        else:
+            embed = discord.Embed(colour=message.author.colour, timestamp=datetime.datetime.now())
+            embed.set_author(name=message.author, icon_url=message.author.display_avatar, url=message.jump_url)
+            embed.add_field(name=message.content or "Message does not contain content",
+                            value=f'\n[Jump to message]({message.jump_url})')
+            embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+            await ctx.send(embed=embed)
+
+            if message.embeds:
+                await ctx.send('Message contains embeds', embeds=message.embeds)
 
     @refer.error
     async def refer_error(self, ctx, error):
@@ -294,7 +333,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
 
-        :return: None 
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
         """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
@@ -314,7 +357,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param new_prefix: The new prefix for the guild
 
-        :return: None 
+        :type ctx: commands.Context
+        :type new_prefix: str
+
+        :return: None
+        :rtype: None
         """
         if len(new_prefix) > 2:
             await ctx.send('Prefix must be 2 characters or less')
@@ -325,9 +372,7 @@ class Util(commands.Cog):
         embed = discord.Embed(
             description=f'Prefix changed to **{new_prefix}**',
             colour=discord.Colour.green()
-        )
-        if ctx.guild.icon:
-            embed.set_thumbnail(url=ctx.guild.icon)
+        ).set_thumbnail(url=ctx.guild.icon or discord.Embed.Empty)
         await ctx.reply(embed=embed)
 
     @prefix.error
@@ -338,7 +383,11 @@ class Util(commands.Cog):
         :param ctx: The context of where the command was used
         :param error: The error that occurred
 
-        :return: None 
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
         """
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,

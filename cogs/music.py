@@ -113,24 +113,25 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        with contextlib.suppress(AttributeError, KeyError):
-            # The player is disconnected when there is no one in the voice channel
-            vc = discord.utils.get(self.bot.voice_clients, guild=member.guild)
-            if len(before.channel.members) == 1 and after != before:
-                self.sql.delete(table='queue', where=f"guild_id = '{member.guild.id}'")
-                self.sql.delete(table='loop', where=f"guild_id = '{member.guild.id}'")
-                
-                vc.stop()
-                await vc.disconnect()
+        vc = member.guild.voice_client
+        if not vc:
+            return
 
-                # Delete all the keys storing the guild's information
-                del self.now_playing[member.guild.id]
-                del self.now_playing_url[member.guild.id]
-                del self.start_time[member.guild.id]
-                del self.source[member.guild.id]
-                del self.volume[member.guild.id]
-                del self.pause_time[member.guild.id]
-                del self.music_view[member.guild.id]
+        if list(filter(lambda m: not m.bot, vc.channel.members)):
+            return
+
+        vc.stop()
+        await vc.disconnect()
+
+        # Delete all the keys storing the guild's information
+        with contextlib.suppress(KeyError):
+            del self.now_playing[member.guild.id]
+            del self.now_playing_url[member.guild.id]
+            del self.start_time[member.guild.id]
+            del self.source[member.guild.id]
+            del self.volume[member.guild.id]
+            del self.pause_time[member.guild.id]
+            del self.music_view[member.guild.id]
 
     # Searches YouTube for the item.
     # Possible errors:
@@ -895,7 +896,7 @@ class Music(commands.Cog):
         # Removing the track from the queue
         remove = self.sql.select(elements=['title', 'url', 'source'], table='queue',
                                  where=f"guild_id = '{ctx.guild.id}'")
-        remove_title = remove[track_number - 1][0]
+        remove_title = remove[track_number - 1][0].replace("'", "''")
         remove_url = remove[track_number - 1][1]
         if len(remove) > 1:
             self.sql.delete(table='queue',
@@ -904,6 +905,7 @@ class Music(commands.Cog):
             self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{remove_title}'")
 
         # Response embed
+        remove_title = remove_title.replace("''", "'")
         embed = discord.Embed(description=f'Removed **[{remove_title}]({remove_url})** from the queue',
                               colour=discord.Colour.random())
         await ctx.send(embed=embed)
@@ -989,6 +991,7 @@ class Music(commands.Cog):
             except discord.HTTPException:
                 with open(f'lyrics_{ctx.author.id}.txt', 'w') as f:
                     f.write(f'{title}\n\n')
+
                     f.write(lyrics)
                     f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
                 
