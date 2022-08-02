@@ -6,6 +6,8 @@ import time
 import asyncpraw
 import requests
 import os
+import sys
+from discord.ext.commands import Bot
 from asyncpraw.reddit import Submission
 from typing import List, Dict
 from googleapiclient.discovery import build
@@ -182,3 +184,18 @@ def log_history(member_id: int, query: str, type_: str, timestamp: int, guild_id
         for index, _ in enumerate(range(len(history) - 50)):
             sql.delete('history', f"timestamp = {timestamp}")
             timestamp = history[index][4]
+
+
+async def inform_owner(bot: Bot, error: Exception):
+    """
+    Sends an error embed to the owner of the bot
+
+    Parameters
+    ----------
+    bot : Bot
+        The bot
+    error : CommandError
+        The error
+    """
+    owner = bot.get_user(800018344702640180)
+    await owner.send(f'An unexpected error occured: {error}')

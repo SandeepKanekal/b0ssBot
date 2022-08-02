@@ -2,7 +2,7 @@
 # Information commands defined here
 import discord
 import datetime
-from tools import send_error_embed, convert_to_unix_time
+from tools import send_error_embed, convert_to_unix_time, inform_owner
 from discord.ext import commands
 
 
@@ -92,7 +92,8 @@ class Info(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please mention a valid user\n\nProper Usage: `{self.bot.get_command("userinfo").usage}`')
             return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error occurred while running the userinfo command! The owner has been notified.')
+        await inform_owner(ctx, error)
 
     # Serverinfo command
     @commands.command(aliases=['si', 'server'], description='Shows the server information', usage='serverinfo')
@@ -298,7 +299,8 @@ class Info(commands.Cog):
             await send_error_embed(ctx,
                                    f'Missing required argument. Please specify a role\n\nProper Usage: `{self.bot.get_command("roleinfo").usage}`')
         else:
-            await send_error_embed(ctx, f'Error: `{error}`')
+            await send_error_embed(ctx, 'An error has occurred while running the roleinfo command.')
+            await inform_owner(self.bot, error)
 
 
 # Setup

@@ -8,7 +8,7 @@ import datetime
 from PIL import Image, ImageChops
 from pyzbar.pyzbar import decode
 from discord.ext import commands
-from tools import convert_to_unix_time
+from tools import convert_to_unix_time, inform_owner
 
 
 class Context(commands.Cog):
@@ -38,10 +38,12 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Inform the user if there is no content in the message
         if not message.content:
             await ctx.respond(content='There is no content in the message provided', ephemeral=True)
             return
         
+        # Create a QR Code
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -50,9 +52,15 @@ class Context(commands.Cog):
         )
         qr.add_data(message.content)
         qr.make(fit=True)
+
+        # Save the image
         img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
         img.save(f'QR_{message.id}.png')
+
+        # Send the image
         await ctx.respond(content=f'Message: {message.jump_url}', file=discord.File(f'QR_{message.id}.png', 'QR.png'))
+
+        # Delete the saved image
         os.remove(f'QR_{message.id}.png')
     
     @generate_qr.error
@@ -69,7 +77,8 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`')
+        await ctx.respond('There was an error generating the QR code! The owner has been informed', ephemeral=True)
+        await inform_owner(self.bot, error)
 
     @commands.message_command(name='Scan QR codes')
     async def scan_qr(self, ctx, message: discord.Message):
@@ -85,28 +94,42 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
-        if message.attachments:
-            embed = discord.Embed(title='QR Scan results', description=f'[Jump to message]({message.jump_url})', colour=0x848585).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
-            await ctx.interaction.response.defer()
-
-            for index, attachment in enumerate(message.attachments):
-                with open(f'{attachment.filename}_{message.id}', 'wb') as f:
-                    f.write(requests.get(attachment.url).content)
-                try:
-                    data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
-                    for code in data:
-                        embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```' if code.data else "No data present in the QR Code", inline=False)
-                except Exception as e:
-                    embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
-                os.remove(f'{attachment.filename}_{message.id}')
-                    
-            if embed.fields:
-                await ctx.respond(embed=embed)
-            else:
-                await ctx.respond('No QR codes found')
+        # Inform the user if there is no attachment in the message.
+        if not message.attachments:
+            await ctx.respond(content='There are no attachments in the message provided', ephemeral=True)
             return
-            
-        await ctx.respond('No attachment found')
+
+        # Create embed
+        embed = discord.Embed(
+            title='QR Scan results', 
+            description=f'[Jump to message]({message.jump_url})', 
+            colour=0x848585
+        ).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
+
+        # Defer the response
+        await ctx.interaction.response.defer()
+
+        for index, attachment in enumerate(message.attachments):
+            # Save the image
+            with open(f'{attachment.filename}_{message.id}', 'wb') as f:
+                f.write(requests.get(attachment.url).content)
+            try:
+                # Decode the image
+                data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
+                for code in data:
+                    embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```' if code.data else "No data present in the QR Code", inline=False)
+            except Exception as e:
+                # Handle errors
+                embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
+            finally:
+                # Delete the saved image
+                os.remove(f'{attachment.filename}_{message.id}')
+
+        # Respond only if there are fields.
+        if embed.fields:
+            await ctx.respond(embed=embed)
+        else:
+            await ctx.respond('No QR codes found')
 
     @scan_qr.error
     async def scan_qr_error(self, ctx, error):
@@ -122,7 +145,8 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`')
+        await ctx.respond('There was an error scanning the QR code! The owner has been informed', ephemeral=True)
+        await inform_owner(self.bot, error)
     
     @commands.user_command(name='User Information')
     async def userinfo(self, ctx, member: discord.Member):
@@ -142,11 +166,17 @@ class Context(commands.Cog):
         joined_at = member.joined_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
         registered_at = member.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
 
+        # Converting to unix timestamps
         joined_at = convert_to_unix_time(joined_at)  # type: str
         registered_at = convert_to_unix_time(registered_at)  # type: str
 
+        # Creating the embed
         embed = discord.Embed(colour=member.colour, timestamp=datetime.datetime.now())
         embed.set_author(name=str(member), icon_url=member.display_avatar)
+        embed.set_footer(text=f'ID: {member.id}')
+        embed.set_thumbnail(url=member.display_avatar)
+
+        # Adding the fields
         embed.add_field(name='Display Name', value=member.mention, inline=True)
         embed.add_field(name='Top Role', value=member.top_role.mention, inline=True)
 
@@ -158,10 +188,8 @@ class Context(commands.Cog):
         
         embed.add_field(name='Permissions', value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]), inline=False)
 
-        embed.set_thumbnail(url=member.display_avatar)
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
-        embed.set_footer(text=f'ID: {member.id}')
 
         await ctx.respond(embed=embed)
     
@@ -179,34 +207,41 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Inform the user if there is no attachment in the message.
         if not message.attachments:
             await ctx.respond('No attachment found', ephemeral=True)
             return
         
+        # Defer the response
         await ctx.interaction.response.defer()
 
         content = ''
         files: list[discord.File] | None = []
 
         for index, image in enumerate(message.attachments):
+            # Save the image
             with open(f'{index}_{message.id}.png', 'wb') as f:
                 f.write(requests.get(image.url).content)
             
+            # Check if the size is larger than 8MB
             if os.path.getsize(f'{index}_{message.id}.png') > 8000000:
                 content += f'Image {index + 1} is larger than 8 megabytes.'
                 os.remove(f'{index}_{message.id}.png')
                 continue
             
+            # Invert the image
             img = Image.open(f'{index}_{message.id}.png')
             invert = ImageChops.invert(img.convert('RGB'))
             invert.save(f'{index}_{message.id}_inverted.png')
 
+            # Add the file to the list
             files.append(discord.File(f'{index}_{message.id}_inverted.png', filename='invert.png'))
 
         await ctx.respond(f'Message: {message.jump_url}{content}', files=files)
 
         files = None  # Raises PermissionError if not set to None before deletion of files.
 
+        # Delete the saved images
         for index in range(len(message.attachments)):
             os.remove(f'{index}_{message.id}.png')
             os.remove(f'{index}_{message.id}_inverted.png')
@@ -225,7 +260,8 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`')
+        await ctx.respond('There was an error inverting the attachments! The owner has been informed', ephemeral=True)
+        await inform_owner(self.bot, error)
 
 
 def setup(bot):

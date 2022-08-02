@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import discord
 import datetime
-from tools import send_error_embed, convert_to_unix_time
+from tools import send_error_embed, convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from discord.ext import commands
 
@@ -125,7 +125,11 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        if isinstance(error, commands.MissingPermissions):
+            await send_error_embed(ctx, 'You do not have the required permissions to use this command.')
+        else:
+            await send_error_embed(ctx, 'An error occurred while running the snipe command! The owner has been informed.')
+            await inform_owner(self.bot, error)
 
     # AFK command
     @commands.command(name='afk', description='Marks the user as AFK', usage='afk <reason>')
@@ -176,7 +180,8 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, 'An error occurred while running the afk command! The owner has been informed.')
+        await inform_owner(self.bot, error)
 
     # Ping command
     @commands.command(name="ping", description='Replies with the latency of the bot', usage='ping')
@@ -193,7 +198,7 @@ class Util(commands.Cog):
         """
         latency = round(self.bot.latency * 1000)
         embed = discord.Embed(
-            description=f'**Pong!!** Bot latency is {str(latency)}ms',
+            description=f'**Pong!!** Bot latency is {latency}ms',
             colour=discord.Colour.yellow())
         await ctx.reply(embed=embed)
 
@@ -240,12 +245,14 @@ class Util(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Provide a limit\n\nProper Usage: `{self.bot.get_command("clear").usage}`')
-            return
-        if isinstance(error, commands.BadArgument):
+        elif isinstance(error, commands.BadArgument):
             await send_error_embed(ctx,
                                    description=f'Provide a valid number\n\nProper Usage: `{self.bot.get_command("clear").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        elif isinstance(error, commands.MissingPermissions):
+            await send_error_embed(ctx, 'You do not have the required permissions to use this command.')
+        else:
+            await send_error_embed(ctx, description='An error occurred while running the clear command! The owner has been informed.')
+            await inform_owner(self.bot, error)
 
     # Poll command
     @commands.command(name='poll', description='Make a poll!', usage='poll <question>')
@@ -285,10 +292,10 @@ class Util(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Provide a question\n\nProper Usage: `{self.bot.get_command("poll").usage}`')
-            return
 
         else:
-            await send_error_embed(ctx, description=f'Error: `{error}`')
+            await send_error_embed(ctx, 'An error occurred while running the poll command! The owner has been informed.')
+            await inform_owner(self.bot, error)
 
     # Refer command
     @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter',
@@ -345,7 +352,8 @@ class Util(commands.Cog):
         elif isinstance(error, commands.CommandInvokeError) and isinstance(error.__cause__, discord.HTTPException):
             await send_error_embed(ctx, description='Provided argument is not a message ID or link')
         else:
-            await send_error_embed(ctx, description=f'Error: `{error}`')
+            await send_error_embed(ctx, 'An error occurred while running the refer command! The owner has been informed.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild',
                       usage='prefix <new_prefix>')
@@ -392,8 +400,9 @@ class Util(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Provide a prefix\n\nProper Usage: `{self.bot.get_command("prefix").usage}`')
-            return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        else:
+            await send_error_embed(ctx, description='An error occurred while running the prefix command! The owner has been informed.')
+            await inform_owner(self.bot, error)
 
 
 def setup(bot):

@@ -2,7 +2,7 @@
 # All misc commands stored here
 import datetime
 import discord
-from tools import send_error_embed
+from tools import send_error_embed, inform_owner
 from discord.ext import commands
 
 
@@ -58,7 +58,8 @@ class Misc(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("spam").usage}`')
             return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error has occurred while running the spam command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
     # Av command
     @commands.command(aliases=['av', 'pfp'], description='Shows the specified user\'s avatar', usage='avatar <user>')
@@ -101,7 +102,8 @@ class Misc(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please specify a valid user\n\nProper Usage: `{self.bot.get_command("avatar").usage}`')
             return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error has occurred while running the avatar command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
     # Servericon command
     @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon',
@@ -176,7 +178,8 @@ class Misc(commands.Cog):
         elif isinstance(error, discord.HTTPException):
             await send_error_embed(ctx, description='Your message is too long!')  
         else:
-            await send_error_embed(ctx, description=f'Error: `{error}`')
+            await send_error_embed(ctx, description='An error has occurred while running the megaspam command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
 
 # Setup

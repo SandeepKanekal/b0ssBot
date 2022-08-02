@@ -7,10 +7,11 @@ import os
 import asyncio
 from discord.ext import commands
 from discord.commands import Option, SlashCommandGroup
-from tools import convert_to_unix_time
+from tools import convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from googleapiclient.discovery import build
 from PIL import Image, ImageChops, UnidentifiedImageError
+from view import EmbedView
 
 
 class Slash(commands.Cog):
@@ -61,7 +62,11 @@ class Slash(commands.Cog):
         :type ctx: discord.ApplicationContext
         :type error: discord.ApplicationCommandInvokeError
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to change the prefix')
+        else:
+            await ctx.respond('An error has occurred while running the prefix command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     @commands.slash_command(name='userinfo',
                             description='Shows the mentioned user\'s information. Leave it blank to get your information',
@@ -122,7 +127,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        await ctx.respond('An error has occurred while running the userinfo command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
 
     @commands.slash_command(name='avatar', description='Shows the specified user\'s avatar', usage='avatar <user>')
     async def avatar(self, ctx,
@@ -162,7 +168,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        await ctx.respond('An error has occurred while running the avatar command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
     
     youtubenotification = SlashCommandGroup(name='youtubenotification', description='Configure YouTube notifications for the server')
 
@@ -231,7 +238,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the youtube add command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @youtubenotification.command(name='remove', description='Remove a YouTube channel from the server')
     @commands.has_permissions(manage_guild=True)
@@ -286,7 +297,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the youtube remove command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @youtubenotification.command(name='list', description='List all YouTube channels added to the server')
     async def youtubenotification_list(self, ctx):
@@ -332,7 +347,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        await ctx.respond('An error has occurred while running the youtube list command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
     
     @youtubenotification.command(name='clear', description='Clear all YouTube channels added to the server')
     @commands.has_permissions(manage_guild=True)
@@ -365,7 +381,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the youtube clear command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @youtubenotification.command(name='update', description='Update YouTube notification configurations')
     @commands.has_permissions(manage_guild=True)
@@ -433,7 +453,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the youtube update command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     warn = SlashCommandGroup(name='warn', description='Warn a user')
 
@@ -497,7 +521,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the warn add command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @warn.command(name='remove', description='Removes the member\'s oldest warn')
     @commands.has_permissions(moderate_members=True)
@@ -552,7 +580,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the warn remove command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @warn.command(name='list', description='Lists the member\'s warns')
     @commands.has_permissions(moderate_members=True)
@@ -601,7 +633,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the warn list command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @warn.command(name='clear', description='Clears the member\'s warns')
     @commands.has_permissions(moderate_members=True)
@@ -646,7 +682,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the warn clear command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     messageresponse = SlashCommandGroup('messageresponse', 'Configure chat responses')
 
@@ -698,7 +738,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the messageresponse add command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @messageresponse.command(name='remove', description='Removes a chat response')
     @commands.has_permissions(manage_messages=True)
@@ -743,7 +787,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the messageresponse remove command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @messageresponse.command(name='list', description='Lists all chat responses')
     async def messageresponse_list(self, ctx):
@@ -795,7 +843,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        await ctx.respond('An error has occurred while running the messageresponse list command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
     
     @messageresponse.command(name='clear', description='Clears all chat responses')
     @commands.has_permissions(manage_messages=True)
@@ -828,7 +877,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the messageresponse clear command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     @commands.slash_command(name='mute', description='Mutes the user specified', usage='mute <user> <duration>')
     @commands.has_permissions(manage_messages=True)
@@ -913,7 +966,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the mute command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     @commands.slash_command(name='unmute', description='Unmutes the user specified', usage='unmute <user>')
     @commands.has_permissions(manage_messages=True)
@@ -965,7 +1022,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the unmute command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     timeout = SlashCommandGroup('timeout', 'Manage timeouts for users')
 
@@ -1029,7 +1090,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the timeout add command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @timeout.command(name='remove', description='Remove a timeout from a user')
     @commands.has_permissions(moderate_members=True)
@@ -1079,7 +1144,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the timeout remove command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     # Code command
     @commands.slash_command(name='code',
@@ -1123,7 +1192,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        await ctx.respond('An error has occurred while running the code command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
 
     @commands.slash_command(name='roleinfo', aliases=['role', 'ri'], description='Shows the information of a role',
                             usage='roleinfo <role>')
@@ -1195,7 +1265,8 @@ class Slash(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.respond('Invalid role', ephemeral=True)
         else:
-            await ctx.respond(f'Error: `{error}`', ephemeral=True)
+            await ctx.respond('An error has occurred while running the roleinfo command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     @commands.slash_command(name='invert', description='Invert avatars or images from URLs!',
                             usage='invert <member> or <url>')
@@ -1265,74 +1336,27 @@ class Slash(commands.Cog):
             await ctx.respond('Invalid URL', ephemeral=True)
             with contextlib.suppress(FileNotFoundError, IndexError):
                 os.remove(f'image_{ctx.author.id}.png')
-                await asyncio.sleep(10)
                 os.remove(list(filter(lambda n: '_inverted.png' in n, os.listdir('./')))[0])
         else:
-            await ctx.respond(f'Error: `{error}`', ephemeral=True)
+            await ctx.respond('An error has occurred while running the invert command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     @commands.slash_command(name='embed', description='Make an embed! Visit https://imgur.com/a/kbFJCL1 for more info')
-    async def embed(self, ctx,
-                    channel: Option(discord.TextChannel, description='Channel to send the embed to', required=True),
-                    title: Option(str, description='Title of the embed', required=True),
-                    description: Option(str, description='Description of the embed', required=True),
-                    colour: Option(int, description='HEX code for the colour of the embed as an octal integer',
-                                   required=False, default=0x000000),
-                    url: Option(str, description='URL of the embed', required=False, default=None),
-                    image: Option(str, description='URL of the image', required=False, default=None),
-                    thumbnail: Option(str, description='URL of the thumbnail', required=False, default=None),
-                    author: Option(discord.Member, description='Author of the embed', required=False, default=None),
-                    footer: Option(str, description='Footer of the embed', required=False, default=None),
-                    timestamp: Option(str, description='Timestamp of the embed', required=False,
-                                      choices=['True', 'False'], default=None)):
+    async def embed(self, ctx, channel: Option(discord.TextChannel, description='The channel to send the embed in', required=True)):
         """
-        Makes an embed
-        
-        :param ctx: command context
-        :param channel: channel to send the embed to
-        :param title: title of the embed
-        :param description: description of the embed
-        :param colour: hex code for the colour of the embed
-        :param url: url of the embed
-        :param image: url of the image
-        :param thumbnail: url of the thumbnail
-        :param author: author of the embed
-        :param footer: footer of the embed
-        :param timestamp: timestamp of the embed
+        Send an embed to the channel specified.
+
+        :param ctx: The context of the command.
+        :param channel: The channel to send the embed to
 
         :type ctx: discord.ApplicationContext
         :type channel: discord.TextChannel
-        :type title: str
-        :type description: str
-        :type colour: int
-        :type url: str
-        :type image: str
-        :type thumbnail: str
-        :type author: discord.Member
-        :type footer: str
-        :type timestamp: str
-        
+
         :return: None
-        :rtype: None
+        :rtype: None        
         """
-        await ctx.interaction.response.defer()
-        embed = discord.Embed(title=title, description=description, url=url, colour=colour)
-
-        if author:
-            embed.set_author(name=author.display_name, icon_url=author.display_avatar)
-
-        if footer:
-            embed.set_footer(text=footer)
-
-        if image:
-            embed.set_image(url=image)
-
-        if thumbnail:
-            embed.set_thumbnail(url=thumbnail)
-
-        embed.timestamp = datetime.datetime.now() if timestamp == 'True' else discord.Embed.Empty
-
-        await channel.send(embed=embed)
-        await ctx.respond('Embed sent!')
+        embed = discord.Embed(title='This is the title', description='This is the description')
+        await ctx.respond(content='This is how the embed will look!', embed=embed, view=EmbedView(embed, channel, timeout=None))
 
     @embed.error
     async def embed_error(self, ctx, error):
@@ -1432,7 +1456,8 @@ class Slash(commands.Cog):
         elif isinstance(error, OverflowError):
             await ctx.respond('Time provided is too far off in the past/future', ephemeral=True)
         else:
-            await ctx.respond(f'Error: {error}', ephemeral=True)
+            await ctx.respond('An error has occurred while running the datetime command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     verify = SlashCommandGroup('verify', 'Manage verification systems')
     
@@ -1489,7 +1514,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have permission to use this command', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the verify add command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
 
     @verify.command(name='remove', description='Remove a verifying message')
     @commands.has_permissions(manage_guild=True)
@@ -1528,7 +1557,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have permission to use this command', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the verify remove command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @verify.command(name='update', description='Update the verification system for the server')
     @commands.has_permissions(manage_guild=True)
@@ -1578,7 +1611,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have permission to use this command', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the verify update command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @commands.slash_command(name='history', description='View your or another user\'s internet search history')
     async def history(self, ctx, member: Option(discord.Member, description='The user to get the history of', required=False, default=None)):
@@ -1664,7 +1701,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have permission to use this command', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the serverjoin add command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @serverjoin.command(name='remove', description='Remove the serverjoin configurations')
     @commands.has_permissions(manage_roles=True)
@@ -1703,7 +1744,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have permission to use this command', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the serverjoin remove command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @serverjoin.command(name='update', description='Update the role to be added when a member/bot joins the server')
     @commands.has_permissions(manage_roles=True)
@@ -1750,7 +1795,11 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have permission to use this command', ephemeral=True)
+        else:
+            await ctx.respond('An error has occurred while running the serverjoin update command! The owner has been notified.', ephemeral=True)
+            await inform_owner(self.bot, error)
     
     @serverjoin.command(name='list', description='List the roles to be added when a member/bot joins the server')
     async def serverjoin_list(self, ctx):
@@ -1793,7 +1842,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond(f'Error: {error}', ephemeral=True)
+        await ctx.respond('An error has occurred while running the serverjoin list command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
 
 
 def setup(bot):

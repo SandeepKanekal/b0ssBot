@@ -7,7 +7,7 @@ import time
 import asyncio
 import view
 from discord.ext import commands
-from tools import send_error_embed
+from tools import send_error_embed, inform_owner
 
 
 class Games(commands.Cog):
@@ -92,7 +92,8 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please ask a question!\n\nProper Usage: `{self.bot.get_command("8ball").usage}`')
             return
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error occured while running the 8ball command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
     @commands.command(aliases=['roll'], description='Rolls a dice', usage='dice')
     @commands.guild_only()
@@ -185,6 +186,9 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        else:
+            await send_error_embed(ctx, description='An error occured while running the truth command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='dare', description='Get a dare', usage='dare <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -236,6 +240,9 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        else:
+            await send_error_embed(ctx, description='An error occured while running the dare command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='truthordare', aliases=['tord'], description='Get a truth or dare',
                       usage='truthordare <rating>')
@@ -293,6 +300,9 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        else:
+            await send_error_embed(ctx, description='An error occured while running the truthordare command! The owner has been notified.')
+            await inform_owner(self.bot, error)
         # OMG! You have found the egg! Here's your prize! https://imgur.com/pSB4AnR
 
     @commands.command(name='wouldyourather', aliases=['wyr'], description='Get a would you rather',
@@ -323,7 +333,6 @@ class Games(commands.Cog):
 
         data = requests.get(f'https://api.truthordarebot.xyz/v1/wyr?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/wyr').json()
 
-
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
         embed.set_author(name='Would You Rather', icon_url=self.bot.user.avatar)
@@ -346,6 +355,9 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        else:
+            await send_error_embed(ctx, description='An error occured while running the wouldyourather command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='neverhaveiever', aliases=['nhie'], description='Get a never have I ever',
                       usage='neverhaveiever <rating>')
@@ -398,6 +410,9 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        else:
+            await send_error_embed(ctx, description='An error occured while running the neverhaveiever command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='paranoia', description='Get a paranoia question', usage='paranoia <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -448,6 +463,9 @@ class Games(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
+        else:
+            await send_error_embed(ctx, description='An error occured while running the paranoia command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='guessthenumber', aliases=['gtn'], description='Guess the number',
                       usage='guessthenumber <limit>')
@@ -520,7 +538,8 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error occured while running the guessthenumber command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
     @commands.command(name='tictactoe', aliases=['ttt'], description='Play Tic Tac Toe', usage='ttt <player>')
     async def tictactoe(self, ctx, player: discord.Member):
@@ -561,7 +580,8 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error occured while running the tictactoe command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
 
 def setup(bot):

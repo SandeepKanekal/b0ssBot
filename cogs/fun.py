@@ -7,7 +7,7 @@ import requests
 import os
 import view
 from discord.ext import commands
-from tools import send_error_embed, get_random_post
+from tools import send_error_embed, get_random_post, inform_owner
 from PIL import Image, ImageChops
 
 
@@ -69,7 +69,8 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error occurred while running the meme command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
     # Dankvideo command
     @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from the dankest subreddits',
@@ -108,7 +109,8 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description=f'Error: `{error}`')
+        await send_error_embed(ctx, description='An error occurred while running the dankvideo command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
     @commands.command(name='invert', description='Invert your or another user\'s avatar', usage='invert <member>')
     async def invert(self, ctx, member: discord.Member = None):
@@ -157,7 +159,8 @@ class Fun(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await send_error_embed(ctx, description='Please provide a valid member.')
         else:
-            await send_error_embed(ctx, description=f'Error: `{error}`')
+            await send_error_embed(ctx, description='An error occurred while running the invert command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='dadjoke', description='Posts a dad joke', usage='dadjoke')
     async def dadjoke(self, ctx):
