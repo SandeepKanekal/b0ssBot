@@ -1,0 +1,14 @@
+git+https://github.com/Pycord-Development/pycord
+git+https://github.com/ytdl-org/youtube-dl
+PyNaCl
+asyncpraw
+Flask
+lyrics_extractor
+wikipedia
+google-api-python-client
+youtube-search-python
+psycopg2
+pillow
+pyzbar
+qrcode
+imgurpython
