@@ -12,7 +12,7 @@ from tools import convert_to_unix_time, inform_owner
 
 
 class Context(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initializes the context class.
         
@@ -25,7 +25,7 @@ class Context(commands.Cog):
         self.bot = bot
     
     @commands.message_command(name='Generate QR Code')
-    async def generate_qr(self, ctx, message: discord.Message):
+    async def generate_qr(self, ctx: discord.ApplicationContext, message: discord.Message):
         """
         Generates a QR code from a message
 
@@ -64,7 +64,7 @@ class Context(commands.Cog):
         os.remove(f'QR_{message.id}.png')
     
     @generate_qr.error
-    async def generate_qr_error(self, ctx, error):
+    async def generate_qr_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
         Error handler for the generate_qr command
 
@@ -81,7 +81,7 @@ class Context(commands.Cog):
         await inform_owner(self.bot, error)
 
     @commands.message_command(name='Scan QR codes')
-    async def scan_qr(self, ctx, message: discord.Message):
+    async def scan_qr(self, ctx: discord.ApplicationContext, message: discord.Message):
         """
         Scans a QR code and returns the result
 
@@ -132,7 +132,7 @@ class Context(commands.Cog):
             await ctx.respond('No QR codes found')
 
     @scan_qr.error
-    async def scan_qr_error(self, ctx, error):
+    async def scan_qr_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
         Error handler for the scan_qr command
 
@@ -149,7 +149,7 @@ class Context(commands.Cog):
         await inform_owner(self.bot, error)
     
     @commands.user_command(name='User Information')
-    async def userinfo(self, ctx, member: discord.Member):
+    async def userinfo(self, ctx: discord.ApplicationContext, member: discord.Member):
         """
         Get the user's information
 
@@ -192,9 +192,10 @@ class Context(commands.Cog):
         embed.add_field(name='Registered', value=registered_at, inline=True)
 
         await ctx.respond(embed=embed)
-    
+
+    # noinspection PyUnusedLocal
     @commands.message_command(name='Invert Attachments')
-    async def invert_attachments(self, ctx, message: discord.Message):
+    async def invert_attachments(self, ctx: discord.ApplicationContext, message: discord.Message):
         """
         Inverts the colors of the attachments of a message
 
@@ -247,7 +248,7 @@ class Context(commands.Cog):
             os.remove(f'{index}_{message.id}_inverted.png')
     
     @invert_attachments.error
-    async def invert_attachments_error(self, ctx, error):
+    async def invert_attachments_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
         Error handler for the invert_attachments command
 
@@ -264,7 +265,7 @@ class Context(commands.Cog):
         await inform_owner(self.bot, error)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Sets up the context cog.
     

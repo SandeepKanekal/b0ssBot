@@ -6,7 +6,6 @@ import time
 import asyncpraw
 import requests
 import os
-import sys
 from discord.ext.commands import Bot
 from asyncpraw.reddit import Submission
 from typing import List, Dict
@@ -198,4 +197,4 @@ async def inform_owner(bot: Bot, error: Exception):
         The error
     """
     owner = bot.get_user(800018344702640180)
-    await owner.send(f'An unexpected error occured: {error}')
+    await owner.send(f'An unexpected error occurred: {error}')

@@ -10,7 +10,7 @@ from discord.ext import commands
 
 
 class Util(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     # A listener which defines what must be done when a message is deleted
@@ -28,14 +28,15 @@ class Util(commands.Cog):
         """
         sql = SQL('b0ssbot')
 
+        # Replace single quotes with double quotes
         content = message.content.replace("'", "''")
 
         if not isinstance(message.author, discord.Member):
             return
 
+        # Make a list of values
         if message.attachments:
-            attachment_str = ''.join(f"'{attachment.url}', " for attachment in message.attachments)
-            attachment_str = attachment_str[:-2]
+            attachment_str = ', '.join(f"'{attachment.url}'" for attachment in message.attachments)
             values = [f'\'{message.author.id}\'', f'\'{content}\'', f'\'{message.channel.id}\'',
                       f'\'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")}\'', f"'{message.guild.id}'",
                       f"ARRAY[{attachment_str}]"]
@@ -46,6 +47,7 @@ class Util(commands.Cog):
                       "ARRAY['None']"]
             attachment_str = "ARRAY['None']"
 
+        # Update databse
         if sql.select(elements=['*'], table='snipes',
                       where=f'guild_id = \'{message.guild.id}\' AND channel_id = \'{message.channel.id}\''):
             sql.update(table='snipes', column='message', value=f'\'{content}\'',
@@ -61,6 +63,8 @@ class Util(commands.Cog):
             else:
                 sql.update(table='snipes', column='attachments', value="ARRAY['None']",
                            where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
+        
+        # Insert into database
         else:
             sql.insert(table='snipes',
                        columns=['author_id', 'message', 'channel_id', 'time', 'guild_id', 'attachments'],
@@ -69,7 +73,7 @@ class Util(commands.Cog):
     # Snipe command
     @commands.command(name='snipe', description='Snipes the most recently deleted message', usage='snipe')
     @commands.has_permissions(manage_messages=True)
-    async def snipe(self, ctx):
+    async def snipe(self, ctx: commands.Context):
         """
         Snipes the most recently deleted message in the channel.
 
@@ -81,6 +85,8 @@ class Util(commands.Cog):
         :rtype: None
         """
         sql = SQL('b0ssbot')
+
+        # Get the latest message
         if message := sql.select(
                 elements=['author_id', 'message', 'channel_id', 'time', 'attachments'],
                 table='snipes',
@@ -108,11 +114,12 @@ class Util(commands.Cog):
             embed.add_field(name='Attachments', value='\n\n'.join(message[0][4]))
 
             await ctx.send(embed=embed)
+
         else:
             await send_error_embed(ctx, 'There are no messages to snipe.')
 
     @snipe.error
-    async def snipe_error(self, ctx, error):
+    async def snipe_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the snipe command
         
@@ -133,7 +140,7 @@ class Util(commands.Cog):
 
     # AFK command
     @commands.command(name='afk', description='Marks the user as AFK', usage='afk <reason>')
-    async def afk(self, ctx, *, reason: str = 'No reason'):
+    async def afk(self, ctx: commands.Context, *, reason: str = 'No reason'):
         """
         Marks the user as AFK.
         
@@ -160,14 +167,16 @@ class Util(commands.Cog):
                    values=[f'\'{member_details}\'', f'\'{str(member.id)}\'', f'\'{str(ctx.guild.id)}\'',
                            f'\'{reason}\''])
 
+        # Create embed
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour, timestamp=datetime.datetime.now())
         embed.set_thumbnail(url=member.display_avatar)
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='AFK note', value=reason.replace("''", "'"))
+
         await ctx.send(embed=embed)
 
     @afk.error
-    async def afk_error(self, ctx, error):
+    async def afk_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the afk command
         
@@ -185,7 +194,7 @@ class Util(commands.Cog):
 
     # Ping command
     @commands.command(name="ping", description='Replies with the latency of the bot', usage='ping')
-    async def ping(self, ctx):
+    async def ping(self, ctx: commands.Context):
         """
         Replies with the latency of the bot.
         
@@ -196,18 +205,19 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        latency = round(self.bot.latency * 1000)
-        embed = discord.Embed(
-            description=f'**Pong!!** Bot latency is {latency}ms',
-            colour=discord.Colour.yellow())
-        await ctx.reply(embed=embed)
+        await ctx.reply(
+            embed=discord.Embed(
+                description=f'**Pong!!** Bot latency is {round(self.bot.latency * 1000)}ms', 
+                colour=discord.Colour.yellow()
+            )
+        )
 
     # Clear command
     @commands.command(aliases=['purge'],
                       description='Purges the amount of messages specified by the user\nPinned messages are not cleared',
                       usage='clear <limit>')
     @commands.has_permissions(manage_messages=True)
-    async def clear(self, ctx, limit: int):
+    async def clear(self, ctx: commands.Context, limit: int):
         """
         Purges the amount of messages specified by the user.
         
@@ -220,8 +230,11 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Deltet command and purge unpinned messages
         await ctx.message.delete()
         await ctx.channel.purge(limit=limit, check=lambda m: not m.pinned)
+
+        # Send confirmation
         msg = await ctx.send(f'Cleared {limit} messages')
         await asyncio.sleep(5)
         with contextlib.suppress(discord.NotFound):
@@ -229,7 +242,7 @@ class Util(commands.Cog):
 
     # Permission errors in the clear command is handled here
     @clear.error
-    async def clear_error(self, ctx, error):
+    async def clear_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the clear command
 
@@ -256,7 +269,7 @@ class Util(commands.Cog):
 
     # Poll command
     @commands.command(name='poll', description='Make a poll!', usage='poll <question>')
-    async def poll(self, ctx, *, question: str):
+    async def poll(self, ctx: commands.Context, *, question: str):
         """
         Makes a poll.
 
@@ -269,14 +282,13 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        embed = discord.Embed(title='Poll', description=question, colour=discord.Colour.random())
-        msg = await ctx.send(embed=embed)
+        msg = await ctx.send(embed=discord.Embed(title='Poll', description=question, colour=discord.Colour.random()))
         # Adding reactions
         await msg.add_reaction('👍')
         await msg.add_reaction('👎')
 
     @poll.error
-    async def poll_error(self, ctx, error):
+    async def poll_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the poll command
 
@@ -300,7 +312,7 @@ class Util(commands.Cog):
     # Refer command
     @commands.command(name='refer', description='Refers to a message, message ID or link required as a parameter',
                       usage='refer <message_id or message_link>')
-    async def refer(self, ctx, message_reference: str):
+    async def refer(self, ctx: commands.Context, message_reference: str):
         """
         Refers to a message, message ID or link required as a parameter.
 
@@ -313,10 +325,12 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Get the message ID
         message_id = message_reference
         if message_reference.startswith('https://discord.com/channels/'):  # Message ID
             message_id = message_reference.split('/')[6]
 
+        # Get the message and respond appropriately
         try:
             message = await ctx.fetch_message(message_id)
         except discord.NotFound:
@@ -333,7 +347,7 @@ class Util(commands.Cog):
                 await ctx.send('Message contains embeds', embeds=message.embeds)
 
     @refer.error
-    async def refer_error(self, ctx, error):
+    async def refer_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the refer command
 
@@ -358,7 +372,7 @@ class Util(commands.Cog):
     @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild',
                       usage='prefix <new_prefix>')
     @commands.has_permissions(manage_guild=True)
-    async def prefix(self, ctx, new_prefix):
+    async def prefix(self, ctx: commands.Context, new_prefix):
         """
         Changes the prefix of the bot for the guild.
 
@@ -375,8 +389,11 @@ class Util(commands.Cog):
             await ctx.send('Prefix must be 2 characters or less')
             return
 
+        # Update database
         sql = SQL('b0ssbot')
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
+
+        # Respond
         embed = discord.Embed(
             description=f'Prefix changed to **{new_prefix}**',
             colour=discord.Colour.green()
@@ -384,7 +401,7 @@ class Util(commands.Cog):
         await ctx.reply(embed=embed)
 
     @prefix.error
-    async def prefix_error(self, ctx, error):
+    async def prefix_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the prefix command
 
@@ -405,5 +422,15 @@ class Util(commands.Cog):
             await inform_owner(self.bot, error)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
+    """
+    Adds the util cog to the bot
+
+    :param bot: The bot
+
+    :type bot: commands.Bot
+
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Util(bot))

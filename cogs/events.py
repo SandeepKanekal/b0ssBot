@@ -23,7 +23,7 @@ def remove(nick_name: str) -> str:
 
 
 class Events(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialize the cog
 
@@ -45,12 +45,16 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        print('Bot is ready')
+        print(f'{self.bot.user.name} has logged in!')
+
+        # Change presence
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
 
+        # Start background tasks
         self.check_for_videos.start()
         self.clear_ytdl_cache.start()
 
+        # Clear the data in the music tables
         sql = SQL('b0ssbot')
         sql.delete(table='queue')
         sql.delete(table='loop')
@@ -109,7 +113,7 @@ class Events(commands.Cog):
                             embed=discord.Embed(
                                 description=f'{message.author.mention}, {member.mention} is AFK!\nAFK note: {afk_user[0][2]}',
                                 colour=discord.Colour.red()
-                            ).set_thumbnail(url=member.avatar or member.default_avatar)
+                            ).set_thumbnail(url=member.display_avatar)
                         )  # Reply to the user
 
         # Ping reply
@@ -151,7 +155,7 @@ class Events(commands.Cog):
                 await message.delete()  # Delete original message
 
     @commands.Cog.listener()
-    async def on_command(self, ctx) -> None:
+    async def on_command(self, ctx: commands.Context) -> None:
         """
         Bot activity on receiving a command
 
@@ -164,9 +168,12 @@ class Events(commands.Cog):
         """
         sql = SQL('b0ssbot')  # type: SQL
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
+
+        # Inform the user about other commands.
         if random.choice([True, False, False, False, False, False, False, False, False,
                           False]) and ctx.command != self.bot.get_command('clear'):
-            await ctx.send(f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.')
+            await ctx.send(
+                f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.')
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild) -> None:
@@ -207,6 +214,7 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Delete all the data of the guild from the database
         sql = SQL('b0ssbot')
         sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='modlogs', where=f'guild_id = \'{guild.id}\'')
@@ -219,11 +227,12 @@ class Events(commands.Cog):
         sql.delete(table='loop', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='verifications', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='serverjoin', where=f'guild_id = \'{guild.id}\'')
-    
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         """
         Bot activity on receiving a reaction
+        Used for the verification system
 
         :param payload: The payload
 
@@ -234,30 +243,41 @@ class Events(commands.Cog):
         """
         if payload.user_id == self.bot.user.id:
             return
-        
+
         sql = SQL('b0ssbot')
-        if not sql.select(elements=['message_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\''):
+        if not sql.select(elements=['message_id'], table='verifications',
+                          where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\''):
+            # Check if the message is a verification message
             return
-        
+
         if payload.emoji.name != '✅':
             return
-        
-        role_id = sql.select(elements=['role_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\'')
+
+        role_id = sql.select(elements=['role_id'], table='verifications',
+                             where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\'')  # Get the role ID
         if not role_id:
             return
         guild = self.bot.get_guild(payload.guild_id)
         role = discord.utils.get(guild.roles, id=int(role_id[0][0]))
-        
-        unverified_role_id = sql.select(['unverified_role_id'], 'verifications', f"guild_id = '{payload.guild_id}' AND message_id = '{payload.message_id}'")[0][0]
+        channel = discord.utils.get(guild.channels, id=int(sql.select(elements=['channel_id'], table='verifications',
+                                                                      where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\'')[
+                                                               0][0]))  # Get the channel
+        message = await channel.fetch_message(payload.message_id)  # Get the message
+
+        if role in payload.member.roles:
+            await message.remove_reaction('✅', payload.member)
+            return
+
+        unverified_role_id = sql.select(['unverified_role_id'], 'verifications',
+                                        f"guild_id = '{payload.guild_id}' AND message_id = '{payload.message_id}'")[0][
+            0]  # Get the unverified role ID
         if unverified_role_id != 'None':
             unverified_role = discord.utils.get(guild.roles, id=int(unverified_role_id))
             await payload.member.remove_roles(unverified_role)
-        
+
         await payload.member.add_roles(role)
 
-        channel = discord.utils.get(guild.channels, id=int(sql.select(elements=['channel_id'], table='verifications', where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\'')[0][0]))
-        message = await channel.fetch_message(payload.message_id)
-        await message.remove_reaction('✅', payload.member)
+        await message.remove_reaction('✅', payload.member)  # Remove the reaction
 
         await payload.member.send(f'You are now verified in {guild.name}')
 
@@ -265,6 +285,7 @@ class Events(commands.Cog):
     async def on_member_join(self, member: discord.Member) -> None:
         """
         Bot activity on a member joining a server
+        Used for server join role addition system.
 
         :param member: The member
 
@@ -278,9 +299,12 @@ class Events(commands.Cog):
         if not sql.select(['*'], 'serverjoin', f"guild_id = '{member.guild.id}'"):
             return
 
-        member_role_id = sql.select(['member_role_id'], 'serverjoin', f"guild_id = '{member.guild.id}'")[0][0]
-        bot_role_id = sql.select(['bot_role_id'], 'serverjoin', f"guild_id = '{member.guild.id}'")[0][0]
-        
+        member_role_id = sql.select(['member_role_id'], 'serverjoin', f"guild_id = '{member.guild.id}'")[0][
+            0]  # Get the role ID for members
+        bot_role_id = sql.select(['bot_role_id'], 'serverjoin', f"guild_id = '{member.guild.id}'")[0][
+            0]  # Get the role ID for bots
+
+        # Add roles accordingly
         if member.bot and bot_role_id:
             bot_role = discord.utils.get(member.guild.roles, id=int(bot_role_id))
             await member.add_roles(bot_role)
@@ -316,14 +340,17 @@ class Events(commands.Cog):
                 table='youtube')
 
             notifiable_channels = [channel for channel in channels if
-                                   channel[1] != youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
-                                       'id']]
+                                   channel[1] !=
+                                   youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
+                                       'id']]  # Check if the latest video in the database is the same as the latest video in the playlist
 
             for channel in notifiable_channels:
-                latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0]['id']
+                latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
+                    'id']  # Get the latest video ID
 
-                publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0]['publishedTime']
-                
+                publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0][
+                    'publishedTime']  # Get the time of publication of the latest video
+
                 if not publish_time:
                     continue
 
@@ -338,7 +365,7 @@ class Events(commands.Cog):
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
                 if webhook is None:
                     webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
-                
+
                 if isinstance(ping_role, discord.Role):
                     ping_string = "@everyone" if 'everyone' in ping_role.name else ping_role.mention
                 else:
@@ -352,7 +379,7 @@ class Events(commands.Cog):
                 sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
                            where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
         except Exception as e:
-            status = f'An error occured in check_for_videos: {e}'
+            status = f'An error occurred in check_for_videos: {e}'
         else:
             status += " Function executed without errors!"
         finally:
@@ -360,7 +387,7 @@ class Events(commands.Cog):
 
 
 # Setup
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Loads the cog
 

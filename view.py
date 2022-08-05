@@ -7,6 +7,7 @@ import contextlib
 import datetime
 from discord.ext import commands
 from tools import send_error_embed, get_quote
+from asyncpraw.reddit import Submission
 
 
 # noinspection PyUnusedLocal
@@ -24,15 +25,16 @@ class YouTubeSearchView(discord.ui.View):
     def edit_embed(self):
         self.embed.clear_fields()
 
+        # Get details
         video_ids = self.items.get('video_ids')
         thumbnails = self.items.get('thumbnails')
         titles = self.items.get('titles')
         authors = self.items.get('authors')
         publish_dates = self.items.get('publish_dates')
         channel_ids = self.items.get('channel_ids')
-
         statistics = self.youtube.videos().list(part='statistics, contentDetails', id=video_ids[self.index]).execute()
 
+        # Edit embed
         self.embed.add_field(name='Result:',
                              value=f'[{titles[self.index]}](https://www.youtube.com/watch?v={video_ids[self.index]})')
         self.embed.add_field(name='Video Author:',
@@ -49,6 +51,7 @@ class YouTubeSearchView(discord.ui.View):
                                                     ephemeral=True)
             return
 
+        # Edit index accordingly
         if self.index == 0:
             self.index = len(self.items.get('video_ids')) - 1
         else:
@@ -64,6 +67,7 @@ class YouTubeSearchView(discord.ui.View):
                                                     ephemeral=True)
             return
 
+        # Edit index accordingly
         if self.index == len(self.items.get('video_ids')) - 1:
             self.index = 0
         else:
@@ -97,6 +101,7 @@ class YouTubeSearchView(discord.ui.View):
                                                     ephemeral=True)
             return
 
+        # Disable items
         for item in self.children:
             item.disabled = True
 
@@ -107,7 +112,7 @@ class YouTubeSearchView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class RedditPostView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, submissions: list, embed: discord.Embed, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, submissions: list[Submission], embed: discord.Embed, timeout: float | None = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.submissions = submissions
@@ -115,6 +120,7 @@ class RedditPostView(discord.ui.View):
         self.index = 0
 
     def edit_embed(self):
+        # Edit embed
         self.embed.title = self.submissions[self.index].title
         self.embed.description = self.submissions[self.index].selftext
         self.embed.url = f'https://reddit.com{self.submissions[self.index].permalink}'
@@ -125,10 +131,12 @@ class RedditPostView(discord.ui.View):
         if self.submissions[self.index].is_self:
             self.embed.set_image(url=discord.Embed.Empty)
 
+        # Set thumbnail as image
         elif self.submissions[self.index].is_video:
             self.embed.description += f'\n[Video Link]({self.submissions[self.index].url})'
             self.embed.set_image(url=self.submissions[self.index].thumbnail)
 
+        # Set image
         else:
             self.embed.set_image(url=self.submissions[self.index].url)
             self.embed.description = ''
@@ -140,6 +148,7 @@ class RedditPostView(discord.ui.View):
                                                     ephemeral=True)
             return
 
+        # Edit index accordingly
         if self.index == 0:
             self.index = len(self.submissions) - 1
         else:
@@ -155,6 +164,7 @@ class RedditPostView(discord.ui.View):
                                                     ephemeral=True)
             return
 
+        # Edit index accordingly
         if self.index == len(self.submissions) - 1:
             self.index = 0
         else:
@@ -170,6 +180,7 @@ class RedditPostView(discord.ui.View):
                                                     ephemeral=True)
             return
 
+        # Disable items
         for item in self.children:
             item.disabled = True
 
@@ -431,6 +442,7 @@ class TicTacToeView(discord.ui.View):
         button_one, button_two, button_three, button_four, button_five, button_six, button_seven, button_eight, button_nine = [
             button for button in self.children if button.custom_id != 'cancel']
 
+        # Check if 3 consecutive buttons have the same style other than discord.ButtonStyle.gray
         if ((button_one.style == button_two.style == button_three.style) and (
                 button_one.style != discord.ButtonStyle.gray) or
                 (button_four.style == button_five.style == button_six.style) and (
@@ -446,22 +458,25 @@ class TicTacToeView(discord.ui.View):
                 (button_one.style == button_five.style == button_nine.style) and (
                         button_one.style != discord.ButtonStyle.gray) or
                 (button_three.style == button_five.style == button_seven.style) and (
-                        button_three.style != discord.ButtonStyle.gray)):  # Check if the player has won
+                        button_three.style != discord.ButtonStyle.gray)):
             return f'{self.turn.mention} has won!'
 
         elif not list(
                 filter(lambda x: not x.disabled, [button for button in self.children if button.custom_id != 'cancel'])):
             return 'It\'s a draw!'
 
+        # Exchange turn
         self.turn = self.other_player if self.turn.id == self.initiator.id else self.initiator
         return None
 
     async def handle_board(self, interaction: discord.Interaction, content: str | None):
+        # Edit the message that the game has ended
         if content:
             for button in self.children:
                 button.disabled = True
             await interaction.followup.edit_message(content=content, view=self, message_id=interaction.message.id)
             self.stop()
+        # Edit the message that the turn has changed
         else:
             await interaction.followup.edit_message(content=f'It is {self.turn.mention}\'s turn!', view=self,
                                                     message_id=interaction.message.id)
@@ -550,25 +565,34 @@ class TicTacToeView(discord.ui.View):
     @discord.ui.button(label='Cancel Game', style=discord.ButtonStyle.red, row=3, custom_id='cancel')
     async def cancel(self, button: discord.Button, interaction: discord.Interaction):
         await interaction.response.defer()
+
         if interaction.user.id not in (self.initiator.id, self.other_player.id):
             await interaction.followup.send('This interaction is not for you', ephemeral=True)
             return
+
         response_player = self.initiator if interaction.user.id != self.initiator.id else self.other_player
+
+        # Send confirmation message
         await interaction.followup.send(
             f'{interaction.user.mention} would like to cancel this game. {response_player.mention}, respond with `yes` if you would like to cancel the game. Replying with anything other than yes will not cancel the game.')
-        message = await self.bot.wait_for('message',
-                                          check=lambda
-                                              m: m.author.id == response_player.id and m.channel.id == interaction.channel.id,
-                                          timeout=None)
+
+        message = await self.bot.wait_for(
+            'message',
+            check=lambda m: m.author.id == response_player.id and m.channel.id == interaction.channel.id,
+            timeout=None
+        )
 
         if message.content.lower() == 'yes':
+            # Disable items
             for item in self.children:
                 item.disabled = True
 
+            # Send `game cancelled` message
             await interaction.followup.edit_message(content=f'{interaction.user.mention} has cancelled the game!',
                                                     view=self, message_id=interaction.message.id)
             self.stop()
 
+        # Continue with the game
         else:
             await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
 
@@ -585,6 +609,7 @@ class FunView(discord.ui.View):
         self.embed = embed
 
     def edit_embed(self):
+        # Edit the embed accordingly
         if self.url.startswith('https://dog.ceo'):
             response = requests.get(self.url).json()
             self.embed.url = response['message']
@@ -605,7 +630,7 @@ class FunView(discord.ui.View):
             self.embed.set_footer(text=f'Type: {response["type"].upper()}')
 
     @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.green)
-    async def next(self, button: discord.Button, interaction: discord.Interaction):
+    async def next_(self, button: discord.Button, interaction: discord.Interaction):
         if interaction.user.id != self.ctx.author.id:
             await interaction.response.send_message(f'This interaction is for {self.ctx.author.mention}',
                                                     ephemeral=True)
@@ -615,12 +640,13 @@ class FunView(discord.ui.View):
         await interaction.response.edit_message(embed=self.embed)
 
     @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
-    async def end(self, button: discord.Button, interaction: discord.Interaction):
+    async def end_(self, button: discord.Button, interaction: discord.Interaction):
         if interaction.user.id != self.ctx.author.id:
             await interaction.response.send_message(f'This interaction is for {self.ctx.author.mention}',
                                                     ephemeral=True)
             return
 
+        # Disable items
         for item in self.children:
             item.disabled = True
 
@@ -634,11 +660,12 @@ class TruthOrDareView(discord.ui.View):
         self.ctx = ctx
 
     @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.green)
-    async def next(self, button: discord.Button, interaction: discord.Interaction):
+    async def next_(self, button: discord.Button, interaction: discord.Interaction):
         button.disabled = True
         await interaction.response.edit_message(view=self)
         self.stop()
 
+        # Reinvoke the command
         await self.ctx.reinvoke()
 
 
@@ -658,12 +685,15 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('skip'))
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-
-        for item in self.children:
-            item.disabled = True
-
-        await interaction.response.edit_message(view=self)
-        self.stop()
+        else:
+            # Disable items
+            for item in self.children:
+                item.disabled = True
+            self.stop()
+        finally:
+            # Respond
+            with contextlib.suppress(discord.NotFound):
+                await interaction.response.edit_message(view=self)
 
     @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
     async def end(self, button: discord.Button, interaction: discord.Interaction):
@@ -671,13 +701,15 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('stop'))
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-
-        for item in self.children:
-            item.disabled = True
-
-        with contextlib.suppress(discord.NotFound):
-            await interaction.response.edit_message(view=self)
-        self.stop()
+        else:
+            # Disable items
+            for item in self.children:
+                item.disabled = True
+            self.stop()
+        finally:
+            # Respond
+            with contextlib.suppress(discord.NotFound):
+                await interaction.response.edit_message(view=self)
 
     @discord.ui.button(emoji='⏯️', style=discord.ButtonStyle.red)
     async def pause(self, button: discord.Button, interaction: discord.Interaction):
@@ -686,8 +718,10 @@ class MusicView(discord.ui.View):
                 self.bot.get_command('pause') if self.vc.is_playing() else self.bot.get_command('resume'))
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        with contextlib.suppress(discord.NotFound):
-            await interaction.response.edit_message(view=self)
+        finally:
+            # Respond
+            with contextlib.suppress(discord.NotFound):
+                await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple)
     async def lyrics(self, button: discord.Button, interaction: discord.Interaction):
@@ -695,8 +729,10 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('lyrics'), query=self.query)
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        with contextlib.suppress(discord.NotFound):
-            await interaction.response.edit_message(view=self)
+        finally:
+            # Respond
+            with contextlib.suppress(discord.NotFound):
+                await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label='Add to queue', style=discord.ButtonStyle.blurple)
     async def add(self, button: discord.Button, interaction: discord.Interaction):
@@ -704,8 +740,10 @@ class MusicView(discord.ui.View):
             await self.ctx.invoke(self.bot.get_command('play'), query=self.query)
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
-        with contextlib.suppress(discord.NotFound):
-            await interaction.response.edit_message(view=self)
+        finally:
+            # Respond
+            with contextlib.suppress(discord.NotFound):
+                await interaction.response.edit_message(view=self)
 
 
 # noinspection PyUnusedLocal
@@ -722,6 +760,8 @@ class EmbedViewModal(discord.ui.Modal):
                                                required=item_data['required']))
 
     async def callback(self, interaction: discord.Interaction):
+        # sourcery skip: low-code-quality
+        # Edit the embed accordingly
         if self.edit_type == 'title':
             self.embed.title = self.children[0].value
 
@@ -882,4 +922,67 @@ class EmbedView(discord.ui.View):
             item.disabled = True
 
         await interaction.response.edit_message(view=self)
+        self.stop()
+
+
+# noinspection PyUnusedLocal
+class HelpView(discord.ui.View):
+    def __init__(self, command: str, bot: commands.Bot, prefix: str, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.command = command
+        self.bot = bot
+        self.prefix = prefix
+
+    @discord.ui.button(label='Prefix Command', style=discord.ButtonStyle.blurple)
+    async def prefix_command(self, button: discord.Button, interaction: discord.Interaction):
+        cmd = self.bot.get_command(self.command)
+
+        # Create and add details to the embed
+        embed = discord.Embed(
+            title=f'Help - {cmd}',
+            description=cmd.description,
+            colour=discord.Colour.blurple(),
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
+
+        embed.add_field(name='Aliases', value=f"`{', '.join(cmd.aliases)}`",
+                        inline=False) if cmd.aliases else embed.add_field(name='Aliases', value='`None`', inline=False)
+        param_str = ''.join(f'`{param}` ' for param in cmd.clean_params)
+        param_str = param_str[:-1]
+        embed.add_field(name='Parameters', value=param_str or '`None`', inline=False)
+        embed.add_field(name='Usage', value=f'`{self.prefix}{cmd.usage}`', inline=False)
+
+        await interaction.response.edit_message(content=None, embed=embed, view=None)
+        self.stop()
+
+    @discord.ui.button(label='Application Command', style=discord.ButtonStyle.blurple)
+    async def application_command(self, button: discord.Button, interaction: discord.Interaction):
+        cmd = self.bot.get_application_command(self.command, type=discord.ApplicationCommand)
+
+        # Create and add details to the embed
+        embed = discord.Embed(
+            title=f'Help - {cmd}',
+            description=cmd.description,
+            colour=discord.Colour.blurple(),
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
+
+        if isinstance(cmd, discord.SlashCommand):
+            param_str = ''.join(f'`{param.name}` ' for param in cmd.options)
+            param_str = param_str[:-1]
+            embed.add_field(name='Parameters', value=param_str, inline=False)
+            embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
+        elif isinstance(cmd, discord.SlashCommandGroup):
+            embed.add_field(name='Subcommands',
+                            value=f'`{" ".join(f"`{subcmd.name}`" for subcmd in cmd.walk_commands())}`', inline=False)
+            embed.add_field(name='Usage',
+                            value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
+        else:
+            embed.add_field(name='Usage',
+                            value='This is an application command. Right click on a message/user to get the command',
+                            inline=False)
+
+        await interaction.response.edit_message(content=None, embed=embed, view=None)
         self.stop()

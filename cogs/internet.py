@@ -15,7 +15,7 @@ from tools import send_error_embed, get_posts, get_quote, convert_to_unix_time, 
 
 
 class Internet(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialize the cog
 
@@ -33,7 +33,7 @@ class Internet(commands.Cog):
                       usage='youtubesearch <query>')
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.guild_only()
-    async def youtubesearch(self, ctx, *, query):
+    async def youtubesearch(self, ctx: commands.Context, *, query):
         """
         Searches YouTube and responds with the top 50 results
         
@@ -90,10 +90,11 @@ class Internet(commands.Cog):
             embed.add_field(name='Video Author:', value=f'[{authors[0]}](https://youtube.com/channel/{channel_ids[0]})')
             embed.add_field(name='Publish Date:', value=f'{publish_dates[0]}')
             embed.set_image(url=thumbnails[0])
-            embed.set_author(name='YouTube', icon_url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj', url='https://www.youtube.com/')
+            embed.set_author(name='YouTube',
+                             icon_url='https://yt3.ggpht.com/584JjRp5QMuKbyduM_2k5RlXFqHJtQ0qLIPZpwbUjMJmgzZngHcam5JMuZQxyzGMV5ljwJRl0Q=s176-c-k-c0x00ffffff-no-rj',
+                             url='https://www.youtube.com/')
             embed.set_footer(
                 text=f'Duration: {stats["items"][0]["contentDetails"]["duration"].strip("PT")}, 🎥: {stats["items"][0]["statistics"]["viewCount"]}, 👍: {stats["items"][0]["statistics"]["likeCount"] if "likeCount" in stats["items"][0]["statistics"].keys() else "Could not fetch likes"}\nResult {index + 1} out of 50')
-
 
             items = {
                 'titles': titles,
@@ -104,12 +105,14 @@ class Internet(commands.Cog):
                 'channel_ids': channel_ids
             }
 
-        await ctx.send(embed=embed, view=view.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed, bot=self.bot, timeout=None))
-    
+        await ctx.send(embed=embed,
+                       view=view.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed, bot=self.bot,
+                                                   timeout=None))
+
         log_history(ctx.author.id, query, 'YouTube', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @youtubesearch.error
-    async def youtubesearch_error(self, ctx, error):
+    async def youtubesearch_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Handles errors in the youtubesearch command
         
@@ -129,14 +132,15 @@ class Internet(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("youtubesearch").usage}`')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the youtubesearch command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the youtubesearch command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Wikipedia command
     @commands.command(aliases=['wiki', 'wikisearch'], description='Gets a summary of the query from wikipedia',
                       usage='wikipedia <query>')
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def wikipedia(self, ctx, *, query: str):
+    async def wikipedia(self, ctx: commands.Context, *, query: str):
         """
         Gets a summary of the query from wikipedia
         
@@ -160,14 +164,14 @@ class Internet(commands.Cog):
                                       colour=discord.Colour.random())
                 embed.set_thumbnail(url=thumbnail)
             await ctx.send(embed=embed)
-    
+
             log_history(ctx.author.id, query, 'Wikipedia', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
         except wikipedia.exceptions.WikipediaException as e:
             await send_error_embed(ctx, description=str(e))
 
     @wikipedia.error
-    async def wikipedia_error(self, ctx, error):
+    async def wikipedia_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Handles errors in the wikipedia command
         
@@ -187,13 +191,14 @@ class Internet(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("wikipedia").usage}`')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the wikipedia command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the wikipedia command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Weather command
     @commands.command(name='weather', description='Get the weather for a location', usage='weather <location>')
     @commands.cooldown(1, 2, commands.BucketType.user)
-    async def weather(self, ctx, *, location: str):
+    async def weather(self, ctx: commands.Context, *, location: str):
         """
         Gets the weather for a location
         
@@ -244,11 +249,11 @@ class Internet(commands.Cog):
             embed.set_footer(text=f'Powered by OpenWeatherMap | ID: {weather_data["id"]}')
 
         await ctx.send(embed=embed)
-    
+
         log_history(ctx.author.id, location, 'Weather', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @weather.error
-    async def weather_error(self, ctx, error):
+    async def weather_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Handles errors in the weather command
         
@@ -268,7 +273,8 @@ class Internet(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please enter a location!\n\nProper Usage: `{self.bot.get_command("weather").usage}`')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the weather command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the weather command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Post command
@@ -276,7 +282,7 @@ class Internet(commands.Cog):
                       usage='redditpost <subreddit>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def redditpost(self, ctx, subreddit):
+    async def redditpost(self, ctx: commands.Context, subreddit):
         """
         Gets a post from the specified subreddit
         
@@ -317,11 +323,13 @@ class Internet(commands.Cog):
                         embed.set_image(url=submissions[0].url)
 
                 try:
-                    await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed, timeout=None))
+                    await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
+                                                                         timeout=None))
                 except discord.HTTPException:
                     embed = discord.Embed(description='The post content was too long to be sent', colour=0xff4300)
-                    await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed, timeout=None))
-    
+                    await ctx.send(embed=embed, view=view.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
+                                                                         timeout=None))
+
                 log_history(ctx.author.id, subreddit, 'Reddit', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
             except AttributeError:
@@ -332,7 +340,7 @@ class Internet(commands.Cog):
                 await send_error_embed(ctx, description=str(e))
 
     @redditpost.error
-    async def post_error(self, ctx, error):
+    async def post_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the redditpost command
         
@@ -352,13 +360,14 @@ class Internet(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please specify a subreddit\n\nProper Usage: `{self.bot.get_command("redditpost").usage}`')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the redditpost command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the redditpost command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     @commands.command(name='trivia', aliases=['fact'], description='Get random trivia', usage='trivia')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def trivia(self, ctx):
+    async def trivia(self, ctx: commands.Context):
         """
         Gets a random trivia fact from the Trivia API
         
@@ -384,7 +393,7 @@ class Internet(commands.Cog):
         await ctx.send(embed=embed, view=view.TriviaView(ctx=ctx, items=trivia, embed=embed, timeout=None))
 
     @trivia.error
-    async def trivia_error(self, ctx, error):
+    async def trivia_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the trivia command
         
@@ -400,14 +409,15 @@ class Internet(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the trivia command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the trivia command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Quote command
     @commands.command(aliases=['qu'], description='Replies with an inspirational quote', usage='quote')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def quote(self, ctx):
+    async def quote(self, ctx: commands.Context):
         """
         Gets a random quote from zenquotes.io API
 
@@ -431,10 +441,11 @@ class Internet(commands.Cog):
             )
             embed.set_author(name=quote[0]['a'])
 
-        await ctx.send(embed=embed, view=view.QuoteView(ctx=ctx, url='https://zenquotes.io/api/random', embed=embed, timeout=None))
+        await ctx.send(embed=embed,
+                       view=view.QuoteView(ctx=ctx, url='https://zenquotes.io/api/random', embed=embed, timeout=None))
 
     @quote.error
-    async def quote_error(self, ctx, error):
+    async def quote_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the quote command
 
@@ -450,14 +461,15 @@ class Internet(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the quote command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the quote command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Joke command
     @commands.command(name='joke', description='Get jokes from r/Jokes', usage='joke')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def joke(self, ctx):
+    async def joke(self, ctx: commands.Context):
         """
         Get a random joke from r/Jokes
         
@@ -471,7 +483,7 @@ class Internet(commands.Cog):
         await ctx.invoke(self.bot.get_command('redditpost'), subreddit='Jokes')
 
     @joke.error
-    async def joke_error(self, ctx, error):
+    async def joke_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the joke command
 
@@ -487,16 +499,17 @@ class Internet(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the joke command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the joke command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     @commands.command(name='github',
                       description='Get information on any public github repository\nExample: `github SandeepKanekal/b0ssBot`',
                       usage='github <repository_owner/repository>')
     @commands.cooldown(1, 1, commands.BucketType.user)
-    async def github(self, ctx, repository):
+    async def github(self, ctx: commands.Context, repository):
         """
-        Get information on any public github repository
+        Get information on any public GitHub repository
         
         :param ctx: The context of the command
         :param repository: The repository to get information on
@@ -549,13 +562,13 @@ class Internet(commands.Cog):
             embed.add_field(name='Open Issues', value=repo_information['open_issues_count'])
 
         await ctx.send(embed=embed)
-    
+
         log_history(ctx.author.id, repository, 'GitHub', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @github.error
-    async def github_error(self, ctx, error):
+    async def github_error(self, ctx: commands.Context, error: commands.CommandError):
         """
-        Error handler for the github command
+        Error handler for the GitHub command
 
         :param ctx: The context of the command
         :param error: The error that occurred
@@ -569,18 +582,21 @@ class Internet(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the github command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the github command! The owner has been notified.')
         await inform_owner(self.bot, error)
-    
+
     @commands.command(name='imgur', description='Get an image from imgur', usage='imgur <query>')
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def imgur(self, ctx, *, query: str):
+    async def imgur(self, ctx: commands.Context, *, query: str):
         """
         Get the images on the imgur frontpage library
-        
+
         :param ctx: The context of the command
+        :param query: The query to search for
 
         :type ctx: commands.Context
+        :type query: str
         
         :return: None
         :rtype: None
@@ -592,12 +608,13 @@ class Internet(commands.Cog):
                 await send_error_embed(ctx, description='No images found')
                 return
 
-            await ctx.send(content=f'Image 1 out of {len(images)}\n{images[0].link}', view=view.ImgurView(ctx=ctx, items=images, timeout=None))
-        
+            await ctx.send(content=f'Image 1 out of {len(images)}\n{images[0].link}',
+                           view=view.ImgurView(ctx=ctx, items=images, timeout=None))
+
         log_history(ctx.author.id, query, 'Imgur', int(datetime.datetime.now().timestamp()), ctx.guild.id)
-    
+
     @imgur.error
-    async def imgur_error(self, ctx, error):
+    async def imgur_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the imgur command
 
@@ -613,11 +630,12 @@ class Internet(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the imgur command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the imgur command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Loads the cog
     

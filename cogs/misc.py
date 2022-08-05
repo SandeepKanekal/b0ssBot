@@ -7,7 +7,7 @@ from discord.ext import commands
 
 
 class Misc(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialize the cog
 
@@ -21,7 +21,7 @@ class Misc(commands.Cog):
 
     # Spam command
     @commands.command(aliases=['s'], description='Spams text', usage='spam <message>')
-    async def spam(self, ctx, *, text: str):
+    async def spam(self, ctx: commands.Context, *, text: str):
         """
         Spams text
 
@@ -41,7 +41,7 @@ class Misc(commands.Cog):
             await ctx.send(text)
 
     @spam.error
-    async def spam_error(self, ctx, error):
+    async def spam_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the spam command
 
@@ -63,7 +63,7 @@ class Misc(commands.Cog):
 
     # Av command
     @commands.command(aliases=['av', 'pfp'], description='Shows the specified user\'s avatar', usage='avatar <user>')
-    async def avatar(self, ctx, *, member: discord.Member = None):
+    async def avatar(self, ctx: commands.Context, *, member: discord.Member = None):
         """
         Shows the specified user's avatar. If no user is specified, shows the author's avatar
 
@@ -85,7 +85,7 @@ class Misc(commands.Cog):
         await ctx.reply(embed=embed)
 
     @avatar.error
-    async def avatar_error(self, ctx, error):
+    async def avatar_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the avatar command
 
@@ -108,7 +108,7 @@ class Misc(commands.Cog):
     # Servericon command
     @commands.command(aliases=['serverpfp', 'serverav', 'serveravatar'], description='Shows the server\'s icon',
                       usage='servericon')
-    async def servericon(self, ctx):
+    async def servericon(self, ctx: commands.Context):
         """
         Shows the server's icon
 
@@ -135,7 +135,7 @@ class Misc(commands.Cog):
     @commands.command(aliases=['ms'], description='Spams a message 25 times', usage='megaspam <message>')
     @commands.has_permissions(manage_messages=True)
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def megaspam(self, ctx, *, message):
+    async def megaspam(self, ctx: commands.Context, *, message):
         """
         Spams a message 25 times
 
@@ -156,7 +156,7 @@ class Misc(commands.Cog):
         await ctx.send('\n'.join(message for _ in range(25)))
 
     @megaspam.error
-    async def megaspam_error(self, ctx, error):
+    async def megaspam_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the megaspam command
 
@@ -183,7 +183,7 @@ class Misc(commands.Cog):
 
 
 # Setup
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Loads the Cog.
 

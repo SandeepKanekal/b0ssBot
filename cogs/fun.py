@@ -12,7 +12,7 @@ from PIL import Image, ImageChops
 
 
 class Fun(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialize the cog
 
@@ -30,7 +30,7 @@ class Fun(commands.Cog):
                       usage='meme <subreddit>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def meme(self, ctx, subreddit: str = None):  # sourcery no-metrics
+    async def meme(self, ctx: commands.Context, subreddit: str = None):  # sourcery no-metrics
         """
         Posts memes from the most famous meme subreddits
         Subreddit can be mentioned
@@ -45,6 +45,7 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Get the subreddit
         if not subreddit:
             subreddit = random.choice(['dankmemes', 'memes', 'meme'])
         elif subreddit.lower() in ['dankmemes', 'memes', 'meme', 'me_irl', 'wholesomememes']:
@@ -53,10 +54,11 @@ class Fun(commands.Cog):
             await send_error_embed(ctx, 'Invalid subreddit')
             return
 
+        # Invoke the redditpost
         await ctx.invoke(self.bot.get_command('redditpost'), subreddit=subreddit)
 
     @meme.error
-    async def meme_error(self, ctx, error):
+    async def meme_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the meme command
 
@@ -75,7 +77,7 @@ class Fun(commands.Cog):
     # Dankvideo command
     @commands.command(aliases=['dv', 'dankvid'], description='Posts dank videos from the dankest subreddits',
                       usage='dankvideo')
-    async def dankvideo(self, ctx):
+    async def dankvideo(self, ctx: commands.Context):
         """
         Posts a random dank video from the dankest subreddits
         
@@ -96,7 +98,7 @@ class Fun(commands.Cog):
         await ctx.send(f'https://reddit.com{submission.permalink}')
 
     @dankvideo.error
-    async def dankvideo_error(self, ctx, error):
+    async def dankvideo_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the dankvideo command
         
@@ -113,7 +115,7 @@ class Fun(commands.Cog):
         await inform_owner(self.bot, error)
 
     @commands.command(name='invert', description='Invert your or another user\'s avatar', usage='invert <member>')
-    async def invert(self, ctx, member: discord.Member = None):
+    async def invert(self, ctx: commands.Context, member: discord.Member = None):
         """
         Inverts the avatar of the user or another user
         
@@ -130,20 +132,23 @@ class Fun(commands.Cog):
 
             response = requests.get(str(member.display_avatar))
 
+            # Save the image
             with open(f'avatar_{member.id}.png', 'wb') as f:
                 f.write(response.content)
 
+            # Inverting the image
             image = Image.open(f'avatar_{member.id}.png')
             invert = ImageChops.invert(image.convert('RGB'))
             invert.save(f'{member.id}_inverted.png')
 
         await ctx.send(file=discord.File(f'{member.id}_inverted.png', 'invert.png'))
 
+        # Delete the images
         os.remove(f'avatar_{member.id}.png')
         os.remove(f'{member.id}_inverted.png')
 
     @invert.error
-    async def invert_error(self, ctx, error):
+    async def invert_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the invert command
         
@@ -163,7 +168,7 @@ class Fun(commands.Cog):
             await inform_owner(self.bot, error)
 
     @commands.command(name='dadjoke', description='Posts a dad joke', usage='dadjoke')
-    async def dadjoke(self, ctx):
+    async def dadjoke(self, ctx: commands.Context):
         """
         Posts a dad joke
         
@@ -182,7 +187,7 @@ class Fun(commands.Cog):
                        view=view.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed, timeout=None))
 
     @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
-    async def bored(self, ctx):
+    async def bored(self, ctx: commands.Context):
         """
         Get a random task to do for fun!
 
@@ -203,7 +208,7 @@ class Fun(commands.Cog):
                                          timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
-    async def egg(self, ctx):
+    async def egg(self, ctx: commands.Context):
         """
         Gives information about the egghunt
 
@@ -219,7 +224,7 @@ class Fun(commands.Cog):
 
     @commands.command(name='dog', description='Get a random dog picture', usage='dog')
     @commands.cooldown(1, 1, commands.BucketType.user)
-    async def dog(self, ctx):
+    async def dog(self, ctx: commands.Context):
         """
         Get a random dog picture
         
@@ -241,7 +246,7 @@ class Fun(commands.Cog):
 
     @commands.command(name='cat', description='Get a random cat picture', usage='cat')
     @commands.cooldown(1, 1, commands.BucketType.user)
-    async def cat(self, ctx):
+    async def cat(self, ctx: commands.Context):
         """
         Get a random cat picture
         
@@ -262,7 +267,7 @@ class Fun(commands.Cog):
                                          timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
-    async def egg(self, ctx):
+    async def egg(self, ctx: commands.Context):
         """
         Gives information about the egghunt
 
@@ -278,7 +283,7 @@ class Fun(commands.Cog):
 
     @commands.command(name='httpcat', description='Learn more about status codes with cats!',
                       usage='httpcat <status_code>')
-    async def httpcat(self, ctx, status_code: int = None):
+    async def httpcat(self, ctx: commands.Context, status_code: int = None):
         """
         Learn more about status codes with cats!
         
@@ -299,15 +304,17 @@ class Fun(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please provide a valid status code.\nValid status codes are: {", ".join([f"`{code}`" for code in status_codes])}')
             return
+
         status_code = status_code or random.choice(status_codes)
 
         picture_url = f'https://http.cat/{status_code}.jpg'
+        
         embed = discord.Embed(title=f'HTTP {status_code}', url=picture_url, colour=discord.Colour.blurple()).set_image(
             url=picture_url)
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Function to load cog
 

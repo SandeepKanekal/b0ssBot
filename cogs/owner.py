@@ -8,12 +8,12 @@ from discord.ui import Modal, InputText
 
 
 class Owner(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(aliases=['loadcog'], hidden=True)
     @commands.is_owner()
-    async def load(self, ctx, cog: str):
+    async def load(self, ctx: commands.Context, cog: str):
         """
         Loads a cog
         
@@ -34,7 +34,7 @@ class Owner(commands.Cog):
             await ctx.send('**`SUCCESS`**')
 
     @load.error
-    async def load_error(self, ctx, e):
+    async def load_error(self, ctx: commands.Context, e: commands.CommandError):
         """
         Handles errors for the load command
         
@@ -51,7 +51,7 @@ class Owner(commands.Cog):
 
     @commands.command(aliases=['unloadcog'], hidden=True)
     @commands.is_owner()
-    async def unload(self, ctx, cog: str):
+    async def unload(self, ctx: commands.Context, cog: str):
         """
         Unloads a cog
         
@@ -72,7 +72,7 @@ class Owner(commands.Cog):
             await ctx.send('**`SUCCESS`**')
 
     @unload.error
-    async def unload_error(self, ctx, e):
+    async def unload_error(self, ctx: commands.Context, e: commands.CommandError):
         """
         Handles errors for the unload command
         
@@ -89,7 +89,7 @@ class Owner(commands.Cog):
 
     @commands.command(aliases=['reloadcog'], hidden=True)
     @commands.is_owner()
-    async def reload(self, ctx, cog: str):
+    async def reload(self, ctx: commands.Context, cog: str):
         """
         Reloads a cog
         
@@ -111,7 +111,7 @@ class Owner(commands.Cog):
             await ctx.send('**`SUCCESS`**')
 
     @reload.error
-    async def reload_error(self, ctx, e):
+    async def reload_error(self, ctx: commands.Context, e: commands.CommandError):
         """
         Handles errors for the reload command
         
@@ -128,7 +128,7 @@ class Owner(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def query(self, ctx, *, query):
+    async def query(self, ctx: commands.Context, *, query):
         """
         Runs a query on the database
         
@@ -155,7 +155,7 @@ class Owner(commands.Cog):
                 await ctx.send('Query provided returns None')
 
     @query.error
-    async def query_error(self, ctx, e):
+    async def query_error(self, ctx: commands.Context, e: commands.CommandError):
         """
         Handles errors for the query command
         
@@ -172,7 +172,7 @@ class Owner(commands.Cog):
 
     @commands.command(aliases=['gl'], hidden=True)
     @commands.is_owner()
-    async def guildlist(self, ctx):
+    async def guildlist(self, ctx: commands.Context):
         """
         Lists all guilds the bot is in
         
@@ -188,7 +188,7 @@ class Owner(commands.Cog):
         )
 
     @guildlist.error
-    async def guildlist_error(self, ctx, e):
+    async def guildlist_error(self, ctx: commands.Context, e: commands.CommandError):
         """
         Handles errors for the guildlist command
         
@@ -205,7 +205,7 @@ class Owner(commands.Cog):
 
     @commands.slash_command(name='eval', guild_ids=[930715526441885696], hidden=True)
     @commands.is_owner()
-    async def eval_(self, ctx, *, mode: Option(str, description='The mode to run the code in', required=True, choices=['single', 'file']), code: Option(str, description='Code for single line', required=False, default=None)):
+    async def eval_(self, ctx: discord.ApplicationContext, *, mode: Option(str, description='The mode to run the code in', required=True, choices=['single', 'file']), code: Option(str, description='Code for single line', required=False, default=None)):
         """
         Evaluates code
         
@@ -254,7 +254,7 @@ class Owner(commands.Cog):
             modal.callback = callback
 
     @eval_.error
-    async def eval_error(self, ctx, e):
+    async def eval_error(self, ctx: discord.ApplicationContext, e: discord.ApplicationCommandInvokeError):
         """
         Handles errors for the reload command
         
@@ -262,7 +262,7 @@ class Owner(commands.Cog):
         :param e: The error that was raised
         
         :type ctx: discord.ApplicationContext
-        :type e: commands.CommandError
+        :type e: discord.ApplicationCommandInvokeError
         
         :return: None
         :rtype: None
@@ -271,7 +271,7 @@ class Owner(commands.Cog):
 
     @commands.command(name='vc', hidden=True)
     @commands.is_owner()
-    async def vc(self, ctx):
+    async def vc(self, ctx: commands.Context):
         """
         Sends the length of voice clients
 
@@ -285,7 +285,7 @@ class Owner(commands.Cog):
         await ctx.reply(len(self.bot.voice_clients))
 
     @vc.error
-    async def vc_error(self, ctx, e):
+    async def vc_error(self, ctx: commands.Context, e: commands.CommandError):
         """
         Handles errors for the vc command
 
@@ -301,5 +301,5 @@ class Owner(commands.Cog):
         await ctx.send(embed=discord.Embed(description=str(e)))
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     bot.add_cog(Owner(bot))

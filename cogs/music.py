@@ -58,7 +58,7 @@ class NotInRange(CommandError):
 
 class Music(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initializes the Music cog.
         
@@ -96,6 +96,7 @@ class Music(commands.Cog):
             'options': '-vn'
         }  # type: dict[str, str] # Options for ffmpeg
 
+    # noinspection PyUnusedLocal
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState,
                                     after: discord.VoiceState) -> None:
@@ -133,10 +134,6 @@ class Music(commands.Cog):
             del self.pause_time[member.guild.id]
             del self.music_view[member.guild.id]
 
-    # Searches YouTube for the item.
-    # Possible errors:
-    # IndexError - Occurs when there is no proper video
-    # youtube_dl.utils.DownloadError - Occurs in case the video cannot be accessed without an account, such as age restrictions
     def search_yt(self, item):
         """
         Searches YouTube for the item.
@@ -145,8 +142,9 @@ class Music(commands.Cog):
         
         :type item: str
         
-        :return: The video details.
-        :rtype: dict[str, str | int]"""
+        :return: The video details of the item.
+        :rtype: dict[str, str | int] | Exception
+        """
         with YoutubeDL(self._ydl_options) as ydl:
             try:
                 info = ydl.extract_info(f"ytsearch:{item}", download=False)['entries'][0]  # Get the required details
@@ -158,7 +156,7 @@ class Music(commands.Cog):
                 'view_count': info['view_count'], 'like_count': info['like_count'], 'thumbnail': info['thumbnail'],
                 'duration': info['duration']}  # Return required details
 
-    async def _send_embed_after_track(self, ctx):
+    async def _send_embed_after_track(self, ctx: commands.Context):
         """
         Sends an embed after the track has finished playing
 
@@ -169,17 +167,23 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        self.music_view[ctx.guild.id].stop()
+        self.music_view[ctx.guild.id].stop()  # Stop listening for interactions with buttons
+
+        # Loop track
         if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             track = self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'")[0]
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
             view = MusicView(ctx, self.bot, ctx.guild.voice_client, track[0][0], timeout=None)
+
+        # Queued track
         elif self.sql.select(elements=['*'], table='queue', where=f"guild_id = '{ctx.guild.id}'"):
             track = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")[0]
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
             view = MusicView(ctx, self.bot, ctx.guild.voice_client, track[0][0], timeout=None)
+        
+        # No track
         else:
             embed = discord.Embed(description='Queue is over', colour=discord.Colour.red())
             embed.set_footer(text='Use the play command to add tracks')
@@ -188,7 +192,7 @@ class Music(commands.Cog):
         self.music_view[ctx.guild.id] = view
         await ctx.send(embed=embed, view=view)
 
-    async def _send_confirmation(self, ctx, song: dict):
+    async def _send_confirmation(self, ctx: commands.Context, song: dict):
         """
         Sends a confirmation message to the channel.
         
@@ -201,15 +205,17 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        embed = discord.Embed(colour=discord.Colour.blue()).set_thumbnail(
-            url=song['thumbnail'])
+        embed = discord.Embed(colour=discord.Colour.blurple())
+
+        embed.set_thumbnail(url=song['thumbnail'])
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_footer(
+            text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
+        )
+
         embed.add_field(
             name='Song added to queue',
             value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
-        )
-        embed.set_footer(
-            text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
         )
 
         if not ctx.voice_client.is_playing():
@@ -223,7 +229,7 @@ class Music(commands.Cog):
             embed=embed, view=view
         )
 
-    def play_next(self, ctx):
+    def play_next(self, ctx: commands.Context):
         """
         The play_next function is used when the player is already playing, this function is invoked when the player is done playing one of the tracks in the queue.
         
@@ -234,7 +240,7 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
+        vc = ctx.guild.voice_client  # Get the voice client
         asyncio.run_coroutine_threadsafe(self._send_embed_after_track(ctx), self.bot.loop)  # Send the embed
         if self.sql.select(['title'], 'queue', f"guild_id = '{ctx.guild.id}'") or self.sql.select(['title'], 'loop',
                                                                                                   f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks queued or looped
@@ -247,7 +253,7 @@ class Music(commands.Cog):
             self.source[ctx.guild.id] = None
             self.pause_time[ctx.guild.id] = None
 
-    def _play_next(self, ctx, vc):
+    def _play_next(self, ctx: commands.Context, vc: discord.VoiceClient):
         """
         The _play_next function plays the music after a track has been played and updates the database.
         
@@ -255,7 +261,7 @@ class Music(commands.Cog):
         :param vc: The voice client.
         
         :type ctx: commands.Context
-        :type vc: Any
+        :type vc: discord.VoiceClient
         
         :return: None
         :rtype: None
@@ -270,16 +276,18 @@ class Music(commands.Cog):
         self.now_playing_url[ctx.guild.id] = track[0][2]
         self.start_time[ctx.guild.id] = datetime.datetime.now()
         self.source[ctx.guild.id] = track[0][0]
+
         # Play the track
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
         vc.source = discord.PCMVolumeTransformer(vc.source, volume=self.volume[ctx.guild.id] / 100)
+
         # Delete the track from the queue
         if not self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             title = track[0][1]
             title = title.replace("'", "''")
             self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
 
-    async def play_music(self, ctx):
+    async def play_music(self, ctx: commands.Context):
         """
         The play_music function is used to play the music when no track is playing.
         
@@ -290,27 +298,32 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
+        vc = ctx.guild.voice_client  # Get the voice client
         voice_channel = ctx.author.voice.channel  # Get the voice channel
+
         if track := self.sql.select(['source', 'title', 'url'], 'loop', f"guild_id = '{ctx.guild.id}'"):
             self.start_time[ctx.guild.id] = datetime.datetime.now()
         else:
             track = \
                 self.sql.select(elements=['source', 'title', 'url'], table='queue',
                                 where=f"guild_id = '{ctx.guild.id}'")
+
         m_url = track[0][0]
         self.now_playing[ctx.guild.id] = track[0][1]
         self.now_playing_url[ctx.guild.id] = track[0][2]
         self.start_time[ctx.guild.id] = datetime.datetime.now()
         self.source[ctx.guild.id] = track[0][0]
+
         # try to connect to voice channel if you are not already connected
         try:
             vc = await voice_channel.connect()
         except discord.ClientException:
             await vc.move_to(voice_channel)
 
+        # Play the track
         vc.play(discord.FFmpegPCMAudio(m_url, **self._ffmpeg_options), after=lambda e: self.play_next(ctx))
         vc.source = discord.PCMVolumeTransformer(vc.source, volume=self.volume[ctx.guild.id] / 100)
+
         # Delete the track as it is being played
         if not self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             title = track[0][1]
@@ -318,7 +331,7 @@ class Music(commands.Cog):
             self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
 
     @commands.command(aliases=['j', 'summon'], description='Joins the voice channel you are in', usage='join')
-    async def join(self, ctx):
+    async def join(self, ctx: commands.Context):
         """
         Joins the voice channel you are in.
         
@@ -338,7 +351,7 @@ class Music(commands.Cog):
             raise AlreadyConnectedToVoiceChannel('Already connected to a voice channel') from e
 
     @join.error
-    async def join_error(self, ctx, error):
+    async def join_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the join command.
         
@@ -360,7 +373,7 @@ class Music(commands.Cog):
     @commands.command(aliases=['p', 'add'],
                       description='Plays the searched song from YouTube or adds it to the queue, query can be a link or a search term',
                       usage='play <query>')
-    async def play(self, ctx, *, query: str):
+    async def play(self, ctx: commands.Context, *, query: str):
         """
         Plays the searched song from YouTube or adds it to the queue, query can be a link or a search term.
 
@@ -374,7 +387,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         async with ctx.typing():
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Get the voice client
+            vc = ctx.guild.voice_client  # Get the voice client
 
             if ctx.author.voice is None:
                 raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
@@ -425,7 +438,7 @@ class Music(commands.Cog):
 
     # Sometimes, videos are not available, a response is required to inform the user
     @play.error
-    async def play_error(self, ctx, error):
+    async def play_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the play command.
         
@@ -447,7 +460,7 @@ class Music(commands.Cog):
             await inform_owner(self.bot, error)
 
     @commands.command(aliases=['q'], description='Shows the music queue', usage='queue')
-    async def queue(self, ctx):
+    async def queue(self, ctx: commands.Context):
         """
         Shows the music queue.
         
@@ -459,17 +472,19 @@ class Music(commands.Cog):
         :rtype: None
         """
         # This command does not stop users outside the voice channel from accessing the command since it is a view-only command
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
 
         if vc is None:  # Player is not connected
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
         if not vc.is_playing():
             raise NoAudioPlaying('No audio is playing')
+        
+        # Create embed
+        embed = discord.Embed(title='Music Queue', colour=discord.Colour.dark_teal(), timestamp=datetime.datetime.now())
 
+        # Looping
         if track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            # If looping is enabled, show the looping track
-            embed = discord.Embed(colour=discord.Colour.blue(), timestamp=datetime.datetime.now())
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             embed.add_field(
                 name='Looping',
@@ -479,22 +494,21 @@ class Music(commands.Cog):
             embed.set_footer(
                 text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 📽️: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}'
             )
-            await ctx.send(embed=embed)
-            return
 
-        # Response embed
-        embed = discord.Embed(title='Music Queue', color=discord.Colour.dark_teal())
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        queue = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
-        embed.add_field(name='Now Playing:',
-                        value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
-                        inline=False)
-        for index, item in enumerate(queue):
-            embed.add_field(name=f'Track Number {index + 1}', value=f'[{item[0]}]({item[1]})', inline=False)
+        # Queue
+        else:
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            queue = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
+            embed.add_field(name='Now Playing:',
+                            value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
+                            inline=False)
+            for index, item in enumerate(queue):
+                embed.add_field(name=f'Track Number {index + 1}', value=f'[{item[0]}]({item[1]})', inline=False)
+
         await ctx.send(embed=embed)
 
     @queue.error
-    async def queue_error(self, ctx, error):
+    async def queue_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the queue command.
         
@@ -513,9 +527,8 @@ class Music(commands.Cog):
             await send_error_embed(ctx, description='An error has occurred while running the queue command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
-    # Self-explanatory
     @commands.command(name='pause', description='Pauses the current track', usage='pause')
-    async def pause(self, ctx):
+    async def pause(self, ctx: commands.Context):
         """
         Pauses the current track.
         
@@ -529,7 +542,11 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        # Get the voice client
+        vc = ctx.guild.voice_client
+
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
         if vc.is_paused():
             raise PlayerPaused('Player is already paused')
@@ -543,6 +560,7 @@ class Music(commands.Cog):
         self.pause_time[ctx.guild.id] = datetime.datetime.now()
 
         vc.pause()
+
         # Response embed
         embed = discord.Embed(
             description=f'Paused [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
@@ -550,7 +568,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     @pause.error
-    async def pause_error(self, ctx, error):
+    async def pause_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the pause command.
         
@@ -563,15 +581,14 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel)):
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
             await send_error_embed(ctx, description='An error has occurred while running the pause command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
-    # Self-explanatory
     @commands.command(aliases=['unpause', 'up'], description='Resumes the paused track', usage='resume')
-    async def resume(self, ctx):
+    async def resume(self, ctx: commands.Context):
         """
         Resumes the paused track.
         
@@ -585,7 +602,10 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
+
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
         if vc.is_playing():
             raise PlayerPlaying('Player is already playing')
@@ -596,6 +616,7 @@ class Music(commands.Cog):
         self.start_time[ctx.guild.id] += datetime.datetime.now() - self.pause_time[ctx.guild.id]
 
         vc.resume()
+
         # Response embed
         embed = discord.Embed(
             description=f'Resumed [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
@@ -603,7 +624,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     @resume.error
-    async def resume_error(self, ctx, error):
+    async def resume_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the resume command.
         
@@ -616,7 +637,7 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerPlaying, AuthorInDifferentVoiceChannel)):
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
             await send_error_embed(ctx, description='An error has occurred while running the resume command! The owner has been notified.')
@@ -624,7 +645,7 @@ class Music(commands.Cog):
 
     # Skips the current track
     @commands.command(name="skip", description="Skips the current track", usage="skip")
-    async def skip(self, ctx):
+    async def skip(self, ctx: commands.Context):
         """
         Skips the current track.
         
@@ -638,7 +659,7 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
 
         if vc is None:
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
@@ -650,6 +671,7 @@ class Music(commands.Cog):
             raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
 
         vc.stop()  # Stopping the player (play_next will be called instantly after stopping)
+        
         # Response embed
         embed = discord.Embed(
             description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
@@ -657,7 +679,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     @skip.error
-    async def skip_error(self, ctx, error):
+    async def skip_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the skip command.
         
@@ -678,7 +700,7 @@ class Music(commands.Cog):
 
     # Stop command
     @commands.command(name='stop', description='Stops the current track and clears the queue', usage='stop')
-    async def stop(self, ctx):
+    async def stop(self, ctx: commands.Context):
         """
         Stops the current track and clears the queue.
         
@@ -692,7 +714,7 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
 
         if vc is None:
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
@@ -714,7 +736,7 @@ class Music(commands.Cog):
         vc.stop()
 
     @stop.error
-    async def stop_error(self, ctx, error):
+    async def stop_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the stop command.
         
@@ -736,7 +758,7 @@ class Music(commands.Cog):
     # Disconnect command
     @commands.command(aliases=['dc', 'leave'], description="Disconnects the player from the voice channel",
                       usage='disconnect')
-    async def disconnect(self, ctx):
+    async def disconnect(self, ctx: commands.Context):
         """
         Disconnects the player from the voice channel.
         
@@ -750,7 +772,7 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
 
         if vc is None:
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
@@ -777,7 +799,7 @@ class Music(commands.Cog):
         self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
 
     @disconnect.error
-    async def disconnect_error(self, ctx, error):
+    async def disconnect_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the disconnect command.
         
@@ -798,7 +820,7 @@ class Music(commands.Cog):
 
     # Nowplaying command
     @commands.command(aliases=['np', 'now'], description='Shows the current track being played', usage='nowplaying')
-    async def nowplaying(self, ctx):
+    async def nowplaying(self, ctx: commands.Context):
         """
         Shows the current track being played.
         
@@ -810,7 +832,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         # This command does not prevent users from outside the voice channel from accessing the command since it is view-only
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
 
         # Basic responses to false calls
         if vc is None:
@@ -875,7 +897,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     @nowplaying.error
-    async def nowplaying_error(self, ctx, error):
+    async def nowplaying_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the nowplaying command.
         
@@ -897,7 +919,7 @@ class Music(commands.Cog):
     # Remove command
     @commands.command(aliases=['rm', 'del', 'delete'], description='Removes a certain track from the queue',
                       usage='remove <track_number>')
-    async def remove(self, ctx, track_number: int):
+    async def remove(self, ctx: commands.Context, track_number: int):
         """
         Removes a certain track from the queue.
         
@@ -913,7 +935,7 @@ class Music(commands.Cog):
         if not ctx.author.voice:  # Checking if the user is in a voice channel
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)  # Getting the voice client
+        vc = ctx.guild.voice_client  # Getting the voice client
 
         if vc is None:
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
@@ -946,7 +968,7 @@ class Music(commands.Cog):
 
     # Error in removing a track
     @remove.error
-    async def remove_error(self, ctx, error):
+    async def remove_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the remove command.
         
@@ -973,7 +995,7 @@ class Music(commands.Cog):
     @commands.command(aliases=['ly'],
                       description='Gets the lyrics of the current track\nUse `-lyrics <song name>` to get the lyrics of a specific song\nAnd -lyrics to get the lyrics of the current playing track',
                       usage='-lyrics <query>')
-    async def lyrics(self, ctx, *, query: str = None):
+    async def lyrics(self, ctx: commands.Context, *, query: str = None):
         """
         Gets the lyrics of the current track or the query if provided.
         
@@ -987,7 +1009,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         async with ctx.typing():
-            vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            vc = ctx.guild.voice_client
             lyrics = ''
             title = ''
 
@@ -1037,7 +1059,7 @@ class Music(commands.Cog):
 
     # Error in lyrics command
     @lyrics.error
-    async def lyrics_error(self, ctx, error):
+    async def lyrics_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the lyrics command.
         
@@ -1061,7 +1083,7 @@ class Music(commands.Cog):
     # Repeat/Loop command
     @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode',
                       usage='loop <0/1>')
-    async def loop(self, ctx, mode: int):
+    async def loop(self, ctx: commands.Context, mode: int):
         """
         Enables or disables loop mode.
         
@@ -1076,8 +1098,7 @@ class Music(commands.Cog):
         """
         # Basic responses to false calls
         if mode not in [0, 1]:  # Checks if the mode argument is valid
-            await send_error_embed(ctx, description='The argument must be 0(disable loop) or 1(enable loop)')
-            return
+            raise NotInRange('The argument must be 0(disable loop) or 1(enable loop)')
 
         if bool(mode) == bool(self.sql.select(elements=['*'], table='loop',
                                               where=f"guild_id = '{ctx.guild.id}'")):  # Checks if the loop mode is already set
@@ -1087,7 +1108,8 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
+
         if vc is None:
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
 
@@ -1108,11 +1130,12 @@ class Music(commands.Cog):
             self.sql.insert(table='loop', columns=['guild_id', 'source', 'title', 'url'],
                             values=[f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
                                     f"'{title}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
+
         await ctx.send(embed=discord.Embed(description=f'Loop mode set to {bool(mode)}', colour=discord.Colour.blue()))
 
     # Error in the loop command
     @loop.error
-    async def loop_error(self, ctx, error):
+    async def loop_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the loop command.
         
@@ -1131,15 +1154,15 @@ class Music(commands.Cog):
         elif isinstance(error, commands.BadArgument):
             await send_error_embed(ctx,
                                    description=f'Mode can be either `0` or `1`\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
-        elif isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel)):
+        elif isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
             await send_error_embed(ctx, description='An error has occurred while running the loop command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Volume command
-    @commands.command(aliases=['vol'], description='Set the volume of the voice client', usage='volume <0-200>')
-    async def volume(self, ctx, volume: int):
+    @commands.command(name='volume', aliases=['vol'], description='Set the volume of the voice client', usage='volume <0-200>')
+    async def volume_(self, ctx: commands.Context, volume: int):
         """
         Sets the volume of the voice client.
         
@@ -1158,7 +1181,7 @@ class Music(commands.Cog):
         if volume < 0 or volume > 200:  # Checks if the volume argument is outside the range
             raise NotInRange('The volume must be between 0 and 200')
 
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = ctx.guild.voice_client
 
         if not vc:
             raise PlayerNotConnectedToVoiceChannel('The player is not connected to the voice channel')
@@ -1174,8 +1197,8 @@ class Music(commands.Cog):
         await ctx.send(embed=discord.Embed(description=f'Volume set to {volume}%', colour=discord.Colour.blue()))
 
     # Error in the volume command
-    @volume.error
-    async def volume_error(self, ctx, error):
+    @volume_.error
+    async def volume_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the volume command.
         
@@ -1202,7 +1225,7 @@ class Music(commands.Cog):
 
 
 # Setup
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Loads the Cog.
     

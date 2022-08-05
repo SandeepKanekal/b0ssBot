@@ -7,7 +7,7 @@ from discord.ext import commands
 
 
 class Info(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialize the cog
         
@@ -26,6 +26,7 @@ class Info(commands.Cog):
         Event listener for when the bot is ready
 
         :return: None
+        :rtype: None
         """
         self.uptime = datetime.datetime.now()  # Sets the uptime to now
 
@@ -33,7 +34,7 @@ class Info(commands.Cog):
     @commands.command(aliases=['whois', 'user', 'ui'],
                       description='Shows the mentioned user\'s information. Leave it blank to get your information',
                       usage='userinfo <member>')
-    async def userinfo(self, ctx, *, member: discord.Member = None):
+    async def userinfo(self, ctx: commands.Context, *, member: discord.Member = None):
         """
         Shows the mentioned user's information. Member is author if left blank.
         
@@ -52,11 +53,19 @@ class Info(commands.Cog):
         joined_at = member.joined_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
         registered_at = member.created_at.strftime('%Y-%m-%d %H:%M:%S:%f')  # type: str
 
+        # Converting to unix timestamps
         joined_at = convert_to_unix_time(joined_at)  # type: str
         registered_at = convert_to_unix_time(registered_at)  # type: str
 
+        # Create embed
         embed = discord.Embed(colour=member.colour, timestamp=datetime.datetime.now())
+
+        # Set details
+        embed.set_footer(text=f'ID: {member.id}')
+        embed.set_thumbnail(url=member.display_avatar)
         embed.set_author(name=str(member), icon_url=member.display_avatar)
+
+        # Add fields
         embed.add_field(name='Display Name', value=member.mention, inline=True)
         embed.add_field(name='Top Role', value=member.top_role.mention, inline=True)
 
@@ -67,15 +76,13 @@ class Info(commands.Cog):
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
         
         embed.add_field(name='Permissions', value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]), inline=False)
-
-        embed.set_thumbnail(url=member.display_avatar)
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
-        embed.set_footer(text=f'ID: {member.id}')
+
         await ctx.send(embed=embed)
 
     @userinfo.error
-    async def userinfo_error(self, ctx, error):
+    async def userinfo_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the userinfo command
         
@@ -97,7 +104,7 @@ class Info(commands.Cog):
 
     # Serverinfo command
     @commands.command(aliases=['si', 'server'], description='Shows the server information', usage='serverinfo')
-    async def serverinfo(self, ctx):
+    async def serverinfo(self, ctx: commands.Context):
         """
         Shows the server information
         
@@ -136,9 +143,11 @@ class Info(commands.Cog):
         channel_string = f'Text Channels: **{text_channel_count}**\nVoice Channels **{voice_channel_count}**'  # type: str
 
         embed = discord.Embed(color=discord.Color.blue(), timestamp=datetime.datetime.now())
+
         embed.set_thumbnail(url=ctx.guild.icon) if ctx.guild.icon else None
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon) if ctx.guild.icon else embed.set_author(
-            name=ctx.guild.name)
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon or discord.Embed.Empty)
+        embed.set_footer(text=f'ID: {ctx.guild.id}')
+
         embed.add_field(name="Owner", value=str(ctx.guild.owner.mention))
         embed.add_field(name='Roles', value=str(len(ctx.guild.roles)))
         embed.add_field(name='Creation Date', value=created_at)
@@ -152,14 +161,13 @@ class Info(commands.Cog):
                             value=str(len(discord.utils.get(ctx.guild.roles, name='Muted').members)))
         except AttributeError:
             embed.add_field(name='Muted Users', value=str(0))
-        embed.set_footer(text=f'ID: {ctx.guild.id}')
         await ctx.send(embed=embed)
 
     # Botinfo command
     @commands.command(aliases=['bi', 'bot'], description='Shows the bot\'s information', usage='botinfo')
-    async def botinfo(self, ctx):
+    async def botinfo(self, ctx: commands.Context):
         """
-        Shows the bot's information
+        Shows the bots information
         
         :param ctx: The context of where the message was sent
         
@@ -175,8 +183,11 @@ class Info(commands.Cog):
         embed = discord.Embed(
             description=f'I am {self.bot.user.name}! I was created by Dose#7204. I was coded using the [pycord](https://github.com/Pycord-Development/pycord) library and my code is available [here](https://github.com/SandeepKanekal/b0ssBot). Though I am a multipurpose bot, my best feature is the internet commands. Use the help command to get to know all my commands.',
             colour=self.bot.user.colour, timestamp=datetime.datetime.now())
+
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.add_field(name='Bot Username', value=str(self.bot.user.name), inline=True)
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+        
+        embed.add_field(name='Bot Username', value=self.bot.user.name, inline=True)
         embed.add_field(name='Bot Owner', value='Dose#7204')
         embed.add_field(name='Total Servers', value=str(len(list(self.bot.guilds))))
         embed.add_field(name='Bot ID', value=str(self.bot.user.id))
@@ -186,14 +197,13 @@ class Info(commands.Cog):
         embed.add_field(name='Source Code', value='[Click here](https://github.com/SandeepKanekal/b0ssBot)')
         embed.add_field(name='Invite Link',
                         value='[Click here](https://discord.com/api/oauth2/authorize?client_id=930715008025890887&permissions=8&scope=bot%20applications.commands)')
-        embed.set_footer(text=f'Requested by {ctx.author}',
-                         icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
+
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['cl'], description='Shows the changelog', usage='changelog')
-    async def changelog(self, ctx):
+    async def changelog(self, ctx: commands.Context):
         """
-        Shows the bot's changelog
+        Shows the bots changelog
         
         :param ctx: The context of where the message was sent
         
@@ -202,6 +212,7 @@ class Info(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Copy content from CHANGELOG.md
         with open('CHANGELOG.md', 'r') as f:
             changelog = f.read().replace('#', '**').replace('+', '•')  # type: str
 
@@ -211,14 +222,13 @@ class Info(commands.Cog):
             description=changelog,
             colour=self.bot.user.colour,
             timestamp=datetime.datetime.now(),
-        )
-        embed.set_thumbnail(url=self.bot.user.avatar)
+        ).set_thumbnail(url=self.bot.user.avatar)
         await ctx.send(embed=embed)
 
     @commands.command(name='uptime', description='Shows the bot\'s uptime', usage='uptime')
-    async def uptime(self, ctx):
+    async def uptime_(self, ctx: commands.Context):
         """
-        Shows the bot's uptime
+        Shows the bots uptime
         
         :param ctx: The context of where the message was sent
         
@@ -236,7 +246,7 @@ class Info(commands.Cog):
 
     @commands.command(name='roleinfo', aliases=['role', 'ri'], description='Shows the information of a role',
                       usage='roleinfo <role>')
-    async def roleinfo(self, ctx, *, role: discord.Role):
+    async def roleinfo(self, ctx: commands.Context, *, role: discord.Role):
         """
         Shows the information of a role
         
@@ -258,10 +268,15 @@ class Info(commands.Cog):
         # Getting the colour of the role
         rgb_colour = role.colour.to_rgb()  # type: tuple[int, int, int]
 
+        # Create embed
         embed = discord.Embed(colour=role.colour, timestamp=datetime.datetime.now())
 
+        # Add data
         embed.set_author(name=role.name, icon_url=role.icon or role.guild.icon or discord.Embed.Empty)
+        embed.set_footer(text=f'ID: {role.id}')
+        embed.set_thumbnail(url=role.icon or discord.Embed.Empty)
 
+        # Add fields
         embed.add_field(name='Members', value=str(len(role.members)), inline=True)
         embed.add_field(name='Creation Date', value=created_at, inline=True)
         embed.add_field(name='Colour',
@@ -274,13 +289,10 @@ class Info(commands.Cog):
             [permission[0].replace('_', ' ').title() for permission in role.permissions if permission[1]]) or 'None',
                         inline=False)
 
-        embed.set_footer(text=f'ID: {role.id}')
-        embed.set_thumbnail(url=role.icon or discord.Embed.Empty)
-
         await ctx.send(embed=embed)
 
     @roleinfo.error
-    async def roleinfo_error(self, ctx, error):
+    async def roleinfo_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Handles errors for the roleinfo command
         
@@ -304,7 +316,7 @@ class Info(commands.Cog):
 
 
 # Setup
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Loads the cog
     

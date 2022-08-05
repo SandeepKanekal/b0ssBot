@@ -24,8 +24,8 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [OpenWeatherMap API Key](https://openweathermap.org/api) Required for weather commands
 + [Zenquotes.io API](https://zenquotes.io/api) Required for quote commands (no key required)
 + [OpenTDB API](https://opentdb.com/api_config.php) Required for trivia commands (no key required)
-+ [TruthOrDareBot API](https://docs.truthordarebot.xyz/api-docs) Required for truth or dare commands (no key required)
-+ [Icanhasdadjoke API](https://icanhazdadjoke.com/api) Required for dad joke commands (no key required)
++ [TruthOrDareBot API](https://docs.truthordarebot.xyz/api-docs) Required for truthordare commands (no key required)
++ [Icanhazdadjoke API](https://icanhazdadjoke.com/api) Required for dad joke commands (no key required)
 + [BoredAPI](https://boredapi.com/api) Required for bored commands (no key required)
 + [GitHub API](https://developer.github.com/v3/) Required for GitHub commands (no key required)
 + [Dog CEO API](https://dog.ceo/dog-api/) Required for dog commands (no key required)

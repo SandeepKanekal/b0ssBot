@@ -25,8 +25,7 @@ async def send_embed(ctx, description: str, colour: discord.Colour = discord.Col
     :return: None
     :rtype: None
     """
-    embed = discord.Embed(description=description, colour=colour)
-    await ctx.send(embed=embed)
+    await ctx.send(embed=discord.Embed(description=description, colour=colour))
 
 
 def modlog_enabled(guild_id: int) -> bool:
@@ -83,7 +82,7 @@ async def send_webhook(channel: discord.TextChannel, embed: discord.Embed, bot: 
 
 
 class Moderation(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialises the Cog
         
@@ -1112,7 +1111,7 @@ class Moderation(commands.Cog):
     @commands.Cog.listener()
     async def on_invite_create(self, invite: discord.Invite) -> None:
         """
-        Event listener for when an invite is created.
+        Event listener for when an invitation is created.
 
         :param invite: The invite that was created
 
@@ -1141,7 +1140,7 @@ class Moderation(commands.Cog):
     @commands.Cog.listener()
     async def on_invite_delete(self, invite: discord.Invite) -> None:
         """
-        Event listener for when an invite is deleted.
+        Event listener for when an invitation is deleted.
 
         :param invite: The invite that was deleted
 
@@ -1225,48 +1224,6 @@ class Moderation(commands.Cog):
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
-
-    # @commands.Cog.listener()
-    # async def on_scheduled_event_update(self, before: discord.ScheduledEvent, after: discord.ScheduledEvent) -> None:
-    #     """
-    #     Event listener for when a scheduled event is updated.
-
-    #     :param before: The scheduled event before the update
-    #     :param after: The scheduled event after the update
-
-    #     :type before: discord.ScheduledEvent
-    #     :type after: discord.ScheduledEvent
-
-    #     :return: None
-    #     :rtype: None
-    #     """
-    #     if not modlog_enabled(after.guild.id):
-    #         return
-
-    #     channel = get_mod_channel(after.guild)  # Get the modlog channel
-
-    #     # Make embed
-    #     embed = discord.Embed(
-    #         title='Scheduled event updated',
-    #         description='',
-    #         colour=discord.Colour.green(),
-    #         timestamp=datetime.datetime.now()
-    #     ).set_author(name=after.guild.name, icon_url=after.guild.icon or discord.Embed.Empty).set_footer(text=f'ID: {after.guild.id}').set_thumbnail(url=after.cover or discord.Embed.Empty)
-
-    #     if before.name != after.name:
-    #         embed.description += f'Name: {before.name} -> {after.name}\n'
-    #     if before.start_time != after.start_time:
-    #         embed.description += f'Start time: {convert_to_unix_time(before.start_time.strftime("%Y-%m-%d %H:%M:%S:%f"))} -> {convert_to_unix_time(after.start_time.strftime("%Y-%m-%d %H:%M:%S:%f"))}\n'
-    #     if before.end_time and after.end_time and before.end_time != after.end_time:
-    #         embed.description += f'End time: {convert_to_unix_time(before.end_time.strftime("%Y-%m-%d %H:%M:%S:%f"))} -> {convert_to_unix_time(after.end_time.strftime("%Y-%m-%d %H:%M:%S:%f"))}\n'
-    #     if before.location != after.location:
-    #         embed.description += f'Location: {before.location} -> {after.location}\n'
-
-    #     if not embed.description: 
-    #         return
-
-    #     # Send webhook
-    #     await send_webhook(channel, embed, self.bot)
 
     @commands.Cog.listener()
     async def on_scheduled_event_user_add(self, event: discord.ScheduledEvent, member: discord.Member) -> None:
@@ -1391,7 +1348,7 @@ class Moderation(commands.Cog):
     # Ban command
     @commands.command(name='ban', description='Bans the mentioned user from the server', usage='ban <user> <reason>')
     @commands.has_permissions(ban_members=True)
-    async def ban(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
+    async def ban(self, ctx: commands.Context, member: discord.Member, *, reason: str = 'No reason provided'):
         """
         Bans the mentioned user from the server
         
@@ -1406,23 +1363,26 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        if member == ctx.author:
+        # Checks before execution
+        if member.id == ctx.author.id:
             await send_embed(ctx, description='You cannot ban yourself', colour=discord.Colour.red())
             return
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot ban this user', colour=discord.Colour.red())
             return
+
+        # Ban user
         try:
             await member.ban(reason=reason)
             await send_embed(ctx, description=f'{member} was banned for {reason}', colour=discord.Colour.red())
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were banned in {ctx.guild.name} for: {reason}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Ban error response
     @ban.error
-    async def ban_error(self, ctx, error):
+    async def ban_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the ban command
         
@@ -1449,7 +1409,7 @@ class Moderation(commands.Cog):
     # Kick command
     @commands.command(name='kick', description='Kicks the mentioned user from the server', usage='kick <user> <reason>')
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
+    async def kick(self, ctx: commands.Context, member: discord.Member, *, reason: str = 'No reason provided'):
         """
         Kicks the mentioned user from the server
         
@@ -1464,23 +1424,26 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        if member == ctx.author:
+        # Checks before execution
+        if member.id == ctx.author.id:
             await send_embed(ctx, description='You cannot kick yourself', colour=discord.Colour.red())
             return
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot kick this user', colour=discord.Colour.red())
             return
+
+        # Kick user
         try:
             await member.kick(reason=reason)
             await send_embed(ctx, description=f'{member} was kicked for {reason}', colour=discord.Colour.red())
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were kicked in {ctx.guild.name} for {reason}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Kick error response
     @kick.error
-    async def kick_error(self, ctx, error):
+    async def kick_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the kick command
         
@@ -1507,7 +1470,7 @@ class Moderation(commands.Cog):
     # Unban command
     @commands.command(aliases=['ub'], description='Unbans the mentioned member from the server', usage='unban <user>')
     @commands.has_permissions(ban_members=True)
-    async def unban(self, ctx, *, member):
+    async def unban(self, ctx: commands.Context, *, member):
         """
         Unbans the mentioned member from the server
         
@@ -1520,32 +1483,38 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Checks before execution
         if member == f'{ctx.author}#{ctx.author.discriminator}':
             await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
             return
-        banned_users = ctx.guild.bans()
+            
         if '#' not in member:
             await send_embed(ctx, description='Invalid user')
             return
+
+        banned_users = ctx.guild.bans()
         name, discriminator = member.split('#')
         user_flag = 0
+
         async for ban in banned_users:
             user = ban.user
             if (user.name, user.discriminator) == (name, discriminator):
                 user_flag += 1
+
+                # Unban user
                 try:
                     await ctx.guild.unban(user)
                     await send_embed(ctx, description=f'{member} was unbanned', colour=discord.Colour.green())
                     return
                 except discord.Forbidden:  # Permission error
-                    await send_embed(ctx, description='I do not have permissionto perform this action!')
+                    await send_embed(ctx, description='I do not have permission to perform this action!')
                     return
         if user_flag == 0:
             await send_embed(ctx, description='User not found')
 
     # Unban error response
     @unban.error
-    async def unban_error(self, ctx, error):
+    async def unban_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the unban command
         
@@ -1572,7 +1541,7 @@ class Moderation(commands.Cog):
     # Mute command
     @commands.command(name='mute', description='Mutes the specified user', usage='mute <user> <reason>')
     @commands.has_permissions(manage_messages=True)
-    async def mute(self, ctx, member: discord.Member, *, reason: str = 'No reason provided'):
+    async def mute(self, ctx: commands.Context, member: discord.Member, *, reason: str = 'No reason provided'):
         """
         Mutes the specified user
 
@@ -1587,30 +1556,35 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        if member == ctx.author:
+        # Checks before execution
+        if member.id == ctx.author.id:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
             return
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot mute this user', colour=discord.Colour.red())
             return
+
         guild = ctx.guild
         muted_role = discord.utils.get(guild.roles, name='Muted')  # Get the muted role
+
         if not muted_role:
             muted_role = await guild.create_role(name='Muted')  # Create a muted role if not present
             for channel in guild.channels:
                 await channel.set_permissions(muted_role, speak=False,
                                               send_messages=False)  # Set permissions of the muted role
+        
+        # Mute users
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
             await send_embed(ctx, description=f'{member} has been muted for {reason}', colour=discord.Colour.red())
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were muted in {guild.name} for {reason}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Mute error response
     @mute.error
-    async def mute_error(self, ctx, error):
+    async def mute_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the mute command
         
@@ -1639,7 +1613,7 @@ class Moderation(commands.Cog):
                       description='Temporarily mutes the specified user\nDuration must be mentioned in minutes',
                       usage='tempmute <user> <duration> <reason>')
     @commands.has_permissions(manage_messages=True)
-    async def tempmute(self, ctx, member: discord.Member, duration: int, *, reason: str = 'No reason provided'):
+    async def tempmute(self, ctx: commands.Context, member: discord.Member, duration: int, *, reason: str = 'No reason provided'):
         """
         Temporarily mutes the specified user
         
@@ -1656,35 +1630,43 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        if member == ctx.author:
+        # Checks before execution
+        if member.id == ctx.author.id:
             await send_embed(ctx, description='You cannot mute yourself', colour=discord.Colour.red())
             return
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot mute this user', colour=discord.Colour.red())
             return
+
         guild = ctx.guild
         muted_role = discord.utils.get(guild.roles, name='Muted')  # Get the muted role
         if not muted_role:
             muted_role = await guild.create_role(name='Muted')
             for channel in guild.channels:
                 await channel.set_permissions(muted_role, speak=False, send_messages=False)
+        
+        # Mute user
         try:
             await member.add_roles(muted_role, reason=reason)
+
             await send_embed(ctx, description=f'{member} has been muted for {reason} for {duration} seconds',
                              colour=discord.Colour.red())
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were muted in {guild.name} for {reason} for {duration} seconds')
+
             await asyncio.sleep(duration * 60)
             await member.remove_roles(muted_role, reason=reason)
+
             await send_embed(ctx, description=f'{member} has been unmuted', colour=discord.Colour.green())
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You were unmuted in {guild.name}')
+
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Tempmute error response
     @tempmute.error
-    async def tempmute_error(self, ctx, error):
+    async def tempmute_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the tempmute command
         
@@ -1714,7 +1696,7 @@ class Moderation(commands.Cog):
     # Unmute command
     @commands.command(aliases=['um'], description='Unmutes the specified user', usage='unmute <user>')
     @commands.has_permissions(manage_messages=True)
-    async def unmute(self, ctx, member: discord.Member):
+    async def unmute(self, ctx: commands.Context, member: discord.Member):
         """
         Unmutes the specified user
         
@@ -1727,24 +1709,28 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        if member == ctx.author:
+        # Checks before execution
+        if member.id == ctx.author.id:
             await send_embed(ctx, description='You cannot unmute yourself', colour=discord.Colour.red())
             return
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot unmute this user', colour=discord.Colour.red())
             return
+
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')  # Get muted role
+
+        # Unmute user
         try:
             await member.remove_roles(muted_role)  # Remove role
             await send_embed(ctx, description=f'{member} was unmuted', colour=discord.Colour.green())
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(f'You have been unmuted in {ctx.guild.name}')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Unmute error response
     @unmute.error
-    async def unmute_error(self, ctx, error):
+    async def unmute_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the unmute command
         
@@ -1771,7 +1757,7 @@ class Moderation(commands.Cog):
     # Nuke command
     @commands.command(aliases=['nk'], description='Nukes the mentioned text channel', usage='nuke <channel>')
     @commands.has_permissions(manage_channels=True)
-    async def nuke(self, ctx, channel: discord.TextChannel = None):
+    async def nuke(self, ctx: commands.Context, channel: discord.TextChannel = None):
         """
         Nukes the mentioned text channel
         
@@ -1785,15 +1771,20 @@ class Moderation(commands.Cog):
         :rtype: None
         """
         sql = SQL('b0ssbot')
+
+        # Checks before execution
         if channel is None:
             await ctx.send('Please mention the text channel to be nuked')
             return
+        
+        # Get the channel
         try:
             nuke_channel = discord.utils.get(ctx.guild.channels, id=channel.id)  # Get the channel to be nuked
         except commands.errors.ChannelNotFound:
             await send_embed(ctx, description='Channel not found')
             return
 
+        # Nuke the channel
         try:
             new_channel = await nuke_channel.clone(reason="Has been Nuked!")
             await nuke_channel.delete()
@@ -1803,9 +1794,10 @@ class Moderation(commands.Cog):
             with contextlib.suppress(discord.NotFound):
                 await ctx.reply("Nuked the Channel successfully!")
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
             return
 
+        # Update modlogs channel in database if provided channel was used for modlogs
         if sql.select(elements=['*'], table='modlogs',
                       where=f"guild_id = '{ctx.guild.id}' AND channel_id = '{nuke_channel.id}'"):
             sql.update(table='modlogs', column='channel_id', value=f"'{new_channel.id}'",
@@ -1814,7 +1806,7 @@ class Moderation(commands.Cog):
 
     # Nuke error response
     @nuke.error
-    async def nuke_error(self, ctx, error):
+    async def nuke_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the nuke command
         
@@ -1841,7 +1833,7 @@ class Moderation(commands.Cog):
     # Lock command
     @commands.command(name='lock', description='Locks the current channel', usage='lock')
     @commands.has_permissions(manage_channels=True)
-    async def lock(self, ctx):
+    async def lock(self, ctx: commands.Context):
         """
         Locks the current channel
         
@@ -1852,16 +1844,17 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Lock the channel
         try:
             channel = ctx.channel
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
             await send_embed(ctx, description=f'{channel} is in lockdown', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Lock error response
     @lock.error
-    async def lock_error(self, ctx, error):
+    async def lock_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the lock command
         
@@ -1881,7 +1874,7 @@ class Moderation(commands.Cog):
     # Unlock command
     @commands.command(name='unlock', description='Unlocks te current channel', usage='unlock')
     @commands.has_permissions(manage_channels=True)
-    async def unlock(self, ctx):
+    async def unlock(self, ctx: commands.Context):
         """
         Unlocks the current channel
 
@@ -1892,16 +1885,17 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Unlock the channel
         try:
             channel = ctx.channel
             await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
             await send_embed(ctx, description=f'{channel} has been unlocked', colour=discord.Colour.red())
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     # Unlock error response
     @unlock.error
-    async def unlock_error(self, ctx, error):
+    async def unlock_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the unlock command
 
@@ -1923,7 +1917,7 @@ class Moderation(commands.Cog):
                       description='Sets the modlog channel\nMention channel for setting or updating the channel\nDon\'t mention channel to disable modlogs',
                       usage='modlogs <channel>')
     @commands.has_permissions(manage_guild=True)
-    async def modlogs(self, ctx, channel: discord.TextChannel = None):
+    async def modlogs(self, ctx: commands.Context, channel: discord.TextChannel = None):
         """
         Sets the modlogs channel
         
@@ -1937,17 +1931,21 @@ class Moderation(commands.Cog):
         :rtype: None
         """
         sql = SQL('b0ssbot')
+
+        # Check if channel is provided
         try:
             mod_channel = discord.utils.get(ctx.guild.text_channels, id=int(
                 sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id = '{ctx.guild.id}'")[0][0]))
         except ValueError:
             mod_channel = None
 
+        # Inform user that no channel is provided
         if channel is None and not int(
                 sql.select(elements=['mode'], table='modlogs', where=f"guild_id = '{ctx.guild.id}'")[0][0]):
             await send_embed(ctx, description='Please mention the channel to set the modlogs to')
             return
 
+        # Disable modlogs
         if channel is None:
             await send_embed(ctx, description='Modlogs have been disabled for this server')
             sql.update(table='modlogs', column='mode', value=0, where=f"guild_id = '{ctx.guild.id}'")
@@ -1960,6 +1958,7 @@ class Moderation(commands.Cog):
                     await webhook.delete(reason='Modlogs disabled')
             return
 
+        # Set modlogs
         sql.update(table='modlogs', column='channel_id', value=channel.id, where=f"guild_id = '{ctx.guild.id}'")
         sql.update(table='modlogs', column='mode', value=1, where=f"guild_id = '{ctx.guild.id}'")
         await ctx.send(f'NOTE: Modlogs requires the **Send Webhooks** to be enabled in {channel.mention}')
@@ -1972,7 +1971,7 @@ class Moderation(commands.Cog):
 
     # Modlogs error response
     @modlogs.error
-    async def modlogs_error(self, ctx, error):
+    async def modlogs_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the modlogs command
         
@@ -1997,7 +1996,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name='deafen', description='Deafen a member', usage='deafen <member>')
     @commands.has_permissions(deafen_members=True)
-    async def deafen(self, ctx, member: discord.Member):
+    async def deafen(self, ctx: commands.Context, member: discord.Member):
         """
         Deafens a member
         
@@ -2010,18 +2009,20 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Checks before execution
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot deafen this user', colour=discord.Colour.red())
             return
 
+        # Deafen member
         try:
             await member.edit(deafen=True)
             await send_embed(ctx, description=f'{member.mention} has been deafened')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     @deafen.error
-    async def deafen_error(self, ctx, error):
+    async def deafen_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the deafen command
 
@@ -2046,7 +2047,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name='undeafen', description='Undeafen a member', usage='undeafen <member>')
     @commands.has_permissions(deafen_members=True)
-    async def undeafen(self, ctx, member: discord.Member):
+    async def undeafen(self, ctx: commands.Context, member: discord.Member):
         """
         Undeafens a member
         
@@ -2059,18 +2060,20 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Checks before execution
         if member.top_role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
             await send_embed(ctx, description='You cannot undeafen this user', colour=discord.Colour.red())
             return
 
+        # Undeafen member
         try:
             await member.edit(deafen=False)
             await send_embed(ctx, description=f'{member.mention} has been undeafened')
         except discord.Forbidden:  # Permission error
-            await send_embed(ctx, description='I do not have permissionto perform this action!')
+            await send_embed(ctx, description='I do not have permission to perform this action!')
 
     @undeafen.error
-    async def undeafen_error(self, ctx, error):
+    async def undeafen_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the undeafen command
             
@@ -2095,7 +2098,7 @@ class Moderation(commands.Cog):
 
 
 # Setup
-def setup(bot):
+def setup(bot: commands.Bot):
     """
     Loads the cog
     

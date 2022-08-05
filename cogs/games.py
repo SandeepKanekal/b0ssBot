@@ -11,7 +11,7 @@ from tools import send_error_embed, inform_owner
 
 
 class Games(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """
         Initialize the cog.
         
@@ -27,7 +27,7 @@ class Games(commands.Cog):
     # 8ball for fun
     @commands.command(name='8ball', aliases=['8b'], description='Ask a question, and get a reply!',
                       usage='8ball <question>')
-    async def eight_ball(self, ctx, *, question: str):
+    async def eight_ball(self, ctx: commands.Context, *, question: str):
         """
         8ball command
 
@@ -75,7 +75,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed)
 
     @eight_ball.error
-    async def eight_ball_error(self, ctx, error):
+    async def eight_ball_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the 8ball command
         
@@ -92,12 +92,13 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please ask a question!\n\nProper Usage: `{self.bot.get_command("8ball").usage}`')
             return
-        await send_error_embed(ctx, description='An error occured while running the 8ball command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error occurred while running the 8ball command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     @commands.command(aliases=['roll'], description='Rolls a dice', usage='dice')
     @commands.guild_only()
-    async def dice(self, ctx):
+    async def dice(self, ctx: commands.Context):
         """
         Dice command
         
@@ -113,12 +114,13 @@ class Games(commands.Cog):
         await msg.edit('**Rolling.**')
         await msg.edit('**Rolling..**')
         await msg.edit('**Rolling...**')
-        await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**', view=view.RollView(ctx=ctx, message_id=msg.id, timeout=None))
+        await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**',
+                       view=view.RollView(ctx=ctx, message_id=msg.id, timeout=None))
 
     # Coinflip command
     @commands.command(aliases=['cf'], description='Heads or Tails?', usage='coinflip')
     @commands.guild_only()
-    async def coinflip(self, ctx):
+    async def coinflip(self, ctx: commands.Context):
         """
         Coinflip command
         
@@ -133,12 +135,13 @@ class Games(commands.Cog):
         await msg.edit('**Flipping.**')
         await msg.edit('**Flipping..**')
         await msg.edit('**Flipping...**')
-        await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**', view=view.FlipView(ctx=ctx, message_id=msg.id, timeout=None))
+        await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**',
+                       view=view.FlipView(ctx=ctx, message_id=msg.id, timeout=None))
 
     @commands.command(name='truth', description='Get a truth question', usage='truth <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def truth(self, ctx, rating: str = None):
+    async def truth(self, ctx: commands.Context, rating: str = None):
         """
         Truth command
         
@@ -155,13 +158,15 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
-        
-        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+
+        # Limit R rating to NSFW channels only
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
             return
 
-        data = requests.get(f'https://api.truthordarebot.xyz/v1/truth?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/truth').json()
-
+        data = requests.get(
+            f'https://api.truthordarebot.xyz/v1/truth?rating={rating}').json() if rating else requests.get(
+            'https://api.truthordarebot.xyz/v1/truth').json()
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
@@ -170,7 +175,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @truth.error
-    async def truth_error(self, ctx, error):
+    async def truth_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Truth error handler
         
@@ -187,13 +192,14 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
         else:
-            await send_error_embed(ctx, description='An error occured while running the truth command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the truth command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='dare', description='Get a dare', usage='dare <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def dare(self, ctx, rating: str = None):
+    async def dare(self, ctx: commands.Context, rating: str = None):
         """
         Dare command
         
@@ -211,12 +217,14 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+        # Limit R rating to NSFW channels only
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
             return
 
-        data = requests.get(f'https://api.truthordarebot.xyz/v1/dare?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/dare').json()
-
+        data = requests.get(
+            f'https://api.truthordarebot.xyz/v1/dare?rating={rating}').json() if rating else requests.get(
+            'https://api.truthordarebot.xyz/v1/dare').json()
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
@@ -224,7 +232,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @dare.error
-    async def dare_error(self, ctx, error):
+    async def dare_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Dare error handler
         
@@ -241,14 +249,15 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
         else:
-            await send_error_embed(ctx, description='An error occured while running the dare command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the dare command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='truthordare', aliases=['tord'], description='Get a truth or dare',
                       usage='truthordare <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def truthordare(self, ctx, rating: str = None, truthordare: str = None):
+    async def truthordare(self, ctx: commands.Context, rating: str = None, truthordare: str = None):
         """
         Truth or dare command
 
@@ -267,8 +276,9 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
-        
-        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+
+        # Limit R rating to NSFW channels only
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
             return
 
@@ -284,7 +294,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @truthordare.error
-    async def truthordare_error(self, ctx, error):
+    async def truthordare_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Truth or dare error handler
 
@@ -301,7 +311,8 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
         else:
-            await send_error_embed(ctx, description='An error occured while running the truthordare command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the truthordare command! The owner has been notified.')
             await inform_owner(self.bot, error)
         # OMG! You have found the egg! Here's your prize! https://imgur.com/pSB4AnR
 
@@ -309,7 +320,7 @@ class Games(commands.Cog):
                       usage='wouldyourather <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def wouldyourather(self, ctx, rating: str = None):
+    async def wouldyourather(self, ctx: commands.Context, rating: str = None):
         """
         Would you rather command
         
@@ -327,11 +338,14 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+        # Limit R rating to NSFW channels only
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
             return
 
-        data = requests.get(f'https://api.truthordarebot.xyz/v1/wyr?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/wyr').json()
+        data = requests.get(
+            f'https://api.truthordarebot.xyz/v1/wyr?rating={rating}').json() if rating else requests.get(
+            'https://api.truthordarebot.xyz/v1/wyr').json()
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
@@ -339,7 +353,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @wouldyourather.error
-    async def wouldyourather_error(self, ctx, error):
+    async def wouldyourather_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Would you rather error handler
         
@@ -356,14 +370,15 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
         else:
-            await send_error_embed(ctx, description='An error occured while running the wouldyourather command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the wouldyourather command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='neverhaveiever', aliases=['nhie'], description='Get a never have I ever',
                       usage='neverhaveiever <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def neverhaveiever(self, ctx, rating: str = None):
+    async def neverhaveiever(self, ctx: commands.Context, rating: str = None):
         """
         Never have I ever command
 
@@ -381,12 +396,14 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+        # Limit R rating to NSFW channels only
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
             return
 
-        data = requests.get(f'https://api.truthordarebot.xyz/v1/nhie?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/nhie').json()
-
+        data = requests.get(
+            f'https://api.truthordarebot.xyz/v1/nhie?rating={rating}').json() if rating else requests.get(
+            'https://api.truthordarebot.xyz/v1/nhie').json()
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
@@ -394,7 +411,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @neverhaveiever.error
-    async def neverhaveiever_error(self, ctx, error):
+    async def neverhaveiever_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Never have I ever error handler
 
@@ -411,13 +428,14 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
         else:
-            await send_error_embed(ctx, description='An error occured while running the neverhaveiever command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the neverhaveiever command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='paranoia', description='Get a paranoia question', usage='paranoia <rating>')
     @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.guild_only()
-    async def paranoia(self, ctx, rating: str = None):
+    async def paranoia(self, ctx: commands.Context, rating: str = None):
         """
         Paranoia command
         
@@ -435,11 +453,14 @@ class Games(commands.Cog):
                                    description='Please enter a valid rating! Valid ratings are `PG`, `PG13`, and `R`')
             return
 
-        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw(): 
+        # Limit R rating to NSFW channels only
+        if rating and rating.upper() == 'R' and not ctx.channel.is_nsfw():
             await send_error_embed(ctx, description='You cannot use the `R` rating outside NSFW channels.')
             return
 
-        data = requests.get(f'https://api.truthordarebot.xyz/v1/paranoia?rating={rating}').json() if rating else requests.get('https://api.truthordarebot.xyz/v1/paranoia').json()
+        data = requests.get(
+            f'https://api.truthordarebot.xyz/v1/paranoia?rating={rating}').json() if rating else requests.get(
+            'https://api.truthordarebot.xyz/v1/paranoia').json()
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
@@ -447,7 +468,7 @@ class Games(commands.Cog):
         await ctx.send(embed=embed, view=view.TruthOrDareView(ctx=ctx, timeout=None))
 
     @paranoia.error
-    async def paranoia_error(self, ctx, error):
+    async def paranoia_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for paranoia command
         
@@ -464,12 +485,13 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown! Please wait {round(error.retry_after, 2)} seconds')
         else:
-            await send_error_embed(ctx, description='An error occured while running the paranoia command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the paranoia command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='guessthenumber', aliases=['gtn'], description='Guess the number',
                       usage='guessthenumber <limit>')
-    async def guessthenumber(self, ctx, limit: int = 100):
+    async def guessthenumber(self, ctx: commands.Context, limit: int = 100):
         """
         Guess the number command
         
@@ -494,7 +516,7 @@ class Games(commands.Cog):
         end_time = start_time + 60
 
         def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel
+            return m.author.id == ctx.author.id and m.channel == ctx.channel
 
         while True:
             try:
@@ -510,6 +532,7 @@ class Games(commands.Cog):
                 if not guess.content.isdigit():
                     continue
 
+                # Inform the user of how near their guess is
                 if int(guess.content) == number:
                     await ctx.send(f'You guessed the number **{guess.content}**!')
                     break
@@ -525,7 +548,7 @@ class Games(commands.Cog):
                     break
 
     @guessthenumber.error
-    async def guessthenumber_error(self, ctx, error):
+    async def guessthenumber_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for guess the number command
         
@@ -538,11 +561,12 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description='An error occured while running the guessthenumber command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error occurred while running the guessthenumber command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     @commands.command(name='tictactoe', aliases=['ttt'], description='Play Tic Tac Toe', usage='ttt <player>')
-    async def tictactoe(self, ctx, player: discord.Member):
+    async def tictactoe(self, ctx: commands.Context, player: discord.Member):
         """
         Tic Tac Toe command
         
@@ -555,7 +579,7 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        if player == ctx.author:
+        if player.id == ctx.author.id:
             await send_error_embed(ctx, description='You cannot play against yourself!')
             return
 
@@ -563,11 +587,13 @@ class Games(commands.Cog):
             await send_error_embed(ctx, description='You cannot play against a bot!')
             return
 
-        turn = random.choice([ctx.author, player])  # type: discord.Member
-        await ctx.send(f'It is {turn.mention}\'s turn!', view=view.TicTacToeView(ctx=ctx, initiator=ctx.author, other_player=player, turn=turn, bot=self.bot, timeout=None))
+        turn = random.choice([ctx.author, player])  # choose a random player to play first
+        await ctx.send(f'It is {turn.mention}\'s turn!',
+                       view=view.TicTacToeView(ctx=ctx, initiator=ctx.author, other_player=player, turn=turn,
+                                               bot=self.bot, timeout=None))
 
     @tictactoe.error
-    async def tictactoe_error(self, ctx, error):
+    async def tictactoe_error(self, ctx: commands.Context, error: commands.CommandError):
         """
         Error handler for the tictactoe command
         
@@ -580,9 +606,10 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description='An error occured while running the tictactoe command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error occurred while running the tictactoe command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     bot.add_cog(Games(bot))

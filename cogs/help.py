@@ -4,18 +4,30 @@ import discord
 import datetime
 from sql_tools import SQL
 from discord.ext import commands
+from view import HelpView
 
 
 # Help command
 class Help(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
+        """
+        Initializes the help command
+        
+        :param bot: The bot object
+        
+        :type bot: commands.Bot
+        
+        :returns: None
+        :rtype: None
+        """
         self.bot = bot
 
     @commands.command(name='help',
                       description='Shows the list of all commands or the information about one command if specified',
                       usage='help <command>',
                       hidden=True)
-    async def help(self, ctx, *, command: str = None):
+    async def help(self, ctx: commands.Context, *, command: str = None):
+        # sourcery skip: low-code-quality
         """
         Shows the list of all commands or the information about one command if specified
         
@@ -32,6 +44,7 @@ class Help(commands.Cog):
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
 
         if command is None:
+            # Create embed
             embed = discord.Embed(
                 title='Help Page', 
                 description=f'Shows the list of all commands\nUse `{prefix}help <command>` to get more information about a command', 
@@ -39,6 +52,7 @@ class Help(commands.Cog):
                 timestamp=datetime.datetime.now()
             ).set_footer(text='Help Page', icon_url=self.bot.user.avatar)
 
+            # Add fields
             for cog in sorted(self.bot.cogs):
                 if cog in ['Eval', 'Help', 'Events', 'Owner']:
                     continue
@@ -47,7 +61,10 @@ class Help(commands.Cog):
                 embed.add_field(name=cog, value=commands_str[:-1], inline=False)
 
         else:
+            # Get command
             cmd = self.bot.get_command(command) or self.bot.get_application_command(command, type=discord.ApplicationCommand)
+
+            # Checks
             if cmd is None:
                 await ctx.reply(f'Command {command} not found')
                 return
@@ -56,6 +73,11 @@ class Help(commands.Cog):
                 await ctx.reply('This command is only for the owner!')
                 return
 
+            if self.bot.get_command(command) and self.bot.get_application_command(command, type=discord.ApplicationCommand):
+                await ctx.reply('There are 2 instances of this command. Choose the command you want to get information about', view=HelpView(command, self.bot, prefix, timeout=None))
+                return
+
+            # Create embed
             embed = discord.Embed(
                 title=f'Help - {cmd}',
                 description=cmd.description,
@@ -64,6 +86,7 @@ class Help(commands.Cog):
             )
             embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
 
+            # Add fields
             if isinstance(cmd, commands.Command):
                 embed.add_field(name='Aliases', value=f"`{', '.join(cmd.aliases)}`", inline=False) if cmd.aliases else embed.add_field(name='Aliases', value='`None`', inline=False)
                 param_str = ''.join(f'`{param}` ' for param in cmd.clean_params)
@@ -76,6 +99,7 @@ class Help(commands.Cog):
                 embed.add_field(name='Parameters', value=param_str, inline=False)
                 embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
             elif isinstance(cmd, discord.SlashCommandGroup):
+                embed.add_field(name='Subcommands', value=f'{" ".join(f"`{subcmd.name}`" for subcmd in cmd.walk_commands())}', inline=False)
                 embed.add_field(name='Usage', value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
             else:
                 embed.add_field(name='Usage', value='This is an application command. Right click on a message/user to get the command', inline=False)
@@ -84,5 +108,15 @@ class Help(commands.Cog):
 
 
 # Setup
-def setup(bot):
+def setup(bot: commands.Bot):
+    """
+    Adds the help command to the bot
+    
+    :param bot: The bot object
+    
+    :type bot: commands.Bot
+    
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Help(bot))
