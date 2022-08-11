@@ -9,6 +9,11 @@ class SQL(object):
     def __init__(self, database: str) -> None:
         self.database = database
 
+    def commit_and_close_connection(self, conn, cursor):
+        conn.commit()
+        cursor.close()
+        conn.close()
+
     def select(self, elements: list, table: str, where: str = None) -> list[tuple[Any, ...]]:
         """
         Selects elements from a database.
@@ -71,11 +76,7 @@ class SQL(object):
             cursor.execute(f'UPDATE {table} SET {column} = {value}')
         else:
             cursor.execute(f'UPDATE {table} SET {column} = {value} WHERE {where}')
-        # Commit
-        conn.commit()
-        # Close the connection
-        cursor.close()
-        conn.close()
+        self.commit_and_close_connection(conn, cursor)
 
     def insert(self, table: str, columns: list, values: list) -> None:
         """
@@ -103,11 +104,7 @@ class SQL(object):
         value_str = ', '.join(values)
         # Insert into the database
         cursor.execute(f'INSERT INTO {table}({column_str}) VALUES({value_str})')
-        # Commit
-        conn.commit()
-        # Close the connection
-        cursor.close()
-        conn.close()
+        self.commit_and_close_connection(conn, cursor)
 
     def delete(self, table: str, where: str = None) -> None:
         """
@@ -130,11 +127,7 @@ class SQL(object):
         cursor = conn.cursor()
         # Delete from the database
         cursor.execute(f'DELETE FROM {table} WHERE {where}' if where else f'DELETE FROM {table}')
-        # Commit
-        conn.commit()
-        # Close the connection
-        cursor.close()
-        conn.close()
+        self.commit_and_close_connection(conn, cursor)
 
     def query(self, q) -> Any:
         """

@@ -421,6 +421,68 @@ class Util(commands.Cog):
             await send_error_embed(ctx, description='An error occurred while running the prefix command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
+    @commands.command(name='serverclear', aliases=['sc'], description='Clear all messages in the server containing the specific content.', usage='serverclear <content>')
+    @commands.has_permissions(manage_messages=True)
+    @commands.cooldown(1, 1800, commands.BucketType.guild)
+    async def serverclear(self, ctx: commands.Context, *, content: str):
+        """
+        Clear all messages in the server containing the specific content.
+
+        :param ctx: The context of where the command was used
+        :param content: The content to search for in the messages to delete
+
+        :type ctx: commands.Context
+        :type content: str
+
+        :return: None
+        :rtype: None
+        """
+        # Inform the user that this will take a while
+        msg = await ctx.reply('This may take a while... Pinned messages will not be cleared.')
+        information = await ctx.send('Initializing...')
+
+        # Delete command message
+        await ctx.message.delete()
+
+        for channel in ctx.guild.text_channels:
+            await information.edit(f'Clearing in {channel.mention}')
+            
+            # Get the messages to delete
+            messages = list(filter(lambda m: content in m.content and not m.pinned, await channel.history(limit=None).flatten()))
+
+            # Delete the messages
+            for message in messages:
+                await message.delete()
+        
+        await information.edit('Done!', delete_after=5)
+        await msg.delete()
+
+    
+    @serverclear.error
+    async def serverclear_error(self, ctx: commands.Context, error: commands.CommandError):
+        """
+        Error handler for the serverclear command
+
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a content to search for\n\nProper Usage: `{self.bot.get_command("serverclear").usage}`')
+        elif isinstance(error, commands.CommandOnCooldown):
+            await send_error_embed(ctx, description=f'This command is on cooldown! Try again in {error.retry_after:.2f} seconds.')
+        elif isinstance(error, commands.MissingPermissions):
+            await send_error_embed(ctx, description=f'Error: {error}')
+        else:
+            await send_error_embed(ctx, description='An error occurred while running the serverclear command! The owner has been informed.')
+            await inform_owner(self.bot, error)
+
 
 def setup(bot: commands.Bot):
     """

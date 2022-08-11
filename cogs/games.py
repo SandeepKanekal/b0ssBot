@@ -561,9 +561,12 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx,
-                               description='An error occurred while running the guessthenumber command! The owner has been notified.')
-        await inform_owner(self.bot, error)
+        if isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx, description=f'Mention a valid limit!\n\nProper Usage: `{self.bot.get_command("guessthenumber").usage}`')
+        else:
+            await send_error_embed(ctx,
+                                description='An error occurred while running the tictactoe command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='tictactoe', aliases=['ttt'], description='Play Tic Tac Toe', usage='ttt <player>')
     async def tictactoe(self, ctx: commands.Context, player: discord.Member):
@@ -606,10 +609,25 @@ class Games(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx,
-                               description='An error occurred while running the tictactoe command! The owner has been notified.')
-        await inform_owner(self.bot, error)
+        if isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx, description=f'You need to specify a player to play against!\n\nProper Usage: `{self.bot.get_command("tictactoe").usage}`')
+        elif isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx, description=f'Mention a valid player to play against!\n\nProper Usage: `{self.bot.get_command("tictactoe").usage}`')
+        else:
+            await send_error_embed(ctx,
+                                description='An error occurred while running the tictactoe command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
 
 def setup(bot: commands.Bot):
+    """
+    Function to setup the module
+    
+    :param bot: The bot to add the module to
+    
+    :type bot: commands.Bot
+    
+    :return: None
+    :rtype: None
+    """
     bot.add_cog(Games(bot))

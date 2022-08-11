@@ -10,6 +10,30 @@ from tools import send_error_embed, get_quote
 from asyncpraw.reddit import Submission
 
 
+class AuthorNotConnectedToVoiceChannel(commands.CommandError):
+    pass
+
+
+class AuthorInDifferentVoiceChannel(commands.CommandError):
+    pass
+
+
+class PlayerNotConnectedToVoiceChannel(commands.CommandError):
+    pass
+
+
+class NoAudioPlaying(commands.CommandError):
+    pass
+
+
+class PlayerPaused(commands.CommandError):
+    pass
+
+
+class PlayerPlaying(commands.CommandError):
+    pass
+
+
 # noinspection PyUnusedLocal
 class YouTubeSearchView(discord.ui.View):
     def __init__(self, ctx: commands.Context, items: dict[str, list[str | int]], youtube, embed: discord.Embed,
@@ -112,7 +136,8 @@ class YouTubeSearchView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class RedditPostView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, submissions: list[Submission], embed: discord.Embed, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, submissions: list[Submission], embed: discord.Embed,
+                 timeout: float | None = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.submissions = submissions
@@ -665,8 +690,64 @@ class TruthOrDareView(discord.ui.View):
         await interaction.response.edit_message(view=self)
         self.stop()
 
-        # Reinvoke the command
+        # Re-invoke the command
         await self.ctx.reinvoke()
+
+
+class MusicChecks:
+    def __init__(self, author: discord.Member, vc: discord.VoiceClient):
+        self.author = author
+        self.vc = vc
+
+    def skip_check(self):
+        if not self.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+
+        if self.vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+
+        if not self.vc.is_playing():
+            raise NoAudioPlaying('No audio is playing')
+
+        if self.author.voice.channel != self.vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+    stop_check = skip_check
+
+    def pause_check(self):
+        if not self.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+
+        if self.vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+
+        if self.vc.is_paused():
+            raise PlayerPaused('Player is already paused')
+
+        if not self.vc.is_playing():
+            raise NoAudioPlaying('No audio is playing')
+
+        if self.author.voice.channel != self.vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+    def resume_check(self):
+        if not self.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+
+        if self.vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+
+        if self.vc.is_playing():
+            raise PlayerPlaying('Player is already playing')
+
+        if self.author.voice.channel != self.vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
+
+    def play_check(self):
+        if self.author.voice is None:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+        if self.vc.is_connected() and self.vc.channel != self.author.voice.channel:
+            raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
 
 
 # noinspection PyUnusedLocal
@@ -681,69 +762,80 @@ class MusicView(discord.ui.View):
 
     @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.green)
     async def skip(self, button: discord.Button, interaction: discord.Interaction):
+        checks = MusicChecks(interaction.user, self.vc)
         try:
+            checks.skip_check()
             await self.ctx.invoke(self.bot.get_command('skip'))
         except Exception as e:
-            await send_error_embed(self.ctx, str(e))
+            await interaction.response.send_message(f'Error: {e}', ephemeral=True)
         else:
             # Disable items
             for item in self.children:
                 item.disabled = True
             self.stop()
-        finally:
             # Respond
             with contextlib.suppress(discord.NotFound):
                 await interaction.response.edit_message(view=self)
 
     @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
     async def end(self, button: discord.Button, interaction: discord.Interaction):
+        checks = MusicChecks(interaction.user, self.vc)
         try:
+            checks.stop_check()
             await self.ctx.invoke(self.bot.get_command('stop'))
         except Exception as e:
-            await send_error_embed(self.ctx, str(e))
+            await interaction.response.send_message(f'Error: {e}', ephemeral=True)
         else:
             # Disable items
             for item in self.children:
                 item.disabled = True
             self.stop()
-        finally:
             # Respond
             with contextlib.suppress(discord.NotFound):
                 await interaction.response.edit_message(view=self)
 
     @discord.ui.button(emoji='⏯️', style=discord.ButtonStyle.red)
     async def pause(self, button: discord.Button, interaction: discord.Interaction):
+        checks = MusicChecks(interaction.user, self.vc)
         try:
-            await self.ctx.invoke(
-                self.bot.get_command('pause') if self.vc.is_playing() else self.bot.get_command('resume'))
+            if self.vc.is_playing():
+                checks.pause_check()
+                await self.ctx.invoke(self.bot.get_command('pause'))
+            else:
+                checks.resume_check()
+                await self.ctx.invoke(self.bot.get_command('resume'))
         except Exception as e:
-            await send_error_embed(self.ctx, str(e))
-        finally:
+            await interaction.response.send_message(f'Error: {e}', ephemeral=True)
+        else:
             # Respond
             with contextlib.suppress(discord.NotFound):
                 await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple)
     async def lyrics(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
         try:
             await self.ctx.invoke(self.bot.get_command('lyrics'), query=self.query)
         except Exception as e:
-            await send_error_embed(self.ctx, str(e))
-        finally:
+            await interaction.followup.send(f'Error: {e}', ephemeral=True)
+        else:
             # Respond
             with contextlib.suppress(discord.NotFound):
-                await interaction.response.edit_message(view=self)
+                await interaction.followup.edit_message(interaction.message.id, view=self)
 
     @discord.ui.button(label='Add to queue', style=discord.ButtonStyle.blurple)
     async def add(self, button: discord.Button, interaction: discord.Interaction):
+        checks = MusicChecks(interaction.user, self.vc)
+        await interaction.response.defer()
         try:
+            checks.play_check()
             await self.ctx.invoke(self.bot.get_command('play'), query=self.query)
         except Exception as e:
-            await send_error_embed(self.ctx, str(e))
-        finally:
+            await interaction.followup.send(f'Error: {e}', ephemeral=True)
+        else:
             # Respond
             with contextlib.suppress(discord.NotFound):
-                await interaction.response.edit_message(view=self)
+                await interaction.followup.edit_message(interaction.message.id, view=self)
 
 
 # noinspection PyUnusedLocal

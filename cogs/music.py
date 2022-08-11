@@ -125,14 +125,18 @@ class Music(commands.Cog):
         await vc.disconnect()
 
         # Delete all the keys storing the guild's information
-        with contextlib.suppress(KeyError):
+        with contextlib.suppress(KeyError, AttributeError):
             del self.now_playing[member.guild.id]
             del self.now_playing_url[member.guild.id]
             del self.start_time[member.guild.id]
             del self.source[member.guild.id]
             del self.volume[member.guild.id]
             del self.pause_time[member.guild.id]
+            self.music_view[member.guild.id].stop()
             del self.music_view[member.guild.id]
+
+        self.sql.delete('queue', f"guild_id = '{member.guild.id}'")
+        self.sql.delete('loop', f"guild_id = '{member.guild.id}'")
 
     def search_yt(self, item):
         """

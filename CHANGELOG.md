@@ -46,6 +46,7 @@
 # Util #
 + The clear command now does not purge pinned messages.
 + The snipe command now only checks for deleted messages in the channel rather than in the guild. This is done to protect private channels. 
++ Addition of a serverclear command.
 
 # Slash #
 + Addition the code command.
