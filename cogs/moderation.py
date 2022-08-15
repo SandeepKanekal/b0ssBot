@@ -167,6 +167,10 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Check if the message was deleted in a DM channel
+        if not message.guild:
+            return
+
         if not modlog_enabled(message.guild.id):  # Check if modlog is enabled
             return
 
@@ -211,6 +215,10 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Check if the message was edited in a DM channel
+        if not before.guild:
+            return
+
         if not modlog_enabled(before.guild.id):  # Check if modlog is enabled
             return
 
@@ -793,7 +801,7 @@ class Moderation(commands.Cog):
                 colour=discord.Colour.green()
             )
             embeds.append(embed)
-        
+
         if not embeds:
             return
 
@@ -1487,7 +1495,7 @@ class Moderation(commands.Cog):
         if member == f'{ctx.author}#{ctx.author.discriminator}':
             await send_embed(ctx, description='You cannot unban yourself', colour=discord.Colour.red())
             return
-            
+
         if '#' not in member:
             await send_embed(ctx, description='Invalid user')
             return
@@ -1572,7 +1580,7 @@ class Moderation(commands.Cog):
             for channel in guild.channels:
                 await channel.set_permissions(muted_role, speak=False,
                                               send_messages=False)  # Set permissions of the muted role
-        
+
         # Mute users
         try:
             await member.add_roles(muted_role, reason=reason)  # Add muted role
@@ -1613,7 +1621,8 @@ class Moderation(commands.Cog):
                       description='Temporarily mutes the specified user\nDuration must be mentioned in minutes',
                       usage='tempmute <user> <duration> <reason>')
     @commands.has_permissions(manage_messages=True)
-    async def tempmute(self, ctx: commands.Context, member: discord.Member, duration: int, *, reason: str = 'No reason provided'):
+    async def tempmute(self, ctx: commands.Context, member: discord.Member, duration: int, *,
+                       reason: str = 'No reason provided'):
         """
         Temporarily mutes the specified user
         
@@ -1644,7 +1653,7 @@ class Moderation(commands.Cog):
             muted_role = await guild.create_role(name='Muted')
             for channel in guild.channels:
                 await channel.set_permissions(muted_role, speak=False, send_messages=False)
-        
+
         # Mute user
         try:
             await member.add_roles(muted_role, reason=reason)
@@ -1776,7 +1785,7 @@ class Moderation(commands.Cog):
         if channel is None:
             await ctx.send('Please mention the text channel to be nuked')
             return
-        
+
         # Get the channel
         try:
             nuke_channel = discord.utils.get(ctx.guild.channels, id=channel.id)  # Get the channel to be nuked

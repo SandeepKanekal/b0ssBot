@@ -13,7 +13,7 @@ from discord.ext import commands
 from discord.ext.commands import CommandError
 from tools import send_error_embed, get_video_stats, format_time, log_history, inform_owner
 from youtube_dl import YoutubeDL
-from view import MusicView
+from ui_components import MusicView
 
 
 class AuthorNotConnectedToVoiceChannel(CommandError):
@@ -77,6 +77,7 @@ class Music(commands.Cog):
         self.volume = {}  # type: dict[int, int] # Stores the volume for each guild
         self.pause_time = {}  # type: dict[int, datetime.datetime | None] # Stores the time when the track was paused for each guild
         self.music_view = {}  # type dict[int, MusicView | None] # Stores the view object for each guild
+        self.loop_limit = {}  # type dict[int, int | None] # Stores the number of times the track must be looped
         self.sql = SQL('b0ssbot')  # type: SQL
         self._ydl_options = {
             "format": "bestaudio/best",
@@ -134,6 +135,7 @@ class Music(commands.Cog):
             del self.pause_time[member.guild.id]
             self.music_view[member.guild.id].stop()
             del self.music_view[member.guild.id]
+            del self.loop_limit[member.guild.id]
 
         self.sql.delete('queue', f"guild_id = '{member.guild.id}'")
         self.sql.delete('loop', f"guild_id = '{member.guild.id}'")
@@ -173,6 +175,14 @@ class Music(commands.Cog):
         """
         self.music_view[ctx.guild.id].stop()  # Stop listening for interactions with buttons
 
+        # Delete the track from the loop table if the limit is over
+        if isinstance(self.loop_limit[ctx.guild.id], int):
+            self.loop_limit[ctx.guild.id] -= 1
+
+        if self.loop_limit[ctx.guild.id] == 0:
+            self.loop_limit[ctx.guild.id] = None
+            self.sql.delete('loop', f"guild_id = '{ctx.guild.id}'")
+
         # Loop track
         if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             track = self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'")[0]
@@ -186,7 +196,7 @@ class Music(commands.Cog):
             embed = discord.Embed(title='Now Playing', description=f"[{track[0]}]({track[1]})",
                                   colour=discord.Colour.green())
             view = MusicView(ctx, self.bot, ctx.guild.voice_client, track[0][0], timeout=None)
-        
+
         # No track
         else:
             embed = discord.Embed(description='Queue is over', colour=discord.Colour.red())
@@ -256,6 +266,7 @@ class Music(commands.Cog):
             self.start_time[ctx.guild.id] = None
             self.source[ctx.guild.id] = None
             self.pause_time[ctx.guild.id] = None
+            self.loop_limit[ctx.guild.id] = None
 
     def _play_next(self, ctx: commands.Context, vc: discord.VoiceClient):
         """
@@ -371,7 +382,8 @@ class Music(commands.Cog):
         if isinstance(error, AlreadyConnectedToVoiceChannel):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the join command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the join command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(aliases=['p', 'add'],
@@ -417,6 +429,8 @@ class Music(commands.Cog):
 
             if ctx.guild.id not in self.volume:
                 self.volume[ctx.guild.id] = 100
+            if ctx.guild.id not in self.loop_limit:
+                self.loop_limit[ctx.guild.id] = None
             song["title"] = song["title"].replace("'", "''")  # Single quotes cause problems
 
             self.sql.insert(
@@ -431,13 +445,13 @@ class Music(commands.Cog):
             )
 
             song['title'] = song['title'].replace("''", "'")
-            
+
         await self._send_confirmation(ctx, song)
 
         if not ctx.voice_client.is_playing():
             # Plays the music
             await self.play_music(ctx)
-    
+
         log_history(ctx.author.id, query, 'Music', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     # Sometimes, videos are not available, a response is required to inform the user
@@ -458,9 +472,11 @@ class Music(commands.Cog):
         if isinstance(error, (AuthorNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         elif isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx, f'Please specify a query\n\nProper Usage: `{self.bot.get_command("play").usage}`')
+            await send_error_embed(ctx,
+                                   f'Please specify a query\n\nProper Usage: `{self.bot.get_command("play").usage}`')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the play command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the play command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(aliases=['q'], description='Shows the music queue', usage='queue')
@@ -483,7 +499,7 @@ class Music(commands.Cog):
 
         if not vc.is_playing():
             raise NoAudioPlaying('No audio is playing')
-        
+
         # Create embed
         embed = discord.Embed(title='Music Queue', colour=discord.Colour.dark_teal(), timestamp=datetime.datetime.now())
 
@@ -528,7 +544,8 @@ class Music(commands.Cog):
         if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the queue command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the queue command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='pause', description='Pauses the current track', usage='pause')
@@ -585,10 +602,13 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel)):
+        if isinstance(error, (
+        AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel,
+        PlayerNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the pause command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the pause command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(aliases=['unpause', 'up'], description='Resumes the paused track', usage='resume')
@@ -641,10 +661,12 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel)):
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerPlaying, AuthorInDifferentVoiceChannel,
+                              PlayerNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the resume command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the resume command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Skips the current track
@@ -675,7 +697,7 @@ class Music(commands.Cog):
             raise AuthorInDifferentVoiceChannel('You are not in the same voice channel as the player')
 
         vc.stop()  # Stopping the player (play_next will be called instantly after stopping)
-        
+
         # Response embed
         embed = discord.Embed(
             description=f'Skipped [{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
@@ -696,10 +718,12 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerNotConnectedToVoiceChannel,
+                              AuthorInDifferentVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the skip command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the skip command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Stop command
@@ -753,10 +777,12 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerNotConnectedToVoiceChannel,
+                              AuthorInDifferentVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the stop command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the stop command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Disconnect command
@@ -797,6 +823,7 @@ class Music(commands.Cog):
             del self.volume[ctx.guild.id]
             del self.pause_time[ctx.guild.id]
             del self.music_view[ctx.guild.id]
+            del self.loop_limit[ctx.guild.id]
 
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
@@ -816,10 +843,12 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
+        if isinstance(error, (
+        AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the disconnect command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the disconnect command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Nowplaying command
@@ -917,7 +946,8 @@ class Music(commands.Cog):
         if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the nowplaying command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the nowplaying command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Remove command
@@ -985,14 +1015,18 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, NoTrack, NotInRange, AuthorInDifferentVoiceChannel)):
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, NoTrack, NotInRange,
+                              AuthorInDifferentVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         elif isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx, f'Specify the track to be removed\n\nProper Usage: `{self.bot.get_command("remove").usage}`')
+            await send_error_embed(ctx,
+                                   f'Specify the track to be removed\n\nProper Usage: `{self.bot.get_command("remove").usage}`')
         elif isinstance(error, commands.BadArgument):
-            await send_error_embed(ctx, f'Enter a valid number\n\nProper Usage: `{self.bot.get_command("remove").usage}`')
+            await send_error_embed(ctx,
+                                   f'Enter a valid number\n\nProper Usage: `{self.bot.get_command("remove").usage}`')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the remove command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the remove command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Lyrics command
@@ -1055,7 +1089,7 @@ class Music(commands.Cog):
 
                     f.write(lyrics)
                     f.write(f'\n\nPowered by genius.com and google custom search engine\nQuery: {query}')
-                
+
                 await ctx.send(file=discord.File(f'lyrics_{ctx.author.id}.txt', 'lyrics.txt'))
                 os.remove(f'lyrics_{ctx.author.id}.txt')
 
@@ -1079,36 +1113,31 @@ class Music(commands.Cog):
         if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying)):
             await send_error_embed(ctx, f'Error: {error}')
         elif isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx, f'Specify the song to get the lyrics of\n\nProper Usage: `{self.bot.get_command("lyrics").usage}`')
+            await send_error_embed(ctx,
+                                   f'Specify the song to get the lyrics of\n\nProper Usage: `{self.bot.get_command("lyrics").usage}`')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the lyrics command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the lyrics command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Repeat/Loop command
-    @commands.command(aliases=['repeat'], description='Use 0(false) or 1(true) to enable or disable loop mode',
-                      usage='loop <0/1>')
-    async def loop(self, ctx: commands.Context, mode: int):
+    @commands.command(aliases=['repeat'],
+                      description='Enable or disable loop.\nEnter the number of times you would like to loop if you want to loop finitely.',
+                      usage='loop <limit>')
+    async def loop(self, ctx: commands.Context, limit: int | None = None):
         """
         Enables or disables loop mode.
         
         :param ctx: The context of the command.
-        :param mode: The mode to set.
+        :param limit: The number of times to loop.
         
         :type ctx: commands.Context
-        :type mode: int
+        :type limit: int | None
         
         :return: None
         :rtype: None
         """
         # Basic responses to false calls
-        if mode not in [0, 1]:  # Checks if the mode argument is valid
-            raise NotInRange('The argument must be 0(disable loop) or 1(enable loop)')
-
-        if bool(mode) == bool(self.sql.select(elements=['*'], table='loop',
-                                              where=f"guild_id = '{ctx.guild.id}'")):  # Checks if the loop mode is already set
-            await send_error_embed(ctx, description=f'Loop mode already set to {bool(mode)}')
-            return
-
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
 
@@ -1123,19 +1152,27 @@ class Music(commands.Cog):
         if ctx.author.voice.channel != vc.channel:
             raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
 
+        self.loop_limit[ctx.guild.id] = limit
+
         title = self.now_playing[ctx.guild.id]
         title = title.replace("'", "''")
         # Delete/Insert into the loop table
-        if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'") and not bool(mode):
+        if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
             self.sql.delete(table='queue',
                             where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
+
+            mode = False
         else:
             self.sql.insert(table='loop', columns=['guild_id', 'source', 'title', 'url'],
                             values=[f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
                                     f"'{title}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
 
-        await ctx.send(embed=discord.Embed(description=f'Loop mode set to {bool(mode)}', colour=discord.Colour.blue()))
+            mode = True
+
+        await ctx.send(embed=discord.Embed(
+            description=f'Current track will be looped {limit} times' if limit else f'Loop mode set to {mode}',
+            colour=discord.Colour.blurple()))
 
     # Error in the loop command
     @loop.error
@@ -1157,15 +1194,18 @@ class Music(commands.Cog):
                                    description=f'Please specify the mode\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
         elif isinstance(error, commands.BadArgument):
             await send_error_embed(ctx,
-                                   description=f'Mode can be either `0` or `1`\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
-        elif isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange)):
+                                   description=f'Limit must be an integer\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
+        elif isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, AuthorInDifferentVoiceChannel,
+                                PlayerNotConnectedToVoiceChannel, NotInRange)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the loop command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the loop command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     # Volume command
-    @commands.command(name='volume', aliases=['vol'], description='Set the volume of the voice client', usage='volume <0-200>')
+    @commands.command(name='volume', aliases=['vol'], description='Set the volume of the voice client',
+                      usage='volume <0-200>')
     async def volume_(self, ctx: commands.Context, volume: int):
         """
         Sets the volume of the voice client.
@@ -1221,10 +1261,13 @@ class Music(commands.Cog):
         elif isinstance(error, commands.BadArgument):
             await send_error_embed(ctx,
                                    description=f'Volume must be a whole number between 0 and 200\n\nProper Usage: `{self.bot.get_command("volume").usage}`')
-        elif isinstance(error, (NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange, AuthorNotConnectedToVoiceChannel)):
+        elif isinstance(error, (
+        NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange,
+        AuthorNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: {error}')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the volume command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the volume command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
 

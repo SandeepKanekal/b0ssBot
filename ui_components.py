@@ -1,5 +1,5 @@
 # Copyright (c) 2022 Sandeep Kanekal
-# Subclasses of discord.ui.View
+# Subclasses of discord UI components
 import discord
 import random
 import requests
@@ -746,8 +746,49 @@ class MusicChecks:
     def play_check(self):
         if self.author.voice is None:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+
         if self.vc.is_connected() and self.vc.channel != self.author.voice.channel:
             raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
+
+    def loop_check(self):
+        if not self.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+
+        if self.vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+
+        if not self.vc.is_playing():
+            raise NoAudioPlaying('No audio is being played')
+
+        if self.author.voice.channel != self.vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
+
+
+class LoopModal(discord.ui.Modal):
+    def __init__(self, ctx: commands.Context, title: str, timeout: float | None = None):
+        super().__init__(title=title, timeout=timeout)
+
+        self.add_item(
+            discord.ui.InputText(
+                label='Enter the number of times to loop',
+                style=discord.InputTextStyle.short,
+                placeholder='Leave blank for infinite loop',
+                required=False
+            )
+        )
+
+        self.ctx = ctx
+
+    async def callback(self, interaction: discord.Interaction):
+        limit = None
+        try:
+            limit = int(self.children[0].value)
+        except ValueError:
+            limit = None
+        finally:
+            await self.ctx.invoke(self.ctx.bot.get_command('loop'), limit=limit)
+            self.stop()
+            await interaction.response.edit_message(embed=interaction.message.embeds[0])
 
 
 # noinspection PyUnusedLocal
@@ -811,7 +852,20 @@ class MusicView(discord.ui.View):
             with contextlib.suppress(discord.NotFound):
                 await interaction.response.edit_message(view=self)
 
-    @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple)
+    @discord.ui.button(emoji='🔁', style=discord.ButtonStyle.blurple)
+    async def loop(self, button: discord.Button, interaction: discord.Interaction):
+        checks = MusicChecks(interaction.user, self.vc)
+        try:
+            checks.loop_check()
+            await interaction.response.send_modal(LoopModal(self.ctx, 'Loop Options', timeout=None))
+        except Exception as e:
+            await interaction.response.send_message(f'Error: {e}', ephemeral=True)
+        else:
+            # Respond
+            with contextlib.suppress(discord.NotFound):
+                await interaction.followup.edit_message(interaction.message.id, view=self)
+
+    @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple, row=1)
     async def lyrics(self, button: discord.Button, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -823,7 +877,7 @@ class MusicView(discord.ui.View):
             with contextlib.suppress(discord.NotFound):
                 await interaction.followup.edit_message(interaction.message.id, view=self)
 
-    @discord.ui.button(label='Add to queue', style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label='Add to queue', style=discord.ButtonStyle.blurple, row=1)
     async def add(self, button: discord.Button, interaction: discord.Interaction):
         checks = MusicChecks(interaction.user, self.vc)
         await interaction.response.defer()
@@ -867,7 +921,11 @@ class EmbedViewModal(discord.ui.Modal):
             self.embed.set_footer(text=self.children[0].value, icon_url=self.children[1].value or discord.Embed.Empty)
 
         elif self.edit_type == 'author':
-            self.embed.set_author(name=self.children[0].value, icon_url=self.children[1].value or discord.Embed.Empty)
+            self.embed.set_author(
+                name=self.children[0].value,
+                icon_url=self.children[1].value or discord.Embed.Empty,
+                url=self.children[2].value or discord.Embed.Empty
+            )
 
         elif self.edit_type == 'thumbnail':
             if not self.children[0].value.startswith('http'):
@@ -909,13 +967,18 @@ class EmbedViewModal(discord.ui.Modal):
 
 # noinspection PyUnusedLocal
 class EmbedView(discord.ui.View):
-    def __init__(self, embed: discord.Embed, channel: discord.TextChannel, timeout: float | None = None):
+    def __init__(self, author_: discord.Member, embed: discord.Embed, channel: discord.TextChannel,
+                 timeout: float | None = None):
         super().__init__(timeout=timeout)
+        self.author_ = author_
         self.embed = embed
         self.channel = channel
 
     @discord.ui.button(label='Title', style=discord.ButtonStyle.blurple)
     async def title(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [
             {'label': 'Title', 'style': discord.InputTextStyle.long, 'placeholder': 'Title', 'required': True}]
         await interaction.response.send_modal(
@@ -923,12 +986,18 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='URL', style=discord.ButtonStyle.blurple)
     async def url(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [{'label': 'URL', 'style': discord.InputTextStyle.long, 'placeholder': 'URL', 'required': True}]
         await interaction.response.send_modal(
             EmbedViewModal(self.embed, 'url', 'Edit URL', input_data, timeout=self.timeout))
 
     @discord.ui.button(label='Description', style=discord.ButtonStyle.blurple)
     async def description(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [{'label': 'Description', 'style': discord.InputTextStyle.long, 'placeholder': 'Description',
                        'required': True}]
         await interaction.response.send_modal(
@@ -936,6 +1005,9 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Footer', style=discord.ButtonStyle.blurple)
     async def footer(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [
             {'label': 'Footer', 'style': discord.InputTextStyle.long, 'placeholder': 'Footer', 'required': True},
             {'label': 'Icon URL', 'style': discord.InputTextStyle.long, 'placeholder': 'Icon URL', 'required': False}]
@@ -944,6 +1016,9 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Author', style=discord.ButtonStyle.blurple)
     async def author(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [{'label': 'Text', 'style': discord.InputTextStyle.short, 'placeholder': 'This field is required',
                        'required': True},
                       {'label': 'Icon URL', 'style': discord.InputTextStyle.short,
@@ -956,18 +1031,27 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Thumbnail', style=discord.ButtonStyle.blurple)
     async def thumbnail(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [{'label': 'URL', 'style': discord.InputTextStyle.long, 'placeholder': 'URL', 'required': True}]
         await interaction.response.send_modal(
             EmbedViewModal(self.embed, 'thumbnail', 'Edit thumbnail', input_data, timeout=self.timeout))
 
     @discord.ui.button(label='Image', style=discord.ButtonStyle.blurple)
     async def image(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [{'label': 'URL', 'style': discord.InputTextStyle.long, 'placeholder': 'URL', 'required': True}]
         await interaction.response.send_modal(
             EmbedViewModal(self.embed, 'image', 'Edit image', input_data, timeout=self.timeout))
 
     @discord.ui.button(label='Colour', style=discord.ButtonStyle.blurple)
     async def colour(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [
             {'label': 'Colour', 'style': discord.InputTextStyle.short, 'placeholder': 'Colour', 'required': True}]
         await interaction.response.send_modal(
@@ -975,11 +1059,17 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Timestamp', style=discord.ButtonStyle.blurple)
     async def timestamp(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         self.embed.timestamp = discord.Embed.Empty if self.embed.timestamp else datetime.datetime.now()
         await interaction.response.edit_message(embed=self.embed)
 
     @discord.ui.button(label='Add Field', style=discord.ButtonStyle.gray)
     async def add_field(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [{'label': 'Name', 'style': discord.InputTextStyle.short, 'placeholder': 'This field is required',
                        'required': True},
                       {'label': 'Value', 'style': discord.InputTextStyle.short, 'placeholder': 'This field is required',
@@ -992,6 +1082,9 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Remove Field', style=discord.ButtonStyle.gray)
     async def remove_field(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         input_data = [
             {'label': 'Index', 'style': discord.InputTextStyle.short, 'placeholder': 'Index', 'required': True}]
         await interaction.response.send_modal(
@@ -1000,6 +1093,9 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Send Embed', style=discord.ButtonStyle.green)
     async def send(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         await self.channel.send(embed=self.embed)
 
         for item in self.children:
@@ -1010,6 +1106,9 @@ class EmbedView(discord.ui.View):
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
     async def cancel(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author_.id:
+            await interaction.response.send_message(f'This interaction is for {self.author_.mention}',
+                                                    ephemeral=True)
         for item in self.children:
             item.disabled = True
 
@@ -1078,3 +1177,43 @@ class HelpView(discord.ui.View):
 
         await interaction.response.edit_message(content=None, embed=embed, view=None)
         self.stop()
+
+
+class FeatureViewModal(discord.ui.Modal):
+    def __init__(self, suggestor: discord.User, type_: str, title: str,
+                 timeout: float | None = None):
+        super().__init__(title=title, timeout=timeout)
+
+        self.suggestor = suggestor
+        self.type_ = type_
+
+        self.add_item(discord.ui.InputText(label='Comments', style=discord.InputTextStyle.long, placeholder='Comments',
+                                           required=False))
+
+    async def callback(self, interaction: discord.Interaction):
+        with contextlib.suppress(discord.Forbidden):
+            await self.suggestor.send(
+                f'Your suggestion has been {self.type_}ed.\nComments by owner: {self.children[0].value}')
+
+        if self.type_ == 'Reject':
+            await interaction.response.edit_message(content=None)
+            await interaction.delete_original_message()
+        else:
+            await interaction.response.edit_message(content=None, view=None)
+
+
+# noinspection PyUnusedLocal
+class FeatureView(discord.ui.View):
+    def __init__(self, suggestor: discord.User, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.suggestor = suggestor
+
+    @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
+    async def accept(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            FeatureViewModal(self.suggestor, 'Accept', 'Add a comment', timeout=None))
+
+    @discord.ui.button(label='Reject', style=discord.ButtonStyle.red)
+    async def reject(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            FeatureViewModal(self.suggestor, 'Reject', 'Add a comment', timeout=None))

@@ -27,6 +27,7 @@
 + Since a member can be of multiple strings, the `member` argument in the avatar command now is a multiline string.
 + Addition of a QR SCAN application context command.
 + Addition of a Generate QR Code application context command.
++ Addition of a suggest feature command.
 
 # Info #
 + Addition of a roleinfo command.

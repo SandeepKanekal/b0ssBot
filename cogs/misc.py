@@ -4,6 +4,7 @@ import datetime
 import discord
 from tools import send_error_embed, inform_owner
 from discord.ext import commands
+from ui_components import FeatureView
 
 
 class Misc(commands.Cog):
@@ -58,7 +59,8 @@ class Misc(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("spam").usage}`')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the spam command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the spam command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Av command
@@ -102,7 +104,8 @@ class Misc(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please specify a valid user\n\nProper Usage: `{self.bot.get_command("avatar").usage}`')
             return
-        await send_error_embed(ctx, description='An error has occurred while running the avatar command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the avatar command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Servericon command
@@ -175,10 +178,69 @@ class Misc(commands.Cog):
         elif isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')
-        elif isinstance(error, discord.HTTPException):
-            await send_error_embed(ctx, description='Your message is too long!')  
+        elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.HTTPException):
+            await send_error_embed(ctx, description='Your message is too long!')
         else:
-            await send_error_embed(ctx, description='An error has occurred while running the megaspam command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the megaspam command! The owner has been notified.')
+            await inform_owner(self.bot, error)
+
+    @commands.command(name='featuresuggest', aliases=['feature'], description='Suggest the owner of the bot, a feature',
+                      usage='featuresuggest <feature>')
+    @commands.cooldown(1, 20, commands.BucketType.user)
+    async def featuresuggest(self, ctx: commands.Context, *, feature: str):
+        """
+        Suggest a feature to the owner of the bot
+
+        :param ctx: The context of where the message was sent
+        :param feature: The feature to suggest
+
+        :type ctx: commands.Context
+        :type feature: str
+
+        :return: None
+        :rtype: None
+        """
+        # Respond to the author
+        await ctx.message.delete()
+        await ctx.send('The feature has been suggested!', delete_after=3)
+
+        # Suggestion embed
+        embed = discord.Embed(
+            title='New feature suggestion!',
+            description=feature,
+            colour=discord.Colour.blurple(),
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar)
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+
+        # Send suggestion to owner
+        await self.bot.get_user(800018344702640180).send(embed=embed, view=FeatureView(ctx.author, timeout=None))
+
+    @featuresuggest.error
+    async def featuresuggest_error(self, ctx: commands.Context, error: commands.CommandError):
+        """
+        Error handler for the featuresuggest command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await send_error_embed(ctx,
+                                   description=f'You are on cooldown. Try again in {error.retry_after:.2f} seconds')
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please specify a feature to suggest\n\nProper Usage: `{self.bot.get_command("featuresuggest").usage}`')
+        else:
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the featuresuggest command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
 

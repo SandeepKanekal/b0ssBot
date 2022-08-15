@@ -177,13 +177,6 @@ def log_history(member_id: int, query: str, type_: str, timestamp: int, guild_id
     query = query.replace("'", "''")
     sql.insert('history', ['member_id', 'query', 'type', 'timestamp', 'guild_id'], [f"'{member_id}'", f"'{query}'", f"'{type_}'", f"'{timestamp}'", f"'{guild_id}'"])
 
-    history = sql.select(['*'], 'history', f"member_id = '{member_id}' AND guild_id = '{guild_id}'")
-    if len(history) > 50:
-        timestamp = history[0][4]
-        for index, _ in enumerate(range(len(history) - 50)):
-            sql.delete('history', f"timestamp = {timestamp}")
-            timestamp = history[index][4]
-
 
 async def inform_owner(bot: Bot, error: Exception):
     """

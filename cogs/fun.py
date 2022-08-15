@@ -5,7 +5,7 @@ import discord
 import datetime
 import requests
 import os
-import view
+import ui_components
 from discord.ext import commands
 from tools import send_error_embed, get_random_post, inform_owner
 from PIL import Image, ImageChops
@@ -71,7 +71,8 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description='An error occurred while running the meme command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error occurred while running the meme command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     # Dankvideo command
@@ -111,7 +112,8 @@ class Fun(commands.Cog):
         :return: None
         :rtype: None
         """
-        await send_error_embed(ctx, description='An error occurred while running the dankvideo command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error occurred while running the dankvideo command! The owner has been notified.')
         await inform_owner(self.bot, error)
 
     @commands.command(name='invert', description='Invert your or another user\'s avatar', usage='invert <member>')
@@ -164,7 +166,8 @@ class Fun(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await send_error_embed(ctx, description='Please provide a valid member.')
         else:
-            await send_error_embed(ctx, description='An error occurred while running the invert command! The owner has been notified.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the invert command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='dadjoke', description='Posts a dad joke', usage='dadjoke')
@@ -184,7 +187,8 @@ class Fun(commands.Cog):
                     'joke'], colour=discord.Colour.random(), timestamp=datetime.datetime.now())
 
         await ctx.send(embed=embed,
-                       view=view.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed, timeout=None))
+                       view=ui_components.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed,
+                                                  timeout=None))
 
     @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
     async def bored(self, ctx: commands.Context):
@@ -204,8 +208,8 @@ class Fun(commands.Cog):
                                   colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
 
         await ctx.send(embed=embed,
-                       view=view.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed,
-                                         timeout=None))
+                       view=ui_components.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed,
+                                                  timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx: commands.Context):
@@ -241,8 +245,8 @@ class Fun(commands.Cog):
                                   colour=discord.Colour.blurple()).set_image(url=response['message'])
 
         await ctx.send(embed=embed,
-                       view=view.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed,
-                                         timeout=None))
+                       view=ui_components.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed,
+                                                  timeout=None))
 
     @commands.command(name='cat', description='Get a random cat picture', usage='cat')
     @commands.cooldown(1, 1, commands.BucketType.user)
@@ -263,8 +267,9 @@ class Fun(commands.Cog):
                                   colour=discord.Colour.blurple()).set_image(url=response[0]['url'])
 
         await ctx.send(embed=embed,
-                       view=view.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search', embed=embed,
-                                         timeout=None))
+                       view=ui_components.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search',
+                                                  embed=embed,
+                                                  timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx: commands.Context):
@@ -308,7 +313,7 @@ class Fun(commands.Cog):
         status_code = status_code or random.choice(status_codes)
 
         picture_url = f'https://http.cat/{status_code}.jpg'
-        
+
         embed = discord.Embed(title=f'HTTP {status_code}', url=picture_url, colour=discord.Colour.blurple()).set_image(
             url=picture_url)
         await ctx.send(embed=embed)

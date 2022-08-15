@@ -11,7 +11,7 @@ from tools import convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from googleapiclient.discovery import build
 from PIL import Image, ImageChops, UnidentifiedImageError
-from view import EmbedView
+from ui_components import EmbedView
 
 
 class Slash(commands.Cog):
@@ -118,8 +118,10 @@ class Slash(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
-        
-        embed.add_field(name='Permissions', value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]), inline=False)
+
+        embed.add_field(name='Permissions',
+                        value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]),
+                        inline=False)
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
 
@@ -214,8 +216,10 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL('b0ssbot')
-        youtube = build('youtube', 'v3', developerKey=os.getenv('YOUTUBE_API_KEY'))
+        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         # Get the channel ID
         youtube_channel_id = requests.get(
@@ -293,7 +297,7 @@ class Slash(commands.Cog):
         :rtype: None
         """
         sql = SQL('b0ssbot')
-        youtube = build('youtube', 'v3', developerKey=os.getenv('YOUTUBE_API_KEY'))
+        youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         # Get the channel ID
         youtube_channel_id = requests.get(
@@ -311,7 +315,7 @@ class Slash(commands.Cog):
         text_channel_id = int(sql.select(elements=['text_channel_id'], table='youtube',
                                          where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{youtube_channel_id}\'')[
                                   0][0])
-        
+
         # Remove from database
         sql.delete(table='youtube',
                    where=f'guild_id = \'{ctx.guild.id}\' AND channel_id = \'{channel["items"][0]["id"]}\'')
@@ -381,7 +385,7 @@ class Slash(commands.Cog):
         for index, channel in enumerate(channels):
             text_channel = discord.utils.get(ctx.guild.text_channels, id=int(channel[2]))
             embed.description += f'{index + 1}. **[{channel[0]}](https://youtube.com/channel/{channel[1]})** in {text_channel.mention}\n'
-        
+
         await ctx.respond(embed=embed)
 
     @youtubenotification_list.error
@@ -422,7 +426,7 @@ class Slash(commands.Cog):
         if not sql.select(elements=['*'], table='youtube', where=f'guild_id = \'{ctx.guild.id}\''):
             await ctx.respond('No channels are currently set up for notifications', ephemeral=True)
             return
-        
+
         # Remove from database
         sql.delete(table='youtube', where=f'guild_id = \'{ctx.guild.id}\'')
 
@@ -1049,7 +1053,7 @@ class Slash(commands.Cog):
             with contextlib.suppress(discord.HTTPException):  # A DM cannot be sent to a bot, hence the suppression
                 await member.send(
                     f'You were muted in {ctx.guild.name} for {reason}. Duration: {duration or "Permanent"}.')
-            
+
             # Wait and unmute if duration is specified
             if duration:
                 await asyncio.sleep(duration * 60)
@@ -1494,7 +1498,7 @@ class Slash(commands.Cog):
         """
         embed = discord.Embed(title='This is the title', description='This is the description')
         await ctx.respond(content='This is how the embed will look!', embed=embed,
-                          view=EmbedView(embed, channel, timeout=None))
+                          view=EmbedView(ctx.author.id, embed, channel, timeout=None))
 
     @embed.error
     async def embed_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
@@ -1513,7 +1517,8 @@ class Slash(commands.Cog):
         if isinstance(error, discord.HTTPException):
             await ctx.respond('URL provided is invalid', ephemeral=True)
         else:
-            await ctx.respond('An error has occurred while running the embed commnand! The owner has been informed.', ephemeral=True)
+            await ctx.respond('An error has occurred while running the embed command! The owner has been informed.',
+                              ephemeral=True)
             await inform_owner(self.bot, error)
 
     @commands.slash_command(name='datetime', desription='Get a dynamic datetime display string',
@@ -1644,7 +1649,7 @@ class Slash(commands.Cog):
         embed.add_field(name='Unverified role', value=unverified_role.mention if unverified_role else 'None',
                         inline=True)
 
-        # Sending the verify message and adding the reaction
+        # Sending the verify-message and adding the reaction
         msg = await channel.send(embed=discord.Embed(description='Please verify yourself to get access to the server.',
                                                      colour=discord.Colour.teal()))
         await msg.add_reaction('✅')
@@ -1822,10 +1827,10 @@ class Slash(commands.Cog):
                               colour=discord.Colour.blurple())
         embed.set_footer(text=f'{member.display_name}\'s History', icon_url=member.display_avatar)
 
-        history = sql.select(['type', 'query', 'timestamp'], 'history',
-                             f'member_id = \'{member.id}\' AND guild_id = \'{ctx.guild.id}\'')
+        history = list(reversed(sql.select(['type', 'query', 'timestamp'], 'history',
+                                           f'member_id = \'{member.id}\' AND guild_id = \'{ctx.guild.id}\'')))[:50]
 
-        for h in history:
+        for h in reversed(history):
             query = h[1].replace("''", "'")
             embed.description += f'{h[0]}: {query} - <t:{h[2]}:R>\n'
 

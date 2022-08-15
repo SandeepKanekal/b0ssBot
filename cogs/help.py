@@ -4,7 +4,7 @@ import discord
 import datetime
 from sql_tools import SQL
 from discord.ext import commands
-from view import HelpView
+from ui_components import HelpView
 
 
 # Help command

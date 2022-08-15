@@ -169,11 +169,17 @@ class Events(commands.Cog):
         sql = SQL('b0ssbot')  # type: SQL
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
 
+        response = random.choice(
+            [
+                f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.',
+                f'Hello there {ctx.author.mention}! You can suggest a feature to the owner! Use {prefix}feature <feature> to suggest a feature.'
+            ]
+        )
+
         # Inform the user about other commands.
         if random.choice([True, False, False, False, False, False, False, False, False,
                           False]) and ctx.command != self.bot.get_command('clear'):
-            await ctx.send(
-                f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.')
+            await ctx.send(response)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild) -> None:
@@ -311,6 +317,23 @@ class Events(commands.Cog):
         else:
             member_role = discord.utils.get(member.guild.roles, id=int(member_role_id))
             await member.add_roles(member_role)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_delete(self, channel: discord.TextChannel) -> None:
+        """
+        Delete required system configurations from the database
+        
+        :param channel: The channel
+        
+        :type channel: discord.TextChannel
+        
+        :return: None
+        :rtype: None
+        """
+        sql = SQL('b0ssbot')
+        sql.delete(table='youtube', where=f'channel_id = \'{channel.id}\'')
+        sql.delete(table='snipes', where=f'channel_id = \'{channel.id}\'')
+        sql.delete(table='modlogs', where=f'channel_id = \'{channel.id}\'')
 
     @tasks.loop(minutes=60)
     async def clear_ytdl_cache(self):
