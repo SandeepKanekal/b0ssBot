@@ -478,7 +478,7 @@ class Util(commands.Cog):
         elif isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx, description=f'This command is on cooldown! Try again in {error.retry_after:.2f} seconds.')
         elif isinstance(error, commands.MissingPermissions):
-            await send_error_embed(ctx, description=f'Error: {error}')
+            await send_error_embed(ctx, description=f'Error: `{error}`')
         else:
             await send_error_embed(ctx, description='An error occurred while running the serverclear command! The owner has been informed.')
             await inform_owner(self.bot, error)

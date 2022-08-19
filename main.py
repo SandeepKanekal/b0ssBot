@@ -8,7 +8,7 @@ from sql_tools import SQL
 
 
 # noinspection PyShadowingNames,PyUnusedLocal
-def get_prefix(bot, message):
+def get_prefix(bot: commands.Bot, message: discord.Message) -> str:
     return sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{message.guild.id}\'')[0][0]
 
 

@@ -1296,7 +1296,7 @@ class Slash(commands.Cog):
                                   choices=['context', 'events', 'fun', 'help', 'info', 'internet', 'misc', 'music',
                                            'moderation',
                                            'util', 'owner', 'slash', 'games', 'main', 'keep_alive', 'sql_tools',
-                                           'tools', 'view'])
+                                           'tools', 'ui_components'])
                    ):
         """
         Gets the code for the specified module
@@ -1396,42 +1396,30 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, commands.BadArgument):
-            await ctx.respond('Invalid role', ephemeral=True)
-        else:
-            await ctx.respond('An error has occurred while running the roleinfo command! The owner has been notified.',
-                              ephemeral=True)
-            await inform_owner(self.bot, error)
+        await ctx.respond('An error has occurred while running the roleinfo command! The owner has been notified.',
+                            ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    invert = SlashCommandGroup('invert', 'Invert images of users or from URLs')
 
-    @commands.slash_command(name='invert', description='Invert avatars or images from URLs!',
-                            usage='invert <member> or <url>')
-    async def invert(self, ctx: discord.ApplicationContext,
-                     member: Option(discord.Member, description='The member to invert the avatar of', required=False,
-                                    default=None),
-                     url: Option(str, description='The URL to get the image from', required=False, default=None)):
+    @invert.command(name='user', description='Inverts the avatar of a user')
+    async def invert_user(self, ctx: discord.ApplicationContext, member: Option(discord.Member, 'The user\' avatar to invert', required=False, default=None)):
         """
-        Inverts the avatar of the user or another user
+        Inverts the avatar of a user
         
-        :param ctx: command context
-        :param member: the member to invert the avatar of
-        :param url: the URL to get the image from
-
+        :param ctx: The context of where the message was sent
+        :param member: The user to invert the avatar of
+        
         :type ctx: discord.ApplicationContext
         :type member: discord.Member
-        :type url: str
         
         :return: None
         :rtype: None
         """
-        # Checks before execution
-        if member and url:
-            await ctx.respond('You cannot specify both a member and a URL', ephemeral=True)
-            return
-
         await ctx.interaction.response.defer()
 
-        request_url = url or (member or ctx.author).display_avatar  # type: str
-        member = member or ctx.author
+        member = member or ctx.author  # type: discord.Member
+        request_url = member.display_avatar  # type: str
 
         # Saving the image
         response = requests.get(request_url)  # type: requests.Response
@@ -1455,11 +1443,68 @@ class Slash(commands.Cog):
         # Removing the files
         os.remove(f'image_{ctx.author.id}.png')
         os.remove(f'{member.id}_inverted.png')
-
-    @invert.error
-    async def invert_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+    
+    @invert_user.error
+    async def invert_user_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
-        Error handler for the invert command
+        Handles errors for the invert_user command
+        
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond('An error has occurred while running the invert_user command! The owner has been notified.',
+                            ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    @invert.command(name='url', description='Inverts the from a URL')
+    async def invert_url(self, ctx: discord.ApplicationContext, url: Option(str, 'The URL to get the image from', required=True)):
+        """
+        Inverts the image from a URL
+        
+        :param ctx: The context of where the message was sent
+        :param url: The URL to invert the image from
+        
+        :type ctx: discord.ApplicationContext
+        :type url: str
+        
+        :return: None
+        :rtype: None
+        """
+        await ctx.interaction.response.defer()
+
+        # Saving the image
+        response = requests.get(url)  # type: requests.Response
+        with open(f'image_{ctx.author.id}.png', 'wb') as f:
+            f.write(response.content)
+
+        # Inverting the image
+        image = Image.open(f'image_{ctx.author.id}.png')
+        invert = ImageChops.invert(image.convert('RGB'))
+        invert.save(f'inverted_{ctx.author.id}.png')
+
+        # Checking if file size is greater than 8mb
+        if os.path.getsize(f'inverted_{ctx.author.id}.png') > 8000000:
+            await ctx.respond('Image is too large to send', ephemeral=True)
+            os.remove(f'image_{ctx.author.id}.png')
+            os.remove(f'inverted_{ctx.author.id}.png')
+            return
+
+        await ctx.respond(file=discord.File(f'inverted_{ctx.author.id}.png', 'invert.png'))
+
+        # Removing the files
+        os.remove(f'image_{ctx.author.id}.png')
+        os.remove(f'inverted_{ctx.author.id}.png')
+    
+    @invert_url.error
+    async def invert_url_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Handles errors for the invert_url command
         
         :param ctx: The context of where the message was sent
         :param error: The error that occurred
@@ -1472,9 +1517,9 @@ class Slash(commands.Cog):
         """
         if isinstance(error.original, (ConnectionError, requests.exceptions.MissingSchema, UnidentifiedImageError)):
             await ctx.respond('Invalid URL', ephemeral=True)
-            with contextlib.suppress(FileNotFoundError, IndexError):
+            with contextlib.suppress(FileNotFoundError):
                 os.remove(f'image_{ctx.author.id}.png')
-                os.remove(list(filter(lambda n: '_inverted.png' in n, os.listdir('./')))[0])
+                os.remove(f'inverted_{ctx.author.id}.png')
         else:
             await ctx.respond('An error has occurred while running the invert command! The owner has been notified.',
                               ephemeral=True)
@@ -2056,6 +2101,102 @@ class Slash(commands.Cog):
         await ctx.respond(
             'An error has occurred while running the serverjoin list command! The owner has been notified.',
             ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    banner = SlashCommandGroup('banner', 'Get banner\'s for users or the guild')
+
+    @banner.command(name='user', description='Shows the specified user\'s banner')
+    async def banner_user(self, ctx: discord.ApplicationContext, member: Option(discord.Member, description='The member to fetch the banner of', required=False, default=None)):
+        """
+        Shows the specified user's banner
+
+        :param ctx: The command context
+        :param member: The member to get the banner of
+
+        :type ctx: discord.ApplicationContext
+        :type member: discord.Member
+
+        :return: None
+        :rtype: None
+        """
+        member = member or ctx.author  # type: discord.Member
+        
+        req = await self.bot.http.request(discord.http.Route("GET", "/users/{uid}", uid=member.id))
+        
+        banner_id = req['banner']
+
+        if banner_id is None:
+            await ctx.respond('This user has no banner', ephemeral=True)
+            return
+        
+        url = f'https://cdn.discordapp.com/banners/{member.id}/{banner_id}?size=1024'
+
+        embed = discord.Embed(colour=member.colour)
+        embed.set_image(url=url)
+        embed.set_author(name=member.name, icon_url=member.display_avatar)
+        embed.add_field(name='Download this image', value=f'[Click Here]({url})')
+        await ctx.respond(embed=embed)
+    
+    @banner_user.error
+    async def banner_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the banner command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond('An error has occurred while running the banner command! The owner has been notified.', ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    @banner.command(name='guild', description='Shows the guild\'s banner')
+    async def banner_guild(self, ctx: discord.ApplicationContext):
+        """
+        Shows the guild's banner
+
+        :param ctx: The command context
+
+        :type ctx: discord.ApplicationContext
+
+        :return: None
+        :rtype: None
+        """
+        req = await self.bot.http.request(discord.http.Route("GET", "/guilds/{gid}", gid=ctx.guild.id))
+        
+        banner_id = req['banner']
+
+        if banner_id is None:
+            await ctx.respond('This guild has no banner', ephemeral=True)
+            return
+        
+        url = f'https://cdn.discordapp.com/banners/{ctx.guild.id}/{banner_id}?size=1024'
+
+        embed = discord.Embed(colour=ctx.guild.colour)
+        embed.set_image(url=url)
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon_url)
+        embed.add_field(name='Download this image', value=f'[Click Here]({url})')
+        await ctx.respond(embed=embed)
+    
+    @banner_guild.error
+    async def banner_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the banner command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond('An error has occurred while running the banner command! The owner has been notified.', ephemeral=True)
         await inform_owner(self.bot, error)
 
 

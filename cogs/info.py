@@ -64,6 +64,7 @@ class Info(commands.Cog):
         embed.set_footer(text=f'ID: {member.id}')
         embed.set_thumbnail(url=member.display_avatar)
         embed.set_author(name=str(member), icon_url=member.display_avatar)
+        embed.set_image(url=member.banner or discord.Embed.Empty)
 
         # Add fields
         embed.add_field(name='Display Name', value=member.mention, inline=True)
@@ -74,8 +75,10 @@ class Info(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
-        
-        embed.add_field(name='Permissions', value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]), inline=False)
+
+        embed.add_field(name='Permissions',
+                        value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]),
+                        inline=False)
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
 
@@ -99,7 +102,8 @@ class Info(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Please mention a valid user\n\nProper Usage: `{self.bot.get_command("userinfo").usage}`')
             return
-        await send_error_embed(ctx, description='An error occurred while running the userinfo command! The owner has been notified.')
+        await send_error_embed(ctx,
+                               description='An error occurred while running the userinfo command! The owner has been notified.')
         await inform_owner(ctx, error)
 
     # Serverinfo command
@@ -186,7 +190,7 @@ class Info(commands.Cog):
 
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
-        
+
         embed.add_field(name='Bot Username', value=self.bot.user.name, inline=True)
         embed.add_field(name='Bot Owner', value='Dose#7204')
         embed.add_field(name='Total Servers', value=str(len(list(self.bot.guilds))))

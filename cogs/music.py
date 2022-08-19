@@ -380,7 +380,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, AlreadyConnectedToVoiceChannel):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the join command! The owner has been notified.')
@@ -470,7 +470,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, (AuthorNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         elif isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    f'Please specify a query\n\nProper Usage: `{self.bot.get_command("play").usage}`')
@@ -542,7 +542,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the queue command! The owner has been notified.')
@@ -605,7 +605,7 @@ class Music(commands.Cog):
         if isinstance(error, (
         AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel,
         PlayerNotConnectedToVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the pause command! The owner has been notified.')
@@ -663,7 +663,7 @@ class Music(commands.Cog):
         """
         if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerPlaying, AuthorInDifferentVoiceChannel,
                               PlayerNotConnectedToVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the resume command! The owner has been notified.')
@@ -720,7 +720,7 @@ class Music(commands.Cog):
         """
         if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerNotConnectedToVoiceChannel,
                               AuthorInDifferentVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the skip command! The owner has been notified.')
@@ -779,7 +779,7 @@ class Music(commands.Cog):
         """
         if isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerNotConnectedToVoiceChannel,
                               AuthorInDifferentVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the stop command! The owner has been notified.')
@@ -845,7 +845,7 @@ class Music(commands.Cog):
         """
         if isinstance(error, (
         AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the disconnect command! The owner has been notified.')
@@ -944,7 +944,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the nowplaying command! The owner has been notified.')
@@ -1017,7 +1017,7 @@ class Music(commands.Cog):
         """
         if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, NoTrack, NotInRange,
                               AuthorInDifferentVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         elif isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    f'Specify the track to be removed\n\nProper Usage: `{self.bot.get_command("remove").usage}`')
@@ -1111,7 +1111,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         elif isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    f'Specify the song to get the lyrics of\n\nProper Usage: `{self.bot.get_command("lyrics").usage}`')
@@ -1197,7 +1197,7 @@ class Music(commands.Cog):
                                    description=f'Limit must be an integer\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
         elif isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, AuthorInDifferentVoiceChannel,
                                 PlayerNotConnectedToVoiceChannel, NotInRange)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the loop command! The owner has been notified.')
@@ -1264,7 +1264,7 @@ class Music(commands.Cog):
         elif isinstance(error, (
         NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange,
         AuthorNotConnectedToVoiceChannel)):
-            await send_error_embed(ctx, f'Error: {error}')
+            await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the volume command! The owner has been notified.')

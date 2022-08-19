@@ -5,7 +5,7 @@ import discord
 import datetime
 import requests
 import os
-import ui_components
+import ui_components as ui
 from discord.ext import commands
 from tools import send_error_embed, get_random_post, inform_owner
 from PIL import Image, ImageChops
@@ -187,7 +187,7 @@ class Fun(commands.Cog):
                     'joke'], colour=discord.Colour.random(), timestamp=datetime.datetime.now())
 
         await ctx.send(embed=embed,
-                       view=ui_components.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed,
+                       view=ui.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed,
                                                   timeout=None))
 
     @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
@@ -208,7 +208,7 @@ class Fun(commands.Cog):
                                   colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')
 
         await ctx.send(embed=embed,
-                       view=ui_components.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed,
+                       view=ui.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed,
                                                   timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
@@ -245,7 +245,7 @@ class Fun(commands.Cog):
                                   colour=discord.Colour.blurple()).set_image(url=response['message'])
 
         await ctx.send(embed=embed,
-                       view=ui_components.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed,
+                       view=ui.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed,
                                                   timeout=None))
 
     @commands.command(name='cat', description='Get a random cat picture', usage='cat')
@@ -267,7 +267,7 @@ class Fun(commands.Cog):
                                   colour=discord.Colour.blurple()).set_image(url=response[0]['url'])
 
         await ctx.send(embed=embed,
-                       view=ui_components.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search',
+                       view=ui.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search',
                                                   embed=embed,
                                                   timeout=None))
 

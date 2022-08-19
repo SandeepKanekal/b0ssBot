@@ -57,6 +57,7 @@
 + Addition of an embed command.
 + Addition of a datetime command.
 + The youtubenotification command has a new mode `update`.
++ Addition of a banner command.
 
 # Games #
 + The cancel button in the tictactoe command now asks for the other player's permission.

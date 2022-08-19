@@ -7,7 +7,7 @@ import time
 import requests
 import wikipedia
 import asyncprawcore
-import ui_components
+import ui_components as ui
 import imgurpython as imgur
 from googleapiclient.discovery import build
 from discord.ext import commands
@@ -106,7 +106,7 @@ class Internet(commands.Cog):
             }
 
         await ctx.send(embed=embed,
-                       view=ui_components.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed,
+                       view=ui.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed,
                                                             bot=self.bot,
                                                             timeout=None))
 
@@ -325,12 +325,12 @@ class Internet(commands.Cog):
 
                 try:
                     await ctx.send(embed=embed,
-                                   view=ui_components.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
+                                   view=ui.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
                                                                      timeout=None))
                 except discord.HTTPException:
                     embed = discord.Embed(description='The post content was too long to be sent', colour=0xff4300)
                     await ctx.send(embed=embed,
-                                   view=ui_components.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
+                                   view=ui.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
                                                                      timeout=None))
 
                 log_history(ctx.author.id, subreddit, 'Reddit', int(datetime.datetime.now().timestamp()), ctx.guild.id)
@@ -393,7 +393,7 @@ class Internet(commands.Cog):
             embed = discord.Embed(title=question, description=f'**Answer:** ||**{answer}**||', colour=0xff4300)
             embed.set_footer(text=f'Question 1 out of {len(trivia["results"])}')
 
-        await ctx.send(embed=embed, view=ui_components.TriviaView(ctx=ctx, items=trivia, embed=embed, timeout=None))
+        await ctx.send(embed=embed, view=ui.TriviaView(ctx=ctx, items=trivia, embed=embed, timeout=None))
 
     @trivia.error
     async def trivia_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -445,7 +445,7 @@ class Internet(commands.Cog):
             embed.set_author(name=quote[0]['a'])
 
         await ctx.send(embed=embed,
-                       view=ui_components.QuoteView(ctx=ctx, url='https://zenquotes.io/api/random', embed=embed,
+                       view=ui.QuoteView(ctx=ctx, url='https://zenquotes.io/api/random', embed=embed,
                                                     timeout=None))
 
     @quote.error
@@ -613,7 +613,7 @@ class Internet(commands.Cog):
                 return
 
             await ctx.send(content=f'Image 1 out of {len(images)}\n{images[0].link}',
-                           view=ui_components.ImgurView(ctx=ctx, items=images, timeout=None))
+                           view=ui.ImgurView(ctx=ctx, items=images, timeout=None))
 
         log_history(ctx.author.id, query, 'Imgur', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 

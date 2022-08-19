@@ -371,8 +371,11 @@ class Events(commands.Cog):
                 latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
                     'id']  # Get the latest video ID
 
-                publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0][
-                    'publishedTime']  # Get the time of publication of the latest video
+                try:
+                    publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0][
+                        'publishedTime']  # Get the time of publication of the latest video
+                except IndexError:
+                    continue
 
                 if not publish_time:
                     continue
