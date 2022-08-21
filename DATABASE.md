@@ -98,3 +98,12 @@ Stores role addition configurations for members/bots of the guilds
 + guild_id: Guild ID (Not Null, VARCHAR(18))
 + member_role_id: Role ID for members (Not Null, VARCHAR(18))
 + bot_role_id: Role ID for bots (Not Null, VARCHAR(18))
+
+# playlist
+Stores the playlist to be looped for the guilds
++ SN: Serial number (Not Null, Primary Key)
++ guild_id: Guild ID (Not Null, VARCHAR(18))
++ source: Source of the song (Not Null, VARCHAR(2000))
++ title: Title of the song (Not Null, VARCHAR(2000))
++ url: URL of the song (Not Null, VARCHAR(2000))
++ position: Position of the song in the playlist (Not Null, int)

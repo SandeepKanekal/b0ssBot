@@ -750,46 +750,6 @@ class MusicChecks:
         if self.vc.is_connected() and self.vc.channel != self.author.voice.channel:
             raise AuthorInDifferentVoiceChannel('You are in a different voice channel')
 
-    def loop_check(self):
-        if not self.author.voice:
-            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
-
-        if self.vc is None:
-            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
-
-        if not self.vc.is_playing():
-            raise NoAudioPlaying('No audio is being played')
-
-        if self.author.voice.channel != self.vc.channel:
-            raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
-
-
-class LoopModal(discord.ui.Modal):
-    def __init__(self, ctx: commands.Context, title: str, timeout: float | None = None):
-        super().__init__(title=title, timeout=timeout)
-
-        self.add_item(
-            discord.ui.InputText(
-                label='Enter the number of times to loop',
-                style=discord.InputTextStyle.short,
-                placeholder='Leave blank for infinite loop',
-                required=False
-            )
-        )
-
-        self.ctx = ctx
-
-    async def callback(self, interaction: discord.Interaction):
-        limit = None
-        try:
-            limit = int(self.children[0].value)
-        except ValueError:
-            limit = None
-        finally:
-            await self.ctx.invoke(self.ctx.bot.get_command('loop'), limit=limit)
-            self.stop()
-            await interaction.response.edit_message(embed=interaction.message.embeds[0])
-
 
 # noinspection PyUnusedLocal
 class MusicView(discord.ui.View):
@@ -851,19 +811,6 @@ class MusicView(discord.ui.View):
             # Respond
             with contextlib.suppress(discord.NotFound):
                 await interaction.response.edit_message(view=self)
-
-    @discord.ui.button(emoji='🔁', style=discord.ButtonStyle.blurple)
-    async def loop(self, button: discord.Button, interaction: discord.Interaction):
-        checks = MusicChecks(interaction.user, self.vc)
-        try:
-            checks.loop_check()
-            await interaction.response.send_modal(LoopModal(self.ctx, 'Loop Options', timeout=None))
-        except Exception as e:
-            await interaction.response.send_message(f'Error: {e}', ephemeral=True)
-        else:
-            # Respond
-            with contextlib.suppress(discord.NotFound):
-                await interaction.followup.edit_message(interaction.message.id, view=self)
 
     @discord.ui.button(label='Lyrics', style=discord.ButtonStyle.blurple, row=1)
     async def lyrics(self, button: discord.Button, interaction: discord.Interaction):
@@ -1166,10 +1113,14 @@ class HelpView(discord.ui.View):
             embed.add_field(name='Parameters', value=param_str, inline=False)
             embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
         elif isinstance(cmd, discord.SlashCommandGroup):
-            embed.add_field(name='Subcommands', value=f'{" ".join(f"`{subcmd.name}`" for subcmd in cmd.walk_commands())}', inline=False)
-            embed.add_field(name='Usage', value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
+            embed.add_field(name='Subcommands',
+                            value=f'{" ".join(f"`{subcmd.name}`" for subcmd in cmd.walk_commands())}', inline=False)
+            embed.add_field(name='Usage',
+                            value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
         else:
-            embed.add_field(name='Usage', value='This is an application command. Right click on a message/user to get the command', inline=False)
+            embed.add_field(name='Usage',
+                            value='This is an application command. Right click on a message/user to get the command',
+                            inline=False)
 
         await interaction.response.edit_message(content=None, embed=embed, view=None)
         self.stop()

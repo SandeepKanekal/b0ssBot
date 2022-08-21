@@ -14,6 +14,7 @@ from discord.ext.commands import CommandError
 from tools import send_error_embed, get_video_stats, format_time, log_history, inform_owner
 from youtube_dl import YoutubeDL
 from ui_components import MusicView
+from discord.commands import Option, SlashCommandGroup
 
 
 class AuthorNotConnectedToVoiceChannel(CommandError):
@@ -139,6 +140,7 @@ class Music(commands.Cog):
 
         self.sql.delete('queue', f"guild_id = '{member.guild.id}'")
         self.sql.delete('loop', f"guild_id = '{member.guild.id}'")
+        self.sql.delete('playlist', f"guild_id = '{member.guild.id}'")
 
     def search_yt(self, item):
         """
@@ -159,7 +161,9 @@ class Music(commands.Cog):
 
         return {'source': info['formats'][0]['url'], 'title': info['title'],
                 'url': info['webpage_url'], 'channel_title': info['channel'], 'channel_id': info['channel_id'],
-                'view_count': info['view_count'], 'like_count': info['like_count'], 'thumbnail': info['thumbnail'],
+                'view_count': info['view_count'],
+                'like_count': info['like_count'] if 'like_count' in info else 'Could not fetch likes',
+                'thumbnail': info['thumbnail'],
                 'duration': info['duration']}  # Return required details
 
     async def _send_embed_after_track(self, ctx: commands.Context):
@@ -242,6 +246,37 @@ class Music(commands.Cog):
             'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
             embed=embed, view=view
         )
+    
+    def update_playlist(self, ctx: commands.Context):
+        """
+        Updates the playlist to be looped if it exists.
+
+        :param ctx: The context of the command.
+
+        :type ctx: commands.Context
+        
+        :return: None
+        :rtype: None
+        """
+        if ctx.guild.voice_client is None:
+            return
+
+        if playlist_track := self.sql.select(elements=['source', 'title', 'url', 'position'], table='playlist',
+                                             where=f"guild_id = '{ctx.guild.id}'"):
+            index = 0
+            for track_details in playlist_track:
+                if self.now_playing[ctx.guild.id] in track_details:
+                    break
+                index += 1
+
+            try:
+                index = playlist_track[index + 1][3]
+            except IndexError:
+                index = 0
+
+            self.sql.update('loop', 'source', f"'{playlist_track[index][0]}'", f"guild_id = '{ctx.guild.id}'")
+            self.sql.update('loop', 'title', f"'{playlist_track[index][1]}'", f"guild_id = '{ctx.guild.id}'")
+            self.sql.update('loop', 'url', f"'{playlist_track[index][2]}'", f"guild_id = '{ctx.guild.id}'")
 
     def play_next(self, ctx: commands.Context):
         """
@@ -255,6 +290,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         vc = ctx.guild.voice_client  # Get the voice client
+        self.update_playlist(ctx)  # Update the playlist to be looped if it exists
         asyncio.run_coroutine_threadsafe(self._send_embed_after_track(ctx), self.bot.loop)  # Send the embed
         if self.sql.select(['title'], 'queue', f"guild_id = '{ctx.guild.id}'") or self.sql.select(['title'], 'loop',
                                                                                                   f"guild_id = '{ctx.guild.id}'"):  # Check if there are any tracks queued or looped
@@ -502,10 +538,16 @@ class Music(commands.Cog):
 
         # Create embed
         embed = discord.Embed(title='Music Queue', colour=discord.Colour.dark_teal(), timestamp=datetime.datetime.now())
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+
+        # Playlist
+        if track := self.sql.select(elements=['title', 'url'], table='playlist', where=f"guild_id = '{ctx.guild.id}'"):
+            embed.title = 'Looping Playlist'
+            for index, song in enumerate(track):
+                embed.add_field(name=f'Track Number {index + 1}', value=f'[{song[0]}]({song[1]})', inline=False)
 
         # Looping
-        if track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        elif track := self.sql.select(elements=['title', 'url'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
             embed.add_field(
                 name='Looping',
                 value=f'[{track[0][0]}]({track[0][1]})'
@@ -517,7 +559,6 @@ class Music(commands.Cog):
 
         # Queue
         else:
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             queue = self.sql.select(elements=['title', 'url'], table='queue', where=f"guild_id = '{ctx.guild.id}'")
             embed.add_field(name='Now Playing:',
                             value=f'[{self.now_playing[ctx.guild.id]}]({self.now_playing_url[ctx.guild.id]})',
@@ -603,8 +644,8 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, (
-        AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel,
-        PlayerNotConnectedToVoiceChannel)):
+                AuthorNotConnectedToVoiceChannel, NoAudioPlaying, PlayerPaused, AuthorInDifferentVoiceChannel,
+                PlayerNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
@@ -759,6 +800,7 @@ class Music(commands.Cog):
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
         self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
+        self.sql.delete(table='playlist', where=f"guild_id = '{ctx.guild.id}'")
 
         # Stopping the player
         vc.stop()
@@ -828,6 +870,7 @@ class Music(commands.Cog):
         # Clearing the queue for the guild
         self.sql.delete(table='queue', where=f"guild_id = '{ctx.guild.id}'")
         self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
+        self.sql.delete(table='playlist', where=f"guild_id = '{ctx.guild.id}'")
 
     @disconnect.error
     async def disconnect_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -844,7 +887,7 @@ class Music(commands.Cog):
         :rtype: None
         """
         if isinstance(error, (
-        AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
+                AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, AuthorInDifferentVoiceChannel)):
             await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,
@@ -1120,23 +1163,29 @@ class Music(commands.Cog):
                                    description='An error has occurred while running the lyrics command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
-    # Repeat/Loop command
-    @commands.command(aliases=['repeat'],
-                      description='Enable or disable loop.\nEnter the number of times you would like to loop if you want to loop finitely.',
-                      usage='loop <limit>')
-    async def loop(self, ctx: commands.Context, limit: int | None = None):
+    loop = SlashCommandGroup('loop', 'Manage loops')
+
+    @loop.command(name='enable', description='Enable loop')
+    async def loop_enable(self, ctx: discord.ApplicationContext,
+                          mode: Option(str, description='Loop mode', required=True, choices=['Track', 'Playlist']),
+                          limit: Option(int, description='The number of times to loop. Leave blank for infinite loop',
+                                        required=False, default=None)):
         """
-        Enables or disables loop mode.
-        
+        Enable loop.
+
         :param ctx: The context of the command.
+        :param mode: The loop mode.
         :param limit: The number of times to loop.
-        
-        :type ctx: commands.Context
+
+        :type ctx: discord.ApplicationContext
+        :type mode: str
         :type limit: int | None
-        
+
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         # Basic responses to false calls
         if not ctx.author.voice:
             raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
@@ -1152,55 +1201,130 @@ class Music(commands.Cog):
         if ctx.author.voice.channel != vc.channel:
             raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
 
+        # Check if loop is already enabled
+        if self.sql.select(['*'], 'loop', f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Loop is already enabled!', ephemeral=True)
+            return
+
         self.loop_limit[ctx.guild.id] = limit
 
-        title = self.now_playing[ctx.guild.id]
-        title = title.replace("'", "''")
-        # Delete/Insert into the loop table
-        if self.sql.select(elements=['*'], table='loop', where=f"guild_id = '{ctx.guild.id}'"):
-            self.sql.delete(table='loop', where=f"guild_id = '{ctx.guild.id}'")
-            self.sql.delete(table='queue',
-                            where=f"guild_id = '{ctx.guild.id}' AND title = '{title}'")
+        # Insert only in loop
+        if mode == 'Track':
+            self.sql.insert('loop', ['guild_id', 'source', 'title', 'url'],
+                            [f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
+                             f"'{self.now_playing[ctx.guild.id]}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
 
-            mode = False
+        # Insert in playlist and loop
         else:
-            self.sql.insert(table='loop', columns=['guild_id', 'source', 'title', 'url'],
-                            values=[f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
-                                    f"'{title}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
+            items = self.sql.select(['source', 'title', 'url'], 'queue', f"guild_id='{ctx.guild.id}'")
+            self.sql.insert('loop', ['guild_id', 'source', 'title', 'url'],
+                            [f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
+                             f"'{self.now_playing[ctx.guild.id]}'", f"'{self.now_playing_url[ctx.guild.id]}'"])
 
-            mode = True
+            self.sql.insert('playlist', ['guild_id', 'source', 'title', 'url', 'position'],
+                            [f"'{ctx.guild.id}'", f"'{self.source[ctx.guild.id]}'",
+                             f"'{self.now_playing[ctx.guild.id]}'", f"'{self.now_playing_url[ctx.guild.id]}'", "'0'"])
 
-        await ctx.send(embed=discord.Embed(
-            description=f'Current track will be looped {limit} times' if limit else f'Loop mode set to {mode}',
-            colour=discord.Colour.blurple()))
+            for index, item in enumerate(items):
+                self.sql.insert('playlist', ['guild_id', 'source', 'title', 'url', 'position'],
+                                [f"'{ctx.guild.id}'", f"'{item[0]}'", f"'{item[1]}'", f"'{item[2]}'", f"'{index + 1}'"])
 
-    # Error in the loop command
-    @loop.error
-    async def loop_error(self, ctx: commands.Context, error: commands.CommandError):
+        await ctx.respond(
+            embed=discord.Embed(description=f'Loop enabled for {mode}', colour=discord.Colour.blue()).set_footer(
+                text=f'Limit: {limit or "Infinite"}'))
+
+    @loop_enable.error
+    async def loop_enable_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
-        Error handler for the loop command.
-        
+        Error handler for the loop enable command.
+
         :param ctx: The context of the command.
         :param error: The error that occurred.
-        
-        :type ctx: commands.Context
-        :type error: commands.CommandError
-        
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
         :return: None
         :rtype: None
         """
-        if isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx,
-                                   description=f'Please specify the mode\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
-        elif isinstance(error, commands.BadArgument):
-            await send_error_embed(ctx,
-                                   description=f'Limit must be an integer\n\nProper Usage: `{self.bot.get_command("loop").usage}`')
-        elif isinstance(error, (AuthorNotConnectedToVoiceChannel, NoAudioPlaying, AuthorInDifferentVoiceChannel,
-                                PlayerNotConnectedToVoiceChannel, NotInRange)):
-            await send_error_embed(ctx, f'Error: `{error}`')
+        if isinstance(error, (AuthorNotConnectedToVoiceChannel, PlayerNotConnectedToVoiceChannel, NoAudioPlaying,
+                              AuthorNotConnectedToVoiceChannel)):
+            await ctx.respond(f'Error: `{error}`', ephemeral=True)
         else:
-            await send_error_embed(ctx,
-                                   description='An error has occurred while running the loop command! The owner has been notified.')
+            await ctx.respond(
+                'An error has occurred while running the loop enable command! The owner has been notified.',
+                ephemeral=True)
+            await inform_owner(self.bot, error)
+
+    @loop.command(name='disable', description='Disable loop')
+    async def loop_disable(self, ctx: discord.ApplicationContext):
+        """
+        Disable loop.
+
+        :param ctx: The context of the command.
+
+        :type ctx: discord.ApplicationContext
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.interaction.response.defer()
+
+        # Basic responses to false calls
+        if not ctx.author.voice:
+            raise AuthorNotConnectedToVoiceChannel('You are not connected to a voice channel')
+
+        vc = ctx.guild.voice_client
+
+        if vc is None:
+            raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')
+
+        if not vc.is_playing():
+            raise NoAudioPlaying('No audio is being played')
+
+        if ctx.author.voice.channel != vc.channel:
+            raise AuthorInDifferentVoiceChannel('You are not connected to the same voice channel as the player')
+
+        # Check if loop is enabled first
+        if not self.sql.select(['*'], 'loop', f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Loop is not enabled!', ephemeral=True)
+            return
+        
+        # Delete from database
+        sources = self.sql.select(['source'], 'queue', f"guild_id = '{ctx.guild.id}'")
+        for source in sources:
+            self.sql.delete('queue', f"guild_id = '{ctx.guild.id}' AND source = '{source[0]}'")
+
+        self.sql.delete('loop', f"guild_id = '{ctx.guild.id}'")
+        self.sql.delete('playlist', f"guild_id = '{ctx.guild.id}'")
+
+        # Delete from memory
+        del self.loop_limit[ctx.guild.id]
+
+        # Respond
+        await ctx.respond(embed=discord.Embed(description='Loop disabled', colour=discord.Colour.blue()))
+
+    @loop_disable.error
+    async def loop_disable_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the loop disable command.
+
+        :param ctx: The context of the command.
+        :param error: The error that occurred.
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, (PlayerNotConnectedToVoiceChannel, NoAudioPlaying, AuthorNotConnectedToVoiceChannel,
+                              AuthorInDifferentVoiceChannel)):
+            await ctx.respond(f'Error: `{error}`', ephemeral=True)
+        else:
+            await ctx.respond(
+                'An error has occurred while running the loop disable command! The owner has been notified.',
+                ephemeral=True)
             await inform_owner(self.bot, error)
 
     # Volume command
@@ -1262,8 +1386,8 @@ class Music(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Volume must be a whole number between 0 and 200\n\nProper Usage: `{self.bot.get_command("volume").usage}`')
         elif isinstance(error, (
-        NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange,
-        AuthorNotConnectedToVoiceChannel)):
+                NoAudioPlaying, AuthorInDifferentVoiceChannel, PlayerNotConnectedToVoiceChannel, NotInRange,
+                AuthorNotConnectedToVoiceChannel)):
             await send_error_embed(ctx, f'Error: `{error}`')
         else:
             await send_error_embed(ctx,

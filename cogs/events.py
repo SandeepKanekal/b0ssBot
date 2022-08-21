@@ -58,6 +58,7 @@ class Events(commands.Cog):
         sql = SQL('b0ssbot')
         sql.delete(table='queue')
         sql.delete(table='loop')
+        sql.delete(table='playlist')
 
     # Bot activity on receiving a message
     @commands.Cog.listener()
