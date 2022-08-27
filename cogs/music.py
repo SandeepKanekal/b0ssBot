@@ -70,17 +70,18 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        self.bot = bot  # type: commands.Bot
-        self.now_playing = {}  # type: dict[int, str | None] # Stores the current track for each guild
-        self.now_playing_url = {}  # type: dict[int, str | None] # Stores the current track url for each guild
-        self.start_time = {}  # type: dict[int, datetime.datetime | None] # Stores the start time for each guild
-        self.source = {}  # type: dict[int, str | None] # Stores the source for each guild
-        self.volume = {}  # type: dict[int, int] # Stores the volume for each guild
-        self.pause_time = {}  # type: dict[int, datetime.datetime | None] # Stores the time when the track was paused for each guild
-        self.music_view = {}  # type dict[int, MusicView | None] # Stores the view object for each guild
-        self.loop_limit = {}  # type dict[int, int | None] # Stores the number of times the track must be looped
-        self.sql = SQL('b0ssbot')  # type: SQL
-        self._ydl_options = {
+        self.bot: commands.Bot = bot
+        self.now_playing: dict[int, str | None] = {}  # Stores the current track for each guild
+        self.now_playing_url: dict[int, str | None] = {}  # Stores the current track url for each guild
+        self.start_time: dict[int, datetime.datetime | None] = {}  # Stores the start time for each guild
+        self.source: dict[int, str | None] = {}  # Stores the source for each guild
+        self.volume: dict[int, int] = {}  # Stores the volume for each guild
+        self.pause_time: dict[
+            int, datetime.datetime | None] = {}  # Stores the time when the track was paused for each guild
+        self.music_view: dict[int, MusicView | None] = {}  # Stores the view object for each guild
+        self.loop_limit: dict[int, int | None] = {}  # Stores the number of times the track must be looped
+        self.sql: SQL = SQL('b0ssbot')
+        self._ydl_options: dict[str, bool | str] = {
             "format": "bestaudio/best",
             "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
             "restrictfilenames": True,
@@ -92,11 +93,11 @@ class Music(commands.Cog):
             "no_warnings": True,
             "default_search": "auto",
             "source_address": "0.0.0.0",
-        }  # type: dict[str, bool | str] # Options for youtube_dl
-        self._ffmpeg_options = {
+        }  # Options for youtube_dl
+        self._ffmpeg_options: dict[str, str] = {
             'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
             'options': '-vn'
-        }  # type: dict[str, str] # Options for ffmpeg
+        }  # Options for ffmpeg
 
     # noinspection PyUnusedLocal
     @commands.Cog.listener()
@@ -116,31 +117,46 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        vc = member.guild.voice_client
+        vc: discord.VoiceClient = member.guild.voice_client
         if not vc:
             return
 
-        if list(filter(lambda m: not m.bot, vc.channel.members)):
-            return
+        # Auto disconnect
+        if before.channel and not after.channel:
+            if list(filter(lambda m: not m.bot, vc.channel.members)):
+                return
 
-        vc.stop()
-        await vc.disconnect()
+            vc.stop()
+            await vc.disconnect()
 
-        # Delete all the keys storing the guild's information
-        with contextlib.suppress(KeyError, AttributeError):
-            del self.now_playing[member.guild.id]
-            del self.now_playing_url[member.guild.id]
-            del self.start_time[member.guild.id]
-            del self.source[member.guild.id]
-            del self.volume[member.guild.id]
-            del self.pause_time[member.guild.id]
-            self.music_view[member.guild.id].stop()
-            del self.music_view[member.guild.id]
-            del self.loop_limit[member.guild.id]
+            # Delete all the keys storing the guild's information
+            with contextlib.suppress(KeyError, AttributeError):
+                del self.now_playing[member.guild.id]
+                del self.now_playing_url[member.guild.id]
+                del self.start_time[member.guild.id]
+                del self.source[member.guild.id]
+                del self.volume[member.guild.id]
+                del self.pause_time[member.guild.id]
+                self.music_view[member.guild.id].stop()
+                del self.music_view[member.guild.id]
+                del self.loop_limit[member.guild.id]
 
-        self.sql.delete('queue', f"guild_id = '{member.guild.id}'")
-        self.sql.delete('loop', f"guild_id = '{member.guild.id}'")
-        self.sql.delete('playlist', f"guild_id = '{member.guild.id}'")
+            self.sql.delete('queue', f"guild_id = '{member.guild.id}'")
+            self.sql.delete('loop', f"guild_id = '{member.guild.id}'")
+            self.sql.delete('playlist', f"guild_id = '{member.guild.id}'")
+
+        # Auto pause/resume on self deafen/undeafen
+        elif len(list(filter(lambda m: not m.bot, vc.channel.members))) == 1:
+            if not before.self_deaf and after.self_deaf:
+                vc.pause()
+                self.pause_time[member.guild.id] = datetime.datetime.now()
+                await member.send(
+                    'I paused the player since you self deafened and were the only member in the voice channel.')
+            elif before.self_deaf and not after.self_deaf:
+                vc.resume()
+                self.start_time[member.guild.id] += datetime.datetime.now() - self.pause_time[member.guild.id]
+                await member.send(
+                    'I resumed the player since you unself deafened and were the only member in the voice channel.')
 
     def search_yt(self, item):
         """
@@ -223,6 +239,7 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
+        # Create embed
         embed = discord.Embed(colour=discord.Colour.blurple())
 
         embed.set_thumbnail(url=song['thumbnail'])
@@ -236,17 +253,19 @@ class Music(commands.Cog):
             value=f'[{song["title"]}]({song["url"]}) BY [{song["channel_title"]}](https://youtube.com/channel/{song["channel_id"]})'
         )
 
+        # Configure view
         if not ctx.voice_client.is_playing():
             view = MusicView(ctx, self.bot, ctx.guild.voice_client, song['title'], timeout=None)
             self.music_view[ctx.guild.id] = view
         else:
             view = None
 
+        # Respond
         await ctx.send(
             'In case the music is not playing, please use the play command again since the access to the music player could be denied.',
             embed=embed, view=view
         )
-    
+
     def update_playlist(self, ctx: commands.Context):
         """
         Updates the playlist to be looped if it exists.
@@ -263,6 +282,7 @@ class Music(commands.Cog):
 
         if playlist_track := self.sql.select(elements=['source', 'title', 'url', 'position'], table='playlist',
                                              where=f"guild_id = '{ctx.guild.id}'"):
+            # Update index properly
             index = 0
             for track_details in playlist_track:
                 if self.now_playing[ctx.guild.id] in track_details:
@@ -274,6 +294,7 @@ class Music(commands.Cog):
             except IndexError:
                 index = 0
 
+            # Update database
             self.sql.update('loop', 'source', f"'{playlist_track[index][0]}'", f"guild_id = '{ctx.guild.id}'")
             self.sql.update('loop', 'title', f"'{playlist_track[index][1]}'", f"guild_id = '{ctx.guild.id}'")
             self.sql.update('loop', 'url', f"'{playlist_track[index][2]}'", f"guild_id = '{ctx.guild.id}'")
@@ -1289,7 +1310,7 @@ class Music(commands.Cog):
         if not self.sql.select(['*'], 'loop', f"guild_id = '{ctx.guild.id}'"):
             await ctx.respond('Loop is not enabled!', ephemeral=True)
             return
-        
+
         # Delete from database
         sources = self.sql.select(['source'], 'queue', f"guild_id = '{ctx.guild.id}'")
         for source in sources:

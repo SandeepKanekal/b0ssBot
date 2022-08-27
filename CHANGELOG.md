@@ -62,6 +62,7 @@
 
 # Games #
 + The cancel button in the tictactoe command now asks for the other player's permission.
++ Addition of a riddle command.
 
 # Context #
 + Addition of a `invert` command.

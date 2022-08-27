@@ -2,9 +2,10 @@
 # All misc commands stored here
 import datetime
 import discord
+import asyncio
 from tools import send_error_embed, inform_owner
 from discord.ext import commands
-from ui_components import FeatureView
+from ui_components import FeatureView, BugView
 
 
 class Misc(commands.Cog):
@@ -241,6 +242,79 @@ class Misc(commands.Cog):
         else:
             await send_error_embed(ctx,
                                    description='An error has occurred while running the featuresuggest command! The owner has been notified.')
+            await inform_owner(self.bot, error)
+
+    @commands.command(name='bugreport', aliases=['bug'], description='Report a bug to the owner of the bot', usage='bugreport <bug>')
+    @commands.cooldown(1, 20, commands.BucketType.user)
+    async def bugreport(self, ctx: commands.Context):
+        """
+        Report a bug to the owner of the bot
+
+        :param ctx: The context of where the message was sent
+
+        :type ctx: commands.Context
+
+        :return: None
+        :rtype: None
+        """
+        # Respond to the author
+        await ctx.message.delete()
+        
+        msg = await ctx.send('To report a bug, please send the **MESSAGE ID** of the message that contains the bug. I will wait for 60 seconds.')
+
+        # Wait for 60 seconds
+        try:
+            message: discord.Message = await self.bot.wait_for('message', timeout=60, check=lambda m: m.author.id == ctx.author.id)
+            message_id = int(message.content)
+        except asyncio.TimeoutError:
+            await msg.delete()
+            return
+        except ValueError:
+            await msg.delete()
+            await ctx.send('Invalid ID passed', delete_after=3)
+        else:
+            try:
+                bug = self.bot.get_message(message_id).embeds[0].description
+            except (AttributeError, IndexError):
+                await msg.delete()
+                await ctx.send('Invalid ID', delete_after=3)
+            else:
+                await msg.delete()
+                await ctx.send('The bug has been reported!', delete_after=3)
+
+                # Bug embed
+                embed = discord.Embed(
+                    title='New bug report!',
+                    description=bug,
+                    colour=discord.Colour.blurple(),
+                    timestamp=datetime.datetime.now()
+                )
+                embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar)
+                embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+
+                # Send bug to owner
+                await self.bot.get_user(800018344702640180).send(embed=embed, view=BugView(ctx.author, timeout=None))
+    
+    @bugreport.error
+    async def bugreport_error(self, ctx: commands.Context, error: commands.CommandError):
+        """
+        Error handler for the bugreport command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.CommandOnCooldown):
+            await send_error_embed(ctx,
+                                   description=f'You are on cooldown. Try again in {error.retry_after:.2f} seconds')
+        else:
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the bugreport command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
 

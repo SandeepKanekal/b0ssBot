@@ -111,7 +111,9 @@ class YouTubeSearchView(discord.ui.View):
 
     @discord.ui.button(label='Play Audio in VC', style=discord.ButtonStyle.green)
     async def play(self, button: discord.Button, interaction: discord.Interaction):
+        checks = MusicChecks(interaction.user, self.ctx.guild.voice_client)
         try:
+            checks.play_check()
             await self.ctx.invoke(self.bot.get_command('play'), query=self.items.get('titles')[self.index])
         except Exception as e:
             await send_error_embed(self.ctx, str(e))
@@ -1126,7 +1128,7 @@ class HelpView(discord.ui.View):
         self.stop()
 
 
-class FeatureViewModal(discord.ui.Modal):
+class ReportModal(discord.ui.Modal):
     def __init__(self, suggestor: discord.User, type_: str, title: str,
                  timeout: float | None = None):
         super().__init__(title=title, timeout=timeout)
@@ -1140,7 +1142,7 @@ class FeatureViewModal(discord.ui.Modal):
     async def callback(self, interaction: discord.Interaction):
         with contextlib.suppress(discord.Forbidden):
             await self.suggestor.send(
-                f'Your suggestion has been {self.type_}ed.\nComments by owner: {self.children[0].value}')
+                f'Your suggestion/report has been {self.type_}ed.\nComments by owner: {self.children[0].value}')
 
         if self.type_ == 'Reject':
             await interaction.response.edit_message(content=None)
@@ -1158,9 +1160,106 @@ class FeatureView(discord.ui.View):
     @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
     async def accept(self, button: discord.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(
-            FeatureViewModal(self.suggestor, 'Accept', 'Add a comment', timeout=None))
+            ReportModal(self.suggestor, 'Accept', 'Add a comment', timeout=None))
 
     @discord.ui.button(label='Reject', style=discord.ButtonStyle.red)
     async def reject(self, button: discord.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(
-            FeatureViewModal(self.suggestor, 'Reject', 'Add a comment', timeout=None))
+            ReportModal(self.suggestor, 'Reject', 'Add a comment', timeout=None))
+
+
+# noinspection PyUnusedLocal
+class RiddleView(discord.ui.View):
+    def __init__(self, embed: discord.Embed, questions: list[str], answers: list[str], bot: commands.Bot, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.embed = embed
+        self.questions = questions
+        self.answers = answers
+        self.bot = bot
+        self.index = 0
+        self.winners = {}
+    
+    @discord.ui.button(label='Answer', style=discord.ButtonStyle.green) 
+    async def answer(self, button: discord.Button, interaction: discord.Interaction):
+        modal = discord.ui.Modal(title=f'Riddle {self.index + 1}', timeout=None)
+        modal.add_item(discord.ui.InputText(label='Answer', style=discord.InputTextStyle.long, placeholder='Answer', required=True))
+    
+        async def callback(inter: discord.Interaction):
+            if modal.children[0].value.lower() in self.answers[self.index].lower():
+                if self.index != len(self.questions) - 1:
+                    print(self.index)
+                    self.index += 1
+                    print(self.index)
+                    self.embed.title = self.questions[self.index]
+                    self.embed.set_footer(text=f'Question {self.index + 1} out of {len(self.questions)}')
+
+                    await inter.response.edit_message(embed=self.embed)
+                else:
+                    try:
+                        winner = self.bot.get_user(max(self.winners.items(), key=lambda x: x[1])[0])
+                    except ValueError:
+                        winner = None
+                    else:
+                        winner = winner.mention
+                    finally:
+                        await inter.response.edit_message(f'The riddle has been completed! Winner: {winner}', embed=None, view=None)
+
+                if inter.user.id in self.winners:
+                    self.winners[inter.user.id] += 1
+                else:
+                    self.winners[inter.user.id] = 1
+            
+            else:
+                await inter.response.send_message('Incorrect answer', ephemeral=True)
+        
+        modal.callback = callback
+
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.blurple)
+    async def next_question(self, button: discord.Button, interaction: discord.Interaction):
+        if self.index != len(self.questions) - 1:
+            self.index += 1
+
+            self.embed.title = self.questions[self.index]
+            self.embed.set_footer(text=f'Question {self.index + 1} out of {len(self.questions)}')
+
+            await interaction.response.edit_message(embed=self.embed)
+        else:
+            try:
+                winner = self.bot.get_user(max(self.winners.items(), key=lambda x: x[1])[0])
+            except ValueError:
+                winner = None
+            else:
+                winner = winner.mention
+            finally:
+                await interaction.response.edit_message(content=f'The riddle has ended! Winner: {winner}', embed=None, view=None)
+                self.stop()
+
+    @discord.ui.button(label='End Riddle', style=discord.ButtonStyle.red)
+    async def end(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            winner = self.bot.get_user(max(self.winners.items(), key=lambda x: x[1])[0])
+        except ValueError:
+            winner = None
+        else:
+            winner = winner.mention
+        finally:
+            await interaction.response.edit_message(content=f'The riddle has ended! Winner: {winner}', embed=None, view=None)
+            self.stop()
+
+
+class BugView(discord.ui.View):
+    def __init__(self, reporter: discord.User, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.reporter = reporter
+
+    @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
+    async def accept(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            ReportModal(self.reporter, 'Accept', 'Add a comment', timeout=None))
+
+    @discord.ui.button(label='Reject', style=discord.ButtonStyle.red)
+    async def reject(self, button: discord.Button, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            ReportModal(self.reporter, 'Reject', 'Add a comment', timeout=None))
