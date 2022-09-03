@@ -7,7 +7,7 @@ lyrics_extractor
 wikipedia
 google-api-python-client
 youtube-search-python
-psycopg2
+psycopg2-binary
 pillow
 pyzbar
 qrcode

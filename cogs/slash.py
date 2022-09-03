@@ -48,7 +48,7 @@ class Slash(commands.Cog):
             await ctx.respond('Prefix must be 2 characters or less')
             return
 
-        sql = SQL('b0ssbot')  # type: SQL
+        sql = SQL('d9t2a5e8mudflk')  # type: SQL
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
         await ctx.respond(f'Prefix changed to **{new_prefix}**')
 
@@ -218,7 +218,7 @@ class Slash(commands.Cog):
         """
         await ctx.interaction.response.defer()
 
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         # Get the channel ID
@@ -296,7 +296,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         # Get the channel ID
@@ -363,7 +363,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         channels = sql.select(elements=['channel_name', 'channel_id', 'text_channel_id'], table='youtube',
                               where=f'guild_id = \'{ctx.guild.id}\'')
 
@@ -420,7 +420,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if there are any channels set up
         if not sql.select(elements=['*'], table='youtube', where=f'guild_id = \'{ctx.guild.id}\''):
@@ -482,7 +482,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Get the channel ID
         youtube_channel_id = requests.get(
@@ -563,7 +563,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         if member.id == ctx.author.id:
             await ctx.respond('You can\'t warn yourself')
@@ -630,7 +630,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         if warns := sql.select(
                 elements=['warns', 'reason'],
@@ -692,7 +692,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         if warns := sql.select(
                 elements=['warns', 'reason'],
@@ -747,7 +747,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         if sql.select(
                 elements=['warns', 'reason'],
@@ -805,7 +805,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         original_message = message
 
         message = message.replace("'", "''").lower()
@@ -862,7 +862,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         original_message = message
 
         message = message.replace("'", "''").lower()
@@ -911,7 +911,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         if not sql.select(elements=['message', 'response'], table='message_responses',
                           where=f"guild_id = '{ctx.guild.id}'"):
@@ -968,7 +968,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         sql.delete(table='message_responses', where=f"guild_id = '{ctx.guild.id}'")
         await ctx.respond('All responses cleared')
 
@@ -1679,7 +1679,7 @@ class Slash(commands.Cog):
         """
         await ctx.interaction.response.defer()
 
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if a verification system already exists
         if sql.select(['*'], 'verifications', where=f"guild_id = '{ctx.guild.id}'"):
@@ -1741,7 +1741,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if verification does not exist
         if not sql.select(['*'], 'verifications', where=f"guild_id = '{ctx.guild.id}'"):
@@ -1796,7 +1796,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check iff verification does not exist
         if not sql.select(['*'], 'verifications', where=f"guild_id = '{ctx.guild.id}'"):
@@ -1858,7 +1858,7 @@ class Slash(commands.Cog):
         """
         member = member or ctx.author
 
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if the user has any history
         if not sql.select(['*'], 'history', where=f"member_id = '{member.id}' AND guild_id = '{ctx.guild.id}'"):
@@ -1905,7 +1905,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if serverjoin already exists
         roles = sql.select(['member_role_id', 'bot_role_id'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'")
@@ -1957,7 +1957,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if serverjoin even exists
         if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
@@ -2012,7 +2012,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if serverjoin even exists
         if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
@@ -2063,7 +2063,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if serverjoin even exists
         if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):

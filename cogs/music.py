@@ -80,7 +80,7 @@ class Music(commands.Cog):
             int, datetime.datetime | None] = {}  # Stores the time when the track was paused for each guild
         self.music_view: dict[int, MusicView | None] = {}  # Stores the view object for each guild
         self.loop_limit: dict[int, int | None] = {}  # Stores the number of times the track must be looped
-        self.sql: SQL = SQL('b0ssbot')
+        self.sql: SQL = SQL('d9t2a5e8mudflk')
         self._ydl_options: dict[str, bool | str] = {
             "format": "bestaudio/best",
             "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",

@@ -173,7 +173,7 @@ def log_history(member_id: int, query: str, type_: str, timestamp: int, guild_id
     -------
     None
     """
-    sql = SQL('b0ssbot')
+    sql = SQL('d9t2a5e8mudflk')
     query = query.replace("'", "''")
     sql.insert('history', ['member_id', 'query', 'type', 'timestamp', 'guild_id'], [f"'{member_id}'", f"'{query}'", f"'{type_}'", f"'{timestamp}'", f"'{guild_id}'"])
 

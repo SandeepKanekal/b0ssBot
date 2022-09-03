@@ -40,7 +40,7 @@ class Help(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
 
         if command is None:

@@ -55,7 +55,7 @@ class Events(commands.Cog):
         self.clear_ytdl_cache.start()
 
         # Clear the data in the music tables
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         sql.delete(table='queue')
         sql.delete(table='loop')
         sql.delete(table='playlist')
@@ -74,7 +74,7 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')  # type: SQL
+        sql = SQL('d9t2a5e8mudflk')  # type: SQL
         if message.author.bot:  # Ignore bots
             return
 
@@ -167,7 +167,7 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')  # type: SQL
+        sql = SQL('d9t2a5e8mudflk')  # type: SQL
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
 
         response = random.choice(
@@ -194,7 +194,7 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Add the guild to the database
         sql.insert(table='prefixes', columns=['guild_id', 'prefix'], values=[f'\'{guild.id}\'', '\'-\''])
@@ -222,7 +222,7 @@ class Events(commands.Cog):
         :rtype: None
         """
         # Delete all the data of the guild from the database
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         sql.delete(table='prefixes', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='modlogs', where=f'guild_id = \'{guild.id}\'')
         sql.delete(table='afks', where=f'guild_id = \'{guild.id}\'')
@@ -251,7 +251,7 @@ class Events(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         if not sql.select(elements=['message_id'], table='verifications',
                           where=f'guild_id = \'{payload.guild_id}\' AND message_id = \'{payload.message_id}\''):
             # Check if the message is a verification message
@@ -301,7 +301,7 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         if not sql.select(['*'], 'serverjoin', f"guild_id = '{member.guild.id}'"):
             return
@@ -331,7 +331,7 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         sql.delete(table='youtube', where=f'channel_id = \'{channel.id}\'')
         sql.delete(table='snipes', where=f'channel_id = \'{channel.id}\'')
         sql.delete(table='modlogs', where=f'channel_id = \'{channel.id}\'')
@@ -356,7 +356,7 @@ class Events(commands.Cog):
         """
         status: str = ''
         try:
-            sql = SQL('b0ssbot')  # type: SQL
+            sql = SQL('d9t2a5e8mudflk')  # type: SQL
             status += 'Checking for videos...'
 
             channels = sql.select(

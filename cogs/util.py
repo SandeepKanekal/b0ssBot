@@ -26,7 +26,7 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Replace single quotes with double quotes
         content = message.content.replace("'", "''")
@@ -84,7 +84,7 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Get the latest message
         if message := sql.select(
@@ -157,7 +157,7 @@ class Util(commands.Cog):
         reason = reason.replace("'", "''")
         member_details = member.name.replace("'", "''") + '#' + member.discriminator
 
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         with contextlib.suppress(discord.Forbidden):
             await member.edit(nick=f'[AFK] {member.display_name}')  # Changing the nickname
@@ -390,7 +390,7 @@ class Util(commands.Cog):
             return
 
         # Update database
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
 
         # Respond

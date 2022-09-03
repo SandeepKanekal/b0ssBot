@@ -141,7 +141,7 @@ class Owner(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
         results = sql.query(query)
         try:
             await ctx.send(results)

@@ -39,7 +39,7 @@ def modlog_enabled(guild_id: int) -> bool:
     :return: True if the modlog is enabled, False otherwise
     :rtype: bool
     """
-    sql = SQL('b0ssbot')
+    sql = SQL('d9t2a5e8mudflk')
     return sql.select(elements=['mode'], table='modlogs', where=f"guild_id='{guild_id}'")[0][0]
 
 
@@ -54,7 +54,7 @@ def get_mod_channel(guild: discord.Guild) -> discord.TextChannel:
     :return: The modlog channel
     :rtype: discord.TextChannel
     """
-    sql = SQL('b0ssbot')
+    sql = SQL('d9t2a5e8mudflk')
     return discord.utils.get(guild.text_channels, id=int(
         sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]))
 
@@ -1779,7 +1779,7 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Checks before execution
         if channel is None:
@@ -1939,7 +1939,7 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('b0ssbot')
+        sql = SQL('d9t2a5e8mudflk')
 
         # Check if channel is provided
         try:
