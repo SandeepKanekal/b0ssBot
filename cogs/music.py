@@ -15,7 +15,6 @@ from tools import send_error_embed, get_video_stats, format_time, log_history, i
 from youtube_dl import YoutubeDL
 from ui_components import MusicView
 from discord.commands import Option, SlashCommandGroup
-from typing import Any
 
 
 class AuthorNotConnectedToVoiceChannel(CommandError):
@@ -72,17 +71,17 @@ class Music(commands.Cog):
         :rtype: None
         """
         self.bot: commands.Bot = bot
-        self.now_playing: dict[int, Any] = {}  # Stores the current track for each guild
-        self.now_playing_url: dict[int, Any] = {}  # Stores the current track url for each guild
-        self.start_time: dict[int, Any] = {}  # Stores the start time for each guild
-        self.source: dict[int, Any] = {}  # Stores the source for each guild
+        self.now_playing: dict[int, str | None] = {}  # Stores the current track for each guild
+        self.now_playing_url: dict[int, str | None] = {}  # Stores the current track url for each guild
+        self.start_time: dict[int, datetime.datetime | None] = {}  # Stores the start time for each guild
+        self.source: dict[int, str | None] = {}  # Stores the source for each guild
         self.volume: dict[int, int] = {}  # Stores the volume for each guild
         self.pause_time: dict[
-            int, Any] = {}  # Stores the time when the track was paused for each guild
-        self.music_view: dict[int, Any] = {}  # Stores the view object for each guild
-        self.loop_limit: dict[int, Any] = {}  # Stores the number of times the track must be looped
+            int, datetime.datetime | None] = {}  # Stores the time when the track was paused for each guild
+        self.music_view: dict[int, MusicView | None] = {}  # Stores the view object for each guild
+        self.loop_limit: dict[int, int | None] = {}  # Stores the number of times the track must be looped
         self.sql: SQL = SQL('d9t2a5e8mudflk')
-        self._ydl_options: dict[str, Any] = {
+        self._ydl_options: dict[str, bool | str] = {
             "format": "bestaudio/best",
             "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
             "restrictfilenames": True,
@@ -168,7 +167,7 @@ class Music(commands.Cog):
         :type item: str
         
         :return: The video details of the item.
-        :rtype: dict[str, Any]  Exception
+        :rtype: dict[str, str | int] | Exception
         """
         with YoutubeDL(self._ydl_options) as ydl:
             try:
