@@ -6,7 +6,7 @@ import qrcode
 import requests
 import datetime
 from PIL import Image, ImageChops
-from pyzbar.pyzbar import decode
+# from pyzbar.pyzbar import decode
 from discord.ext import commands
 from tools import convert_to_unix_time, inform_owner
 
@@ -80,73 +80,73 @@ class Context(commands.Cog):
         await ctx.respond('There was an error generating the QR code! The owner has been informed', ephemeral=True)
         await inform_owner(self.bot, error)
 
-    @commands.message_command(name='Scan QR codes')
-    async def scan_qr(self, ctx: discord.ApplicationContext, message: discord.Message):
-        """
-        Scans a QR code and returns the result
+    # @commands.message_command(name='Scan QR codes')
+    # async def scan_qr(self, ctx: discord.ApplicationContext, message: discord.Message):
+    #     """
+    #     Scans a QR code and returns the result
 
-        :param ctx: The context of where the message was sent
-        :param message: The message to scan
+    #     :param ctx: The context of where the message was sent
+    #     :param message: The message to scan
 
-        :type ctx: discord.ApplicationContext
-        :type message: discord.Message
+    #     :type ctx: discord.ApplicationContext
+    #     :type message: discord.Message
 
-        :return: None
-        :rtype: None
-        """
-        # Inform the user if there is no attachment in the message.
-        if not message.attachments:
-            await ctx.respond(content='There are no attachments in the message provided', ephemeral=True)
-            return
+    #     :return: None
+    #     :rtype: None
+    #     """
+    #     # Inform the user if there is no attachment in the message.
+    #     if not message.attachments:
+    #         await ctx.respond(content='There are no attachments in the message provided', ephemeral=True)
+    #         return
 
-        # Create embed
-        embed = discord.Embed(
-            title='QR Scan results', 
-            description=f'[Jump to message]({message.jump_url})', 
-            colour=0x848585
-        ).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
+    #     # Create embed
+    #     embed = discord.Embed(
+    #         title='QR Scan results', 
+    #         description=f'[Jump to message]({message.jump_url})', 
+    #         colour=0x848585
+    #     ).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
 
-        # Defer the response
-        await ctx.interaction.response.defer()
+    #     # Defer the response
+    #     await ctx.interaction.response.defer()
 
-        for index, attachment in enumerate(message.attachments):
-            # Save the image
-            with open(f'{attachment.filename}_{message.id}', 'wb') as f:
-                f.write(requests.get(attachment.url).content)
-            try:
-                # Decode the image
-                data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
-                for code in data:
-                    embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```' if code.data else "No data present in the QR Code", inline=False)
-            except Exception as e:
-                # Handle errors
-                embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
-            finally:
-                # Delete the saved image
-                os.remove(f'{attachment.filename}_{message.id}')
+    #     for index, attachment in enumerate(message.attachments):
+    #         # Save the image
+    #         with open(f'{attachment.filename}_{message.id}', 'wb') as f:
+    #             f.write(requests.get(attachment.url).content)
+    #         try:
+    #             # Decode the image
+    #             data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
+    #             for code in data:
+    #                 embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```' if code.data else "No data present in the QR Code", inline=False)
+    #         except Exception as e:
+    #             # Handle errors
+    #             embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
+    #         finally:
+    #             # Delete the saved image
+    #             os.remove(f'{attachment.filename}_{message.id}')
 
-        # Respond only if there are fields.
-        if embed.fields:
-            await ctx.respond(embed=embed)
-        else:
-            await ctx.respond('No QR codes found')
+    #     # Respond only if there are fields.
+    #     if embed.fields:
+    #         await ctx.respond(embed=embed)
+    #     else:
+    #         await ctx.respond('No QR codes found')
 
-    @scan_qr.error
-    async def scan_qr_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
-        """
-        Error handler for the scan_qr command
+    # @scan_qr.error
+    # async def scan_qr_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+    #     """
+    #     Error handler for the scan_qr command
 
-        :param ctx: The context of where the message was sent
-        :param error: The error that occurred
+    #     :param ctx: The context of where the message was sent
+    #     :param error: The error that occurred
 
-        :type ctx: discord.ApplicationContext
-        :type error: discord.ApplicationCommandInvokeError
+    #     :type ctx: discord.ApplicationContext
+    #     :type error: discord.ApplicationCommandInvokeError
 
-        :return: None
-        :rtype: None
-        """
-        await ctx.respond('There was an error scanning the QR code! The owner has been informed', ephemeral=True)
-        await inform_owner(self.bot, error)
+    #     :return: None
+    #     :rtype: None
+    #     """
+    #     await ctx.respond('There was an error scanning the QR code! The owner has been informed', ephemeral=True)
+    #     await inform_owner(self.bot, error)
     
     @commands.user_command(name='User Information')
     async def userinfo(self, ctx: discord.ApplicationContext, member: discord.Member):
