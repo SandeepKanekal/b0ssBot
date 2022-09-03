@@ -217,7 +217,7 @@ class Context(commands.Cog):
         await ctx.interaction.response.defer()
 
         content = ''
-        files: list[discord.File] | None = []
+        files = []
 
         for index, image in enumerate(message.attachments):
             # Save the image

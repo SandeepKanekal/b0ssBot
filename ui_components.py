@@ -8,6 +8,7 @@ import datetime
 from discord.ext import commands
 from tools import send_error_embed, get_quote
 from asyncpraw.reddit import Submission
+from typing import Any
 
 
 class AuthorNotConnectedToVoiceChannel(commands.CommandError):
@@ -36,8 +37,8 @@ class PlayerPlaying(commands.CommandError):
 
 # noinspection PyUnusedLocal
 class YouTubeSearchView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, items: dict[str, list[str | int]], youtube, embed: discord.Embed,
-                 bot: commands.Bot, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, items: dict[str, list[Any]], youtube, embed: discord.Embed,
+                 bot: commands.Bot, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.items = items
@@ -139,7 +140,7 @@ class YouTubeSearchView(discord.ui.View):
 # noinspection PyUnusedLocal
 class RedditPostView(discord.ui.View):
     def __init__(self, ctx: commands.Context, submissions: list[Submission], embed: discord.Embed,
-                 timeout: float | None = None):
+                 timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.submissions = submissions
@@ -218,7 +219,7 @@ class RedditPostView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class QuoteView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.url = url
@@ -259,8 +260,8 @@ class QuoteView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class TriviaView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, items: dict[str, int | list[dict[str, str]]], embed: discord.Embed,
-                 timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, items: dict[str, Any], embed: discord.Embed,
+                 timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.items = items
@@ -322,7 +323,7 @@ class TriviaView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class ImgurView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, items: list, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, items: list, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.items = items
@@ -375,7 +376,7 @@ class ImgurView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class FlipView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, message_id: int, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, message_id: int, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.message_id = message_id
@@ -412,7 +413,7 @@ class FlipView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class RollView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, message_id: int, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, message_id: int, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.message_id = message_id
@@ -449,7 +450,7 @@ class RollView(discord.ui.View):
 # noinspection PyUnusedLocal
 class TicTacToeView(discord.ui.View):
     def __init__(self, ctx: commands.Context, initiator: discord.Member, other_player: discord.Member,
-                 turn: discord.Member, bot: commands.Bot, timeout: float | None = None):
+                 turn: discord.Member, bot: commands.Bot, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.initiator = initiator
@@ -465,7 +466,7 @@ class TicTacToeView(discord.ui.View):
         button.style = discord.ButtonStyle.blurple if self.turn.id == self.first_turn.id else discord.ButtonStyle.red
         return button
 
-    def check(self) -> str | None:
+    def check(self) -> Any:
         button_one, button_two, button_three, button_four, button_five, button_six, button_seven, button_eight, button_nine = [
             button for button in self.children if button.custom_id != 'cancel']
 
@@ -496,7 +497,7 @@ class TicTacToeView(discord.ui.View):
         self.turn = self.other_player if self.turn.id == self.initiator.id else self.initiator
         return None
 
-    async def handle_board(self, interaction: discord.Interaction, content: str | None):
+    async def handle_board(self, interaction: discord.Interaction, content: Any):
         # Edit the message that the game has ended
         if content:
             for button in self.children:
@@ -629,7 +630,7 @@ class TicTacToeView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class FunView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, url: str, embed: discord.Embed, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.url = url
@@ -682,7 +683,7 @@ class FunView(discord.ui.View):
 
 
 class TruthOrDareView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, timeout: float | None = None):
+    def __init__(self, ctx: commands.Context, timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
 
@@ -756,7 +757,7 @@ class MusicChecks:
 # noinspection PyUnusedLocal
 class MusicView(discord.ui.View):
     def __init__(self, ctx: commands.Context, bot: commands.Bot, vc: discord.VoiceClient, query: str,
-                 timeout: float | None = None):
+                 timeout = None):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.bot = bot
@@ -844,7 +845,7 @@ class MusicView(discord.ui.View):
 # noinspection PyUnusedLocal
 class EmbedViewModal(discord.ui.Modal):
     def __init__(self, embed: discord.Embed, edit_type: str, title: str,
-                 input_data: list[dict[str, str | discord.InputTextStyle | bool]] | None, timeout: float | None = None):
+                 input_data: Any, timeout = None):
         super().__init__(title=title, timeout=timeout)
         self.embed = embed
         self.edit_type = edit_type
@@ -917,7 +918,7 @@ class EmbedViewModal(discord.ui.Modal):
 # noinspection PyUnusedLocal
 class EmbedView(discord.ui.View):
     def __init__(self, author_: discord.Member, embed: discord.Embed, channel: discord.TextChannel,
-                 timeout: float | None = None):
+                 timeout = None):
         super().__init__(timeout=timeout)
         self.author_ = author_
         self.embed = embed
@@ -1067,7 +1068,7 @@ class EmbedView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class HelpView(discord.ui.View):
-    def __init__(self, command: str, bot: commands.Bot, prefix: str, timeout: float | None = None):
+    def __init__(self, command: str, bot: commands.Bot, prefix: str, timeout = None):
         super().__init__(timeout=timeout)
         self.command = command
         self.bot = bot
@@ -1130,7 +1131,7 @@ class HelpView(discord.ui.View):
 
 class ReportModal(discord.ui.Modal):
     def __init__(self, suggestor: discord.User, type_: str, title: str,
-                 timeout: float | None = None):
+                 timeout = None):
         super().__init__(title=title, timeout=timeout)
 
         self.suggestor = suggestor
@@ -1153,7 +1154,7 @@ class ReportModal(discord.ui.Modal):
 
 # noinspection PyUnusedLocal
 class FeatureView(discord.ui.View):
-    def __init__(self, suggestor: discord.User, timeout: float | None = None):
+    def __init__(self, suggestor: discord.User, timeout = None):
         super().__init__(timeout=timeout)
         self.suggestor = suggestor
 
@@ -1170,7 +1171,7 @@ class FeatureView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class RiddleView(discord.ui.View):
-    def __init__(self, embed: discord.Embed, questions: list[str], answers: list[str], bot: commands.Bot, timeout: float | None = None):
+    def __init__(self, embed: discord.Embed, questions: list[str], answers: list[str], bot: commands.Bot, timeout = None):
         super().__init__(timeout=timeout)
         self.embed = embed
         self.questions = questions
@@ -1250,7 +1251,7 @@ class RiddleView(discord.ui.View):
 
 
 class BugView(discord.ui.View):
-    def __init__(self, reporter: discord.User, timeout: float | None = None):
+    def __init__(self, reporter: discord.User, timeout = None):
         super().__init__(timeout=timeout)
         self.reporter = reporter
 

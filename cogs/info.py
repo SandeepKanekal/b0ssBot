@@ -18,7 +18,7 @@ class Info(commands.Cog):
         :rtype: None
         """
         self.bot = bot  # type: commands.Bot
-        self.uptime: datetime.datetime | None = None
+        self.uptime = None
 
     @commands.Cog.listener()
     async def on_ready(self):
