@@ -50,10 +50,6 @@ class Events(commands.Cog):
         # Change presence
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
 
-        # Install libraries
-        os.system('sudo apt-get install libzbar0')
-        os.system('sudo apt-get install libzbar-dev')
-
         # Start background tasks
         self.check_for_videos.start()
         self.clear_ytdl_cache.start()
