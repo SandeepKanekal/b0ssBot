@@ -1842,49 +1842,6 @@ class Slash(commands.Cog):
                 ephemeral=True)
             await inform_owner(self.bot, error)
 
-    @commands.slash_command(name='history', description='View your or another user\'s internet search history')
-    async def history(self, ctx: discord.ApplicationContext,
-                      member: Option(discord.Member, description='The user to get the history of', required=False,
-                                     default=None)):
-        """
-        View your or another user\'s internet search history
-        
-        :param ctx: The context of where the message was sent
-        :param member: The user to get the history of
-        
-        :type ctx: discord.ApplicationContext
-        :type member: discord.Member
-        
-        :return: None
-        :rtype: None
-        """
-        member = member or ctx.author
-
-        sql = SQL(os.getenv('sql_db_name'))
-
-        # Check if the user has any history
-        if not sql.select(['*'], 'history', where=f"member_id = '{member.id}' AND guild_id = '{ctx.guild.id}'"):
-            await ctx.respond(f'{member.mention} has no history', ephemeral=True)
-            return
-
-        await ctx.interaction.response.defer()
-
-        # Create embed
-        embed = discord.Embed(title=f'{member.display_name}\'s history', description='',
-                              colour=discord.Colour.blurple())
-        embed.set_footer(text=f'{member.display_name}\'s History', icon_url=member.display_avatar)
-
-        history = list(reversed(sql.select(['type', 'query', 'timestamp'], 'history',
-                                           f'member_id = \'{member.id}\' AND guild_id = \'{ctx.guild.id}\'')))[:50]
-
-        for h in reversed(history):
-            query = h[1].replace("''", "'")
-            embed.description += f'{h[0]}: {query} - <t:{h[2]}:R>\n'
-
-        embed.description = embed.description[:-1]
-
-        await ctx.respond(embed=embed)
-
     serverjoin = SlashCommandGroup('serverjoin', 'Roles to be added when a member/bot joins the server')
 
     @serverjoin.command(name='add', description='Add a role to be added when a member/bot joins the server')
