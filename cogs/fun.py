@@ -188,7 +188,7 @@ class Fun(commands.Cog):
 
         await ctx.send(embed=embed,
                        view=ui.FunView(ctx=ctx, url='https://icanhazdadjoke.com/', embed=embed,
-                                                  timeout=None))
+                                       timeout=None))
 
     @commands.command(name='bored', description='Get a random task to do for fun!', usage='bored')
     async def bored(self, ctx: commands.Context):
@@ -209,7 +209,7 @@ class Fun(commands.Cog):
 
         await ctx.send(embed=embed,
                        view=ui.FunView(ctx=ctx, url='https://www.boredapi.com/api/activity/', embed=embed,
-                                                  timeout=None))
+                                       timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx: commands.Context):
@@ -246,7 +246,7 @@ class Fun(commands.Cog):
 
         await ctx.send(embed=embed,
                        view=ui.FunView(ctx=ctx, url='https://dog.ceo/api/breeds/image/random', embed=embed,
-                                                  timeout=None))
+                                       timeout=None))
 
     @commands.command(name='cat', description='Get a random cat picture', usage='cat')
     @commands.cooldown(1, 1, commands.BucketType.user)
@@ -268,8 +268,8 @@ class Fun(commands.Cog):
 
         await ctx.send(embed=embed,
                        view=ui.FunView(ctx=ctx, url='https://api.thecatapi.com/v1/images/search',
-                                                  embed=embed,
-                                                  timeout=None))
+                                       embed=embed,
+                                       timeout=None))
 
     @commands.command(name='egg', description='Gives information about the egghunt', usage='egg')
     async def egg(self, ctx: commands.Context):

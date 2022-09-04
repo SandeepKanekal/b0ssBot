@@ -2,6 +2,7 @@
 # Contains the help commands
 import discord
 import datetime
+import os
 from sql_tools import SQL
 from discord.ext import commands
 from ui_components import HelpView
@@ -40,7 +41,7 @@ class Help(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         prefix = sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{ctx.guild.id}\'')[0][0]
 
         if command is None:

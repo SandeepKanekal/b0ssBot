@@ -11,7 +11,7 @@ import lyrics_extractor
 from sql_tools import SQL
 from discord.ext import commands
 from discord.ext.commands import CommandError
-from tools import send_error_embed, get_video_stats, format_time, log_history, inform_owner
+from tools import send_error_embed, get_video_stats, format_time, inform_owner
 from youtube_dl import YoutubeDL
 from ui_components import MusicView
 from discord.commands import Option, SlashCommandGroup
@@ -80,7 +80,7 @@ class Music(commands.Cog):
             int, datetime.datetime | None] = {}  # Stores the time when the track was paused for each guild
         self.music_view: dict[int, MusicView | None] = {}  # Stores the view object for each guild
         self.loop_limit: dict[int, int | None] = {}  # Stores the number of times the track must be looped
-        self.sql: SQL = SQL('d9t2a5e8mudflk')
+        self.sql: SQL = SQL(os.getenv('sql_db_name'))
         self._ydl_options: dict[str, bool | str] = {
             "format": "bestaudio/best",
             "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
@@ -508,8 +508,6 @@ class Music(commands.Cog):
         if not ctx.voice_client.is_playing():
             # Plays the music
             await self.play_music(ctx)
-
-        log_history(ctx.author.id, query, 'Music', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     # Sometimes, videos are not available, a response is required to inform the user
     @play.error
@@ -1139,8 +1137,6 @@ class Music(commands.Cog):
 
                 await ctx.send(embed=embed)
 
-                log_history(ctx.author.id, query, 'Lyrics', int(datetime.datetime.now().timestamp()), ctx.guild.id)
-
             # Lyrics not found exception
             except lyrics_extractor.lyrics.LyricScraperException:
                 await send_error_embed(ctx,
@@ -1156,8 +1152,6 @@ class Music(commands.Cog):
 
                 await ctx.send(file=discord.File(f'lyrics_{ctx.author.id}.txt', 'lyrics.txt'))
                 os.remove(f'lyrics_{ctx.author.id}.txt')
-
-                log_history(ctx.author.id, query, 'Lyrics', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     # Error in lyrics command
     @lyrics.error

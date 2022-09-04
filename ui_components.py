@@ -1195,6 +1195,7 @@ class RiddleView(discord.ui.View):
 
                     await inter.response.edit_message(embed=self.embed)
                 else:
+                    winner = None
                     try:
                         winner = self.bot.get_user(max(self.winners.items(), key=lambda x: x[1])[0])
                     except ValueError:
@@ -1226,6 +1227,7 @@ class RiddleView(discord.ui.View):
 
             await interaction.response.edit_message(embed=self.embed)
         else:
+            winner = None
             try:
                 winner = self.bot.get_user(max(self.winners.items(), key=lambda x: x[1])[0])
             except ValueError:
@@ -1238,6 +1240,7 @@ class RiddleView(discord.ui.View):
 
     @discord.ui.button(label='End Riddle', style=discord.ButtonStyle.red)
     async def end(self, button: discord.Button, interaction: discord.Interaction):
+        winner = None
         try:
             winner = self.bot.get_user(max(self.winners.items(), key=lambda x: x[1])[0])
         except ValueError:
@@ -1249,6 +1252,7 @@ class RiddleView(discord.ui.View):
             self.stop()
 
 
+# noinspection PyUnusedLocal
 class BugView(discord.ui.View):
     def __init__(self, reporter: discord.User, timeout: float | None = None):
         super().__init__(timeout=timeout)

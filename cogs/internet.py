@@ -11,7 +11,7 @@ import ui_components as ui
 import imgurpython as imgur
 from googleapiclient.discovery import build
 from discord.ext import commands
-from tools import send_error_embed, get_posts, get_quote, convert_to_unix_time, log_history, inform_owner
+from tools import send_error_embed, get_posts, get_quote, convert_to_unix_time, inform_owner
 
 
 class Internet(commands.Cog):
@@ -107,10 +107,8 @@ class Internet(commands.Cog):
 
         await ctx.send(embed=embed,
                        view=ui.YouTubeSearchView(ctx=ctx, items=items, youtube=youtube, embed=embed,
-                                                            bot=self.bot,
-                                                            timeout=None))
-
-        log_history(ctx.author.id, query, 'YouTube', int(datetime.datetime.now().timestamp()), ctx.guild.id)
+                                                 bot=self.bot,
+                                                 timeout=None))
 
     @youtubesearch.error
     async def youtubesearch_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -165,8 +163,6 @@ class Internet(commands.Cog):
                                       colour=discord.Colour.random())
                 embed.set_thumbnail(url=thumbnail)
             await ctx.send(embed=embed)
-
-            log_history(ctx.author.id, query, 'Wikipedia', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
         except wikipedia.exceptions.WikipediaException as e:
             await send_error_embed(ctx, description=str(e))
@@ -251,8 +247,6 @@ class Internet(commands.Cog):
 
         await ctx.send(embed=embed)
 
-        log_history(ctx.author.id, location, 'Weather', int(datetime.datetime.now().timestamp()), ctx.guild.id)
-
     @weather.error
     async def weather_error(self, ctx: commands.Context, error: commands.CommandError):
         """
@@ -326,14 +320,12 @@ class Internet(commands.Cog):
                 try:
                     await ctx.send(embed=embed,
                                    view=ui.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
-                                                                     timeout=None))
+                                                          timeout=None))
                 except discord.HTTPException:
                     embed = discord.Embed(description='The post content was too long to be sent', colour=0xff4300)
                     await ctx.send(embed=embed,
                                    view=ui.RedditPostView(ctx=ctx, submissions=submissions, embed=embed,
-                                                                     timeout=None))
-
-                log_history(ctx.author.id, subreddit, 'Reddit', int(datetime.datetime.now().timestamp()), ctx.guild.id)
+                                                          timeout=None))
 
             except AttributeError:
                 # Could not get a post
@@ -446,7 +438,7 @@ class Internet(commands.Cog):
 
         await ctx.send(embed=embed,
                        view=ui.QuoteView(ctx=ctx, url='https://zenquotes.io/api/random', embed=embed,
-                                                    timeout=None))
+                                         timeout=None))
 
     @quote.error
     async def quote_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -567,8 +559,6 @@ class Internet(commands.Cog):
 
         await ctx.send(embed=embed)
 
-        log_history(ctx.author.id, repository, 'GitHub', int(datetime.datetime.now().timestamp()), ctx.guild.id)
-
     @github.error
     async def github_error(self, ctx: commands.Context, error: commands.CommandError):
         """
@@ -614,8 +604,6 @@ class Internet(commands.Cog):
 
             await ctx.send(content=f'Image 1 out of {len(images)}\n{images[0].link}',
                            view=ui.ImgurView(ctx=ctx, items=images, timeout=None))
-
-        log_history(ctx.author.id, query, 'Imgur', int(datetime.datetime.now().timestamp()), ctx.guild.id)
 
     @imgur.error
     async def imgur_error(self, ctx: commands.Context, error: commands.CommandError):

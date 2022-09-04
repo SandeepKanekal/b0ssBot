@@ -83,15 +83,6 @@ Stores the verification system of the guilds
 + channel_id: Channel ID (Not Null, VARCHAR(18))
 + guild_id: Guild ID (Not Null, VARCHAR(18))
 
-# history
-Stores the search history a user has with b0ssBot
-+ SN: Serial number (Not Null, Primary Key)
-+ member_id: Member ID (Not Null, VARCHAR(18))
-+ query: The query (Not Null, VARCHAR(2000))
-+ type: The type of service used  (Not Null, VARCHAR(20))
-+ timestamp: The timestamp of when the service was used (Not Null, integer)
-+ guild_id: Guild ID (Not Null, VARCHAR(18))
-
 # serverjoin
 Stores role addition configurations for members/bots of the guilds
 + SN: Serial number (Not Null, Primary Key)

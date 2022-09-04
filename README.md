@@ -34,7 +34,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 # Database 
 PostgreSQL is used. You can change the database details (username, host, database) to your convinience. 
 
-Currently, there are 13 tables:
+Currently, there are 12 tables:
 + afks (columns: SN, member, member_id, guild_id, reason)
 + snipes (columns: SN, author_id, message, channel_id, time, 'guild_id', 'attachments')
 + prefixes (columns: SN, guild_id, prefix)
@@ -45,7 +45,6 @@ Currently, there are 13 tables:
 + message_responses(columns: SN, guild_id, message, response)
 + youtube(columns: SN, guild_id, text_channel_id, channel_id, channel_name, latest_video_id)
 + verifications(columns: SN, message_id, role_id, unverified_role_id, channel_id, guild_id)
-+ history(columns: SN, member_id, query, type, timestamp, guild_id)
 + serverjoin(columns: SN, guild_id, member_role_id, bot_role_id)
 + playlist(columns: SN, guild_id, source, title, url, position)
 

@@ -141,7 +141,7 @@ class Owner(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         results = sql.query(query)
         try:
             await ctx.send(results)

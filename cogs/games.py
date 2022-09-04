@@ -594,7 +594,7 @@ class Games(commands.Cog):
         turn = random.choice([ctx.author, player])  # choose a random player to play first
         await ctx.send(f'It is {turn.mention}\'s turn!',
                        view=ui.TicTacToeView(ctx=ctx, initiator=ctx.author, other_player=player, turn=turn,
-                                                        bot=self.bot, timeout=None))
+                                             bot=self.bot, timeout=None))
 
     @tictactoe.error
     async def tictactoe_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -621,7 +621,8 @@ class Games(commands.Cog):
                                    description='An error occurred while running the tictactoe command! The owner has been notified.')
             await inform_owner(self.bot, error)
 
-    @commands.command(name='riddle', description='Play a competetive multiplayer riddle game', usage='riddle <question_limit>')
+    @commands.command(name='riddle', description='Play a competetive multiplayer riddle game',
+                      usage='riddle <question_limit>')
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def riddle(self, ctx: commands.Context, question_limit: int = 10):
         """
@@ -639,17 +640,19 @@ class Games(commands.Cog):
         async with ctx.typing():
             res = requests.get(f'https://opentdb.com/api.php?amount={question_limit}').json()
 
-            questions = [question['question'].replace('&quot;', '"').replace('&#039;', "'") for question in res['results']]
-            answers = [question['correct_answer'].replace('&quot;', '"').replace('&#039;', "'") for question in res['results']]
+            questions = [question['question'].replace('&quot;', '"').replace('&#039;', "'") for question in
+                         res['results']]
+            answers = [question['correct_answer'].replace('&quot;', '"').replace('&#039;', "'") for question in
+                       res['results']]
 
-            embed = discord.Embed(title=questions[0], colour=0x0c1d4b).set_footer(text=f'Question 1 out of {question_limit}')
-
+            embed = discord.Embed(title=questions[0], colour=0x0c1d4b).set_footer(
+                text=f'Question 1 out of {question_limit}')
 
             await ctx.send(
-                f'Hey players, here are the rules:\n\n{question_limit} questions will be asked. Anyone is allowed to participate.', 
+                f'Hey players, here are the rules:\n\n{question_limit} questions will be asked. Anyone is allowed to participate.',
                 embed=embed, view=ui.RiddleView(embed, questions, answers, self.bot, timeout=None)
             )
-    
+
     @riddle.error
     async def riddle_error(self, ctx: commands.Context, error: commands.CommandError):
         """
@@ -668,7 +671,8 @@ class Games(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Mention a valid limit!\n\nProper Usage: `{self.bot.get_command("riddle").usage}`')
         elif isinstance(error, commands.CommandOnCooldown):
-            await send_error_embed(ctx, description=f'Command is on cooldown! Retry after {error.retry_after:.2f} seconds.')
+            await send_error_embed(ctx,
+                                   description=f'Command is on cooldown! Retry after {error.retry_after:.2f} seconds.')
         else:
             await send_error_embed(ctx,
                                    description='An error occurred while running the riddle command! The owner has been notified.')

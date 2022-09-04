@@ -22,7 +22,6 @@
 + YouTube channel URLs are used for notifying when a YouTuber uploads content.
 + To use autoresponses, the response and the message must be stored.
 + Deleted message for sniping are only visible for the channel the message was deleted in. The user must have `manage_messages` to use the command.
-+ The history command sends the history of a user with the bot
 
 # Who can see this information?
 + Though information like User/Channel/Guild ID can be publicly accessed via the discord app, No one other than the owner of the bot can access the database.

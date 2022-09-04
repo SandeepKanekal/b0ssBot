@@ -13,7 +13,7 @@ def get_prefix(bot: commands.Bot, message: discord.Message) -> str:
 
 
 # Pre-run requirements
-sql = SQL('d9t2a5e8mudflk')
+sql = SQL(os.getenv('sql_db_name'))
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=discord.Intents.all())
 bot.remove_command('help')
 

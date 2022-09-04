@@ -48,7 +48,7 @@ class Slash(commands.Cog):
             await ctx.respond('Prefix must be 2 characters or less')
             return
 
-        sql = SQL('d9t2a5e8mudflk')  # type: SQL
+        sql = SQL(os.getenv('sql_db_name'))  # type: SQL
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
         await ctx.respond(f'Prefix changed to **{new_prefix}**')
 
@@ -218,7 +218,7 @@ class Slash(commands.Cog):
         """
         await ctx.interaction.response.defer()
 
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         # Get the channel ID
@@ -296,7 +296,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
         # Get the channel ID
@@ -363,7 +363,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         channels = sql.select(elements=['channel_name', 'channel_id', 'text_channel_id'], table='youtube',
                               where=f'guild_id = \'{ctx.guild.id}\'')
 
@@ -420,7 +420,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if there are any channels set up
         if not sql.select(elements=['*'], table='youtube', where=f'guild_id = \'{ctx.guild.id}\''):
@@ -482,7 +482,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Get the channel ID
         youtube_channel_id = requests.get(
@@ -563,7 +563,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         if member.id == ctx.author.id:
             await ctx.respond('You can\'t warn yourself')
@@ -630,7 +630,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         if warns := sql.select(
                 elements=['warns', 'reason'],
@@ -692,7 +692,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         if warns := sql.select(
                 elements=['warns', 'reason'],
@@ -747,7 +747,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         if sql.select(
                 elements=['warns', 'reason'],
@@ -805,7 +805,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
         message = message.replace("'", "''").lower()
@@ -862,7 +862,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
         message = message.replace("'", "''").lower()
@@ -911,7 +911,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         if not sql.select(elements=['message', 'response'], table='message_responses',
                           where=f"guild_id = '{ctx.guild.id}'"):
@@ -968,7 +968,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         sql.delete(table='message_responses', where=f"guild_id = '{ctx.guild.id}'")
         await ctx.respond('All responses cleared')
 
@@ -1397,13 +1397,14 @@ class Slash(commands.Cog):
         :rtype: None
         """
         await ctx.respond('An error has occurred while running the roleinfo command! The owner has been notified.',
-                            ephemeral=True)
+                          ephemeral=True)
         await inform_owner(self.bot, error)
-    
+
     invert = SlashCommandGroup('invert', 'Invert images of users or from URLs')
 
     @invert.command(name='user', description='Inverts the avatar of a user')
-    async def invert_user(self, ctx: discord.ApplicationContext, member: Option(discord.Member, 'The user\' avatar to invert', required=False, default=None)):
+    async def invert_user(self, ctx: discord.ApplicationContext,
+                          member: Option(discord.Member, 'The user\' avatar to invert', required=False, default=None)):
         """
         Inverts the avatar of a user
         
@@ -1443,7 +1444,7 @@ class Slash(commands.Cog):
         # Removing the files
         os.remove(f'image_{ctx.author.id}.png')
         os.remove(f'{member.id}_inverted.png')
-    
+
     @invert_user.error
     async def invert_user_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
@@ -1459,11 +1460,12 @@ class Slash(commands.Cog):
         :rtype: None
         """
         await ctx.respond('An error has occurred while running the invert_user command! The owner has been notified.',
-                            ephemeral=True)
+                          ephemeral=True)
         await inform_owner(self.bot, error)
-    
+
     @invert.command(name='url', description='Inverts the from a URL')
-    async def invert_url(self, ctx: discord.ApplicationContext, url: Option(str, 'The URL to get the image from', required=True)):
+    async def invert_url(self, ctx: discord.ApplicationContext,
+                         url: Option(str, 'The URL to get the image from', required=True)):
         """
         Inverts the image from a URL
         
@@ -1500,7 +1502,7 @@ class Slash(commands.Cog):
         # Removing the files
         os.remove(f'image_{ctx.author.id}.png')
         os.remove(f'inverted_{ctx.author.id}.png')
-    
+
     @invert_url.error
     async def invert_url_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
@@ -1679,7 +1681,7 @@ class Slash(commands.Cog):
         """
         await ctx.interaction.response.defer()
 
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if a verification system already exists
         if sql.select(['*'], 'verifications', where=f"guild_id = '{ctx.guild.id}'"):
@@ -1741,7 +1743,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if verification does not exist
         if not sql.select(['*'], 'verifications', where=f"guild_id = '{ctx.guild.id}'"):
@@ -1796,7 +1798,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check iff verification does not exist
         if not sql.select(['*'], 'verifications', where=f"guild_id = '{ctx.guild.id}'"):
@@ -1858,7 +1860,7 @@ class Slash(commands.Cog):
         """
         member = member or ctx.author
 
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if the user has any history
         if not sql.select(['*'], 'history', where=f"member_id = '{member.id}' AND guild_id = '{ctx.guild.id}'"):
@@ -1905,7 +1907,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin already exists
         roles = sql.select(['member_role_id', 'bot_role_id'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'")
@@ -1957,7 +1959,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin even exists
         if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
@@ -2012,7 +2014,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin even exists
         if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
@@ -2063,7 +2065,7 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin even exists
         if not sql.select(['*'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'"):
@@ -2102,11 +2104,13 @@ class Slash(commands.Cog):
             'An error has occurred while running the serverjoin list command! The owner has been notified.',
             ephemeral=True)
         await inform_owner(self.bot, error)
-    
+
     banner = SlashCommandGroup('banner', 'Get banner\'s for users or the guild')
 
     @banner.command(name='user', description='Shows the specified user\'s banner')
-    async def banner_user(self, ctx: discord.ApplicationContext, member: Option(discord.Member, description='The member to fetch the banner of', required=False, default=None)):
+    async def banner_user(self, ctx: discord.ApplicationContext,
+                          member: Option(discord.Member, description='The member to fetch the banner of',
+                                         required=False, default=None)):
         """
         Shows the specified user's banner
 
@@ -2120,15 +2124,15 @@ class Slash(commands.Cog):
         :rtype: None
         """
         member = member or ctx.author  # type: discord.Member
-        
+
         req = await self.bot.http.request(discord.http.Route("GET", "/users/{uid}", uid=member.id))
-        
+
         banner_id = req['banner']
 
         if banner_id is None:
             await ctx.respond('This user has no banner', ephemeral=True)
             return
-        
+
         url = f'https://cdn.discordapp.com/banners/{member.id}/{banner_id}?size=1024'
 
         embed = discord.Embed(colour=member.colour)
@@ -2136,7 +2140,7 @@ class Slash(commands.Cog):
         embed.set_author(name=member.name, icon_url=member.display_avatar)
         embed.add_field(name='Download this image', value=f'[Click Here]({url})')
         await ctx.respond(embed=embed)
-    
+
     @banner_user.error
     async def banner_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
@@ -2151,9 +2155,10 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond('An error has occurred while running the banner command! The owner has been notified.', ephemeral=True)
+        await ctx.respond('An error has occurred while running the banner command! The owner has been notified.',
+                          ephemeral=True)
         await inform_owner(self.bot, error)
-    
+
     @banner.command(name='guild', description='Shows the guild\'s banner')
     async def banner_guild(self, ctx: discord.ApplicationContext):
         """
@@ -2167,21 +2172,21 @@ class Slash(commands.Cog):
         :rtype: None
         """
         req = await self.bot.http.request(discord.http.Route("GET", "/guilds/{gid}", gid=ctx.guild.id))
-        
+
         banner_id = req['banner']
 
         if banner_id is None:
             await ctx.respond('This guild has no banner', ephemeral=True)
             return
-        
+
         url = f'https://cdn.discordapp.com/banners/{ctx.guild.id}/{banner_id}?size=1024'
 
-        embed = discord.Embed(colour=ctx.guild.colour)
+        embed = discord.Embed(colour=discord.Colour.random())
         embed.set_image(url=url)
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon_url)
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
         embed.add_field(name='Download this image', value=f'[Click Here]({url})')
         await ctx.respond(embed=embed)
-    
+
     @banner_guild.error
     async def banner_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
         """
@@ -2196,7 +2201,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.respond('An error has occurred while running the banner command! The owner has been notified.', ephemeral=True)
+        await ctx.respond('An error has occurred while running the banner command! The owner has been notified.',
+                          ephemeral=True)
         await inform_owner(self.bot, error)
 
 

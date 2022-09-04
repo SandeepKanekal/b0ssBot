@@ -3,6 +3,7 @@
 import contextlib
 import discord
 import datetime
+import os
 import asyncio
 from sql_tools import SQL
 from tools import convert_to_unix_time
@@ -39,7 +40,7 @@ def modlog_enabled(guild_id: int) -> bool:
     :return: True if the modlog is enabled, False otherwise
     :rtype: bool
     """
-    sql = SQL('d9t2a5e8mudflk')
+    sql = SQL(os.getenv('sql_db_name'))
     return sql.select(elements=['mode'], table='modlogs', where=f"guild_id='{guild_id}'")[0][0]
 
 
@@ -54,7 +55,7 @@ def get_mod_channel(guild: discord.Guild) -> discord.TextChannel:
     :return: The modlog channel
     :rtype: discord.TextChannel
     """
-    sql = SQL('d9t2a5e8mudflk')
+    sql = SQL(os.getenv('sql_db_name'))
     return discord.utils.get(guild.text_channels, id=int(
         sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild.id}'")[0][0]))
 
@@ -1779,7 +1780,7 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Checks before execution
         if channel is None:
@@ -1939,7 +1940,7 @@ class Moderation(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Check if channel is provided
         try:

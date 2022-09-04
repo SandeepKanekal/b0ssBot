@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import discord
 import datetime
+import os
 from tools import send_error_embed, convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from discord.ext import commands
@@ -26,7 +27,7 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Replace single quotes with double quotes
         content = message.content.replace("'", "''")
@@ -63,7 +64,7 @@ class Util(commands.Cog):
             else:
                 sql.update(table='snipes', column='attachments', value="ARRAY['None']",
                            where=f"guild_id = '{message.guild.id}' AND channel_id = '{message.channel.id}'")
-        
+
         # Insert into database
         else:
             sql.insert(table='snipes',
@@ -84,7 +85,7 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         # Get the latest message
         if message := sql.select(
@@ -135,7 +136,8 @@ class Util(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await send_error_embed(ctx, 'You do not have the required permissions to use this command.')
         else:
-            await send_error_embed(ctx, 'An error occurred while running the snipe command! The owner has been informed.')
+            await send_error_embed(ctx,
+                                   'An error occurred while running the snipe command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
     # AFK command
@@ -157,7 +159,7 @@ class Util(commands.Cog):
         reason = reason.replace("'", "''")
         member_details = member.name.replace("'", "''") + '#' + member.discriminator
 
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
 
         with contextlib.suppress(discord.Forbidden):
             await member.edit(nick=f'[AFK] {member.display_name}')  # Changing the nickname
@@ -168,7 +170,8 @@ class Util(commands.Cog):
                            f'\'{reason}\''])
 
         # Create embed
-        embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour, timestamp=datetime.datetime.now())
+        embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour,
+                              timestamp=datetime.datetime.now())
         embed.set_thumbnail(url=member.display_avatar)
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.add_field(name='AFK note', value=reason.replace("''", "'"))
@@ -207,7 +210,7 @@ class Util(commands.Cog):
         """
         await ctx.reply(
             embed=discord.Embed(
-                description=f'**Pong!!** Bot latency is {round(self.bot.latency * 1000)}ms', 
+                description=f'**Pong!!** Bot latency is {round(self.bot.latency * 1000)}ms',
                 colour=discord.Colour.yellow()
             )
         )
@@ -264,7 +267,8 @@ class Util(commands.Cog):
         elif isinstance(error, commands.MissingPermissions):
             await send_error_embed(ctx, 'You do not have the required permissions to use this command.')
         else:
-            await send_error_embed(ctx, description='An error occurred while running the clear command! The owner has been informed.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the clear command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
     # Poll command
@@ -306,7 +310,8 @@ class Util(commands.Cog):
                                    description=f'Provide a question\n\nProper Usage: `{self.bot.get_command("poll").usage}`')
 
         else:
-            await send_error_embed(ctx, 'An error occurred while running the poll command! The owner has been informed.')
+            await send_error_embed(ctx,
+                                   'An error occurred while running the poll command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
     # Refer command
@@ -366,7 +371,8 @@ class Util(commands.Cog):
         elif isinstance(error, commands.CommandInvokeError) and isinstance(error.__cause__, discord.HTTPException):
             await send_error_embed(ctx, description='Provided argument is not a message ID or link')
         else:
-            await send_error_embed(ctx, 'An error occurred while running the refer command! The owner has been informed.')
+            await send_error_embed(ctx,
+                                   'An error occurred while running the refer command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
     @commands.command(name='prefix', desrciption='Change the prefix of the bot for the guild',
@@ -390,7 +396,7 @@ class Util(commands.Cog):
             return
 
         # Update database
-        sql = SQL('d9t2a5e8mudflk')
+        sql = SQL(os.getenv('sql_db_name'))
         sql.update(table='prefixes', column='prefix', value=f'\'{new_prefix}\'', where=f'guild_id=\'{ctx.guild.id}\'')
 
         # Respond
@@ -418,10 +424,13 @@ class Util(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Provide a prefix\n\nProper Usage: `{self.bot.get_command("prefix").usage}`')
         else:
-            await send_error_embed(ctx, description='An error occurred while running the prefix command! The owner has been informed.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the prefix command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
-    @commands.command(name='serverclear', aliases=['sc'], description='Clear all messages in the server containing the specific content.', usage='serverclear <content>')
+    @commands.command(name='serverclear', aliases=['sc'],
+                      description='Clear all messages in the server containing the specific content.',
+                      usage='serverclear <content>')
     @commands.has_permissions(manage_messages=True)
     @commands.cooldown(1, 1800, commands.BucketType.guild)
     async def serverclear(self, ctx: commands.Context, *, content: str):
@@ -446,18 +455,18 @@ class Util(commands.Cog):
 
         for channel in ctx.guild.text_channels:
             await information.edit(f'Clearing in {channel.mention}')
-            
+
             # Get the messages to delete
-            messages = list(filter(lambda m: content in m.content and not m.pinned, await channel.history(limit=None).flatten()))
+            messages = list(
+                filter(lambda m: content in m.content and not m.pinned, await channel.history(limit=None).flatten()))
 
             # Delete the messages
             for message in messages:
                 await message.delete()
-        
+
         await information.edit('Done!', delete_after=5)
         await msg.delete()
 
-    
     @serverclear.error
     async def serverclear_error(self, ctx: commands.Context, error: commands.CommandError):
         """
@@ -476,11 +485,13 @@ class Util(commands.Cog):
             await send_error_embed(ctx,
                                    description=f'Provide a content to search for\n\nProper Usage: `{self.bot.get_command("serverclear").usage}`')
         elif isinstance(error, commands.CommandOnCooldown):
-            await send_error_embed(ctx, description=f'This command is on cooldown! Try again in {error.retry_after:.2f} seconds.')
+            await send_error_embed(ctx,
+                                   description=f'This command is on cooldown! Try again in {error.retry_after:.2f} seconds.')
         elif isinstance(error, commands.MissingPermissions):
             await send_error_embed(ctx, description=f'Error: `{error}`')
         else:
-            await send_error_embed(ctx, description='An error occurred while running the serverclear command! The owner has been informed.')
+            await send_error_embed(ctx,
+                                   description='An error occurred while running the serverclear command! The owner has been informed.')
             await inform_owner(self.bot, error)
 
 
