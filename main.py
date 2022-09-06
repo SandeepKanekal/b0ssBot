@@ -22,9 +22,5 @@ for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
-# Install zbar libraries
-os.system('sudo apt-get install libzbar0')
-os.system("sudo apt-get install libzbar-dev")
-
 keep_alive.keep_alive()  # Keep alive
 bot.run(os.getenv('TOKEN'))  # Starts the bot

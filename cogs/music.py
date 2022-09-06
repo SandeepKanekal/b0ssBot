@@ -145,7 +145,15 @@ class Music(commands.Cog):
             self.sql.delete('loop', f"guild_id = '{member.guild.id}'")
             self.sql.delete('playlist', f"guild_id = '{member.guild.id}'")
 
-        # Auto pause/resume on self deafen/undeafen
+        # Move to author's voice channel
+        elif before.channel:
+            if list(filter(lambda m: not m.bot, vc.channel.members)):
+                return
+
+            vc.pause()
+            await vc.move_to(after.channel)
+            vc.resume()
+
         elif len(list(filter(lambda m: not m.bot, vc.channel.members))) == 1:
             if not before.self_deaf and after.self_deaf:
                 vc.pause()
@@ -156,7 +164,10 @@ class Music(commands.Cog):
                 vc.resume()
                 self.start_time[member.guild.id] += datetime.datetime.now() - self.pause_time[member.guild.id]
                 await member.send(
-                    'I resumed the player since you unself deafened and were the only member in the voice channel.')
+                    'I resumed the player since you self undeafened and were the only member in the voice channel.')
+
+            if before.channel != after.channel:
+                await vc.move_to(after.channel)
 
     def search_yt(self, item):
         """
