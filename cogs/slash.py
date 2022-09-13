@@ -1643,9 +1643,9 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, ValueError):
-            await ctx.respond('Invalid datetime provided', ephemeral=True)
-        elif isinstance(error, OverflowError):
+        if isinstance(error.original, ValueError):
+            await ctx.respond('Invalid value provided', ephemeral=True)
+        elif isinstance(error.original, OverflowError):
             await ctx.respond('Time provided is too far off in the past/future', ephemeral=True)
         else:
             await ctx.respond('An error has occurred while running the datetime command! The owner has been notified.',

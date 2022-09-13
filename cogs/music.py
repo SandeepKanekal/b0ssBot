@@ -117,15 +117,12 @@ class Music(commands.Cog):
         :return: None
         :rtype: None
         """
-        vc: discord.VoiceClient = member.guild.voice_client
+        vc: discord.VoiceClient | None = member.guild.voice_client
         if not vc:
             return
 
         # Auto disconnect
-        if before.channel and not after.channel:
-            if list(filter(lambda m: not m.bot, vc.channel.members)):
-                return
-
+        if before.channel and not after.channel and not list(filter(lambda m: not m.bot, vc.channel.members)):
             vc.stop()
             await vc.disconnect()
 
@@ -146,13 +143,12 @@ class Music(commands.Cog):
             self.sql.delete('playlist', f"guild_id = '{member.guild.id}'")
 
         # Move to author's voice channel
-        elif before.channel:
-            if list(filter(lambda m: not m.bot, vc.channel.members)):
-                return
-
+        elif before.channel and not list(filter(lambda m: not m.bot, vc.channel.members)):
             vc.pause()
+            self.pause_time[member.guild.id] = datetime.datetime.now()
             await vc.move_to(after.channel)
             vc.resume()
+            self.start_time[member.guild.id] += datetime.datetime.now() - self.pause_time[member.guild.id]
 
         elif len(list(filter(lambda m: not m.bot, vc.channel.members))) == 1:
             if not before.self_deaf and after.self_deaf:
@@ -160,14 +156,12 @@ class Music(commands.Cog):
                 self.pause_time[member.guild.id] = datetime.datetime.now()
                 await member.send(
                     'I paused the player since you self deafened and were the only member in the voice channel.')
+
             elif before.self_deaf and not after.self_deaf:
                 vc.resume()
                 self.start_time[member.guild.id] += datetime.datetime.now() - self.pause_time[member.guild.id]
                 await member.send(
                     'I resumed the player since you self undeafened and were the only member in the voice channel.')
-
-            if before.channel != after.channel:
-                await vc.move_to(after.channel)
 
     def search_yt(self, item):
         """
