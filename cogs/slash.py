@@ -899,6 +899,65 @@ class Slash(commands.Cog):
                 ephemeral=True)
             await inform_owner(self.bot, error)
 
+    @messageresponse.command(name='update', description='Update an existing chat response')
+    @commands.has_permissions(manage_messages=True)
+    async def messageresponse_update(self, ctx: discord.ApplicationContext,
+                                  message: Option(str, desription='The message to update the response to',
+                                                  required=True),
+                                  response: Option(str, description='The new response for the message', required=True)):
+        """
+        Adds a chat a response
+
+        :param ctx: The context of the command
+        :param message: The message to trigger the response to
+        :param response: The response for the message
+        
+        :type ctx: discord.ApplicationContext
+        :type message: str
+        :type response: str
+        
+        :return: None
+        :rtype: None
+        """
+        sql = SQL(os.getenv('sql_db_name'))
+        original_message = message
+
+        message = message.replace("'", "''").lower()
+        response = response.replace("'", "''")
+
+        if not sql.select(elements=['message', 'response'], table='message_responses',
+                        where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
+            await ctx.respond(f'A response for `{original_message}` does not exist', ephemeral=True)
+            return
+
+        else:
+            sql.update('message_responses', 'response', f'\'{response}\'', f"message = '{message}'")
+
+        await ctx.respond(f'Response for `{original_message}` updated')
+
+    @messageresponse_add.error
+    async def messageresponse_add_error(self, ctx: discord.ApplicationContext,
+                                        error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the messageresponse add command
+        
+        :param ctx: The context of the message
+        :param error: The error that occurred
+        
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+        
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
+        else:
+            await ctx.respond(
+                'An error has occurred while running the messageresponse add command! The owner has been notified.',
+                ephemeral=True)
+            await inform_owner(self.bot, error)
+
     @messageresponse.command(name='list', description='Lists all chat responses')
     async def messageresponse_list(self, ctx: discord.ApplicationContext):
         """
