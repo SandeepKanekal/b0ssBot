@@ -9,6 +9,7 @@ google-api-python-client
 youtube-search-python
 psycopg2-binary
 pillow
-pyzbar
 qrcode
 imgurpython
+python-dotenv
+wheel

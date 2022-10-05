@@ -11,7 +11,7 @@ from tools import convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from googleapiclient.discovery import build
 from PIL import Image, ImageChops, UnidentifiedImageError
-from ui_components import EmbedView
+from ui_components import EmbedView, MessageresponseView
 
 
 class Slash(commands.Cog):
@@ -935,8 +935,8 @@ class Slash(commands.Cog):
 
         await ctx.respond(f'Response for `{original_message}` updated')
 
-    @messageresponse_add.error
-    async def messageresponse_add_error(self, ctx: discord.ApplicationContext,
+    @messageresponse_update.error
+    async def messageresponse_update_error(self, ctx: discord.ApplicationContext,
                                         error: discord.ApplicationCommandInvokeError):
         """
         Error handler for the messageresponse add command
@@ -954,7 +954,7 @@ class Slash(commands.Cog):
             await ctx.respond('You do not have the required permissions to use this command!', ephemeral=True)
         else:
             await ctx.respond(
-                'An error has occurred while running the messageresponse add command! The owner has been notified.',
+                'An error has occurred while running the messageresponse update command! The owner has been notified.',
                 ephemeral=True)
             await inform_owner(self.bot, error)
 
@@ -985,14 +985,14 @@ class Slash(commands.Cog):
         for response in responses:
             embed.add_field(name=f'Message: {response[0]}', value=f'Response: {response[1]}', inline=False)
 
-        try:
+        embed.set_footer(text=f'Page 1 of {len(responses)//25+1}')
+
+        view = MessageresponseView(responses, embed) if len(responses) > 25 else None
+
+        if view:
+            await ctx.respond(embed=embed, view=view)
+        else:
             await ctx.respond(embed=embed)
-        except discord.HTTPException:
-            with open(f'responses_{ctx.guild.id}.txt', 'w') as f:
-                for response in responses:
-                    f.write(f'Message: {response[0]}\nResponse: {response[1]}\n\n')
-            await ctx.respond(file=discord.File(f'responses_{ctx.guild.id}.txt', filename='responses.txt'))
-            os.remove(f'responses_{ctx.guild.id}.txt')
 
     @messageresponse_list.error
     async def messageresponse_list_error(self, ctx: discord.ApplicationContext,
@@ -1703,7 +1703,7 @@ class Slash(commands.Cog):
         :rtype: None
         """
         if isinstance(error.original, ValueError):
-            await ctx.respond('Invalid value provided', ephemeral=True)
+            await ctx.respond('Invalid datetime provided', ephemeral=True)
         elif isinstance(error.original, OverflowError):
             await ctx.respond('Time provided is too far off in the past/future', ephemeral=True)
         else:

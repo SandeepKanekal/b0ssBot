@@ -1267,3 +1267,57 @@ class BugView(discord.ui.View):
     async def reject(self, button: discord.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(
             ReportModal(self.reporter, 'Reject', 'Add a comment', timeout=None))
+
+
+#noinspection PyUnusedLocal
+class MessageresponseView(discord.ui.View):
+    def __init__(self, responses: list[tuple], embed: discord.Embed, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.responses = []
+        self.embed = embed
+        self.page_index = 0
+
+        self.responses.extend(responses[i * 25 : i * 25 + 24] for i in range(len(responses) // 25 + 1))
+        
+
+    async def edit_embed(self, page_index: int):
+        self.page_index = page_index
+
+        self.embed.clear_fields()
+
+        self.embed.set_footer(text=f'Page {self.page_index+1} of {len(self.responses)}')
+
+        for response in self.responses[self.page_index]:
+            self.embed.add_field(name=f'**Message: {response[0]}**', value=f'Response: {response[1]}', inline=False)
+
+    
+    @discord.ui.button(emoji='⏮️', style=discord.ButtonStyle.blurple)
+    async def first(self, button: discord.Button, interaction: discord.Interaction):
+        await self.edit_embed(0)
+
+        await interaction.response.edit_message(embed=self.embed)
+    
+    @discord.ui.button(emoji='⏪', style=discord.ButtonStyle.green)
+    async def previous(self, button: discord.Button, interaction: discord.Interaction):
+        await self.edit_embed(self.page_index - 1 if self.page_index != 0 else len(self.responses) - 1)
+
+        await interaction.response.edit_message(embed=self.embed)
+    
+    @discord.ui.button(emoji='⏩', style=discord.ButtonStyle.green)
+    async def next_(self, button: discord.Button, interaction: discord.Interaction):
+        await self.edit_embed(self.page_index + 1 if self.page_index != len(self.responses) - 1 else 0)
+
+        await interaction.response.edit_message(embed=self.embed)
+    
+    @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.blurple)
+    async def last(self, button: discord.Button, interaction: discord.Interaction):
+        await self.edit_embed(len(self.responses)-1)
+
+        await interaction.response.edit_message(embed=self.embed)
+    
+    @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
+    async def end(self, button: discord.Button, interaction: discord.Interaction):
+        for item in self.children:
+            item.disabled = True
+        
+        await interaction.response.edit_message(view=self)

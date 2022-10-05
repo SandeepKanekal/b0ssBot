@@ -7,3 +7,4 @@
 /pytest_cache
 /praw.ini
 /tests.py
+/.env

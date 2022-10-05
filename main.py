@@ -3,6 +3,7 @@
 import discord
 import keep_alive
 import os
+from dotenv import load_dotenv
 from discord.ext import commands
 from sql_tools import SQL
 
@@ -13,6 +14,7 @@ def get_prefix(bot: commands.Bot, message: discord.Message) -> str:
 
 
 # Pre-run requirements
+load_dotenv()
 sql = SQL(os.getenv('sql_db_name'))
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=discord.Intents.all())
 bot.remove_command('help')
