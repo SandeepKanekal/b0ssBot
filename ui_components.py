@@ -7,6 +7,7 @@ import contextlib
 import datetime
 from discord.ext import commands
 from tools import send_error_embed, get_quote
+from sql_tools import SQL
 from asyncpraw.reddit import Submission
 
 
@@ -1321,3 +1322,41 @@ class MessageresponseView(discord.ui.View):
             item.disabled = True
         
         await interaction.response.edit_message(view=self)
+
+
+# noinspection PyUnusedLocal
+class ClearView(discord.ui.View):
+    def __init__(self, sql: SQL, author: discord.Member, table: str, timeout: float | None = None):
+        super().__init__(timeout=timeout)
+        self.sql = sql
+        self.author = author
+        self.table = table
+    
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.red)
+    async def yes(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author.id:
+            await interaction.response.send_message(content='This is not for you!', ephemeral=True)
+            return
+        
+        self.sql.delete(
+            table=self.table,
+            where=f"guild_id = '{self.author.guild.id}'"
+        )
+
+        for item in self.children:
+            item.disabled = True
+        
+        await interaction.response.edit_message(content='Cleared all responses!', view=self)
+        self.stop()
+    
+    @discord.ui.button(label='No', style=discord.ButtonStyle.green)
+    async def no(self, button: discord.Button, interaction: discord.Interaction):
+        if interaction.user.id != self.author.id:
+            await interaction.response.send_message(content='This is not for you!', ephemeral=True)
+            return
+        
+        for item in self.children:
+            item.disabled = True
+        
+        await interaction.response.edit_message(content='Clear operation cancelled!', view=self)
+        self.stop()

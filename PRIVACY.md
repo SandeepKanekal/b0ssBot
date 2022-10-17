@@ -10,7 +10,6 @@
 
 # What information is collected?
 + IDs: User ID, Channel IDs and Guild IDs are collected and stored.
-+ Queries for history.
 + Reasons for warns.
 + YouTube channel URLs for the youtubenotification command.
 + Messages and responses for autoresponses.

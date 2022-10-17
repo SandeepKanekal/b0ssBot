@@ -427,50 +427,44 @@ class Util(commands.Cog):
             await send_error_embed(ctx,
                                    description='An error occurred while running the prefix command! The owner has been informed.')
             await inform_owner(self.bot, error)
-
-    @commands.command(name='serverclear', aliases=['sc'],
-                      description='Clear all messages in the server containing the specific content.',
-                      usage='serverclear <content>')
-    @commands.has_permissions(manage_messages=True)
-    @commands.cooldown(1, 1800, commands.BucketType.guild)
-    async def serverclear(self, ctx: commands.Context, *, content: str):
+    
+    @commands.command(name='mentions', description='Get mentions for the last 500 messages', usage='mentions')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def mentions(self, ctx: commands.Context):
         """
-        Clear all messages in the server containing the specific content.
+        Get mentions for the last 500 messages
 
-        :param ctx: The context of where the command was used
-        :param content: The content to search for in the messages to delete
+        :param ctx: The command Context
 
         :type ctx: commands.Context
-        :type content: str
 
         :return: None
         :rtype: None
         """
-        # Inform the user that this will take a while
-        msg = await ctx.reply('This may take a while... Pinned messages will not be cleared.')
-        information = await ctx.send('Initializing...')
+        async with ctx.typing():
+            messages = await ctx.channel.history(limit=500).flatten()
 
-        # Delete command message
-        await ctx.message.delete()
+            mentions = list(filter(lambda m: ctx.author.id in m.raw_mentions, messages))
 
-        for channel in ctx.guild.text_channels:
-            await information.edit(f'Clearing in {channel.mention}')
+            if not mentions:
+                await ctx.reply('No messages found mentioning you!')
+                return
 
-            # Get the messages to delete
-            messages = list(
-                filter(lambda m: content in m.content and not m.pinned, await channel.history(limit=None).flatten()))
+            embed = discord.Embed(
+                title=f'Messages mentioning {ctx.author}',
+                description='\n'.join(f'{idx+1}. [Jump to message]({msg.jump_url}) Sent: <t:{int(msg.created_at.timestamp())}:R>' for idx, msg in enumerate(mentions)),
+                colour=ctx.author.colour,
+                timestamp=datetime.datetime.now()
+            )
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar)
+            embed.set_footer(text=f'Previous 500 messages mentioning {ctx.author}')
 
-            # Delete the messages
-            for message in messages:
-                await message.delete()
-
-        await information.edit('Done!', delete_after=5)
-        await msg.delete()
-
-    @serverclear.error
-    async def serverclear_error(self, ctx: commands.Context, error: commands.CommandError):
+            await ctx.send(embed=embed)
+    
+    @mentions.error
+    async def mentions_error(self, ctx: commands.Context, error: commands.CommandError):
         """
-        Error handler for the serverclear command
+        Error handler for the mentions command
 
         :param ctx: The context of where the command was used
         :param error: The error that occurred
@@ -481,18 +475,12 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        if isinstance(error, commands.MissingRequiredArgument):
-            await send_error_embed(ctx,
-                                   description=f'Provide a content to search for\n\nProper Usage: `{self.bot.get_command("serverclear").usage}`')
-        elif isinstance(error, commands.CommandOnCooldown):
-            await send_error_embed(ctx,
-                                   description=f'This command is on cooldown! Try again in {error.retry_after:.2f} seconds.')
-        elif isinstance(error, commands.MissingPermissions):
-            await send_error_embed(ctx, description=f'Error: `{error}`')
-        else:
-            await send_error_embed(ctx,
-                                   description='An error occurred while running the serverclear command! The owner has been informed.')
-            await inform_owner(self.bot, error)
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(f'You are on cooldown! Try again in {error.retry_after:.2f} seconds.')
+            return
+        await send_error_embed(ctx,
+                               description='An error has occurred while running the mentions command! The owner has been notified.')
+        await inform_owner(self.bot, error)
 
 
 def setup(bot: commands.Bot):

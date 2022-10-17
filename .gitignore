@@ -4,7 +4,7 @@
 /.vs
 /__pycache__
 /cogs/__pycache__
-/pytest_cache
+/.pytest_cache
 /praw.ini
 /tests.py
 /.env

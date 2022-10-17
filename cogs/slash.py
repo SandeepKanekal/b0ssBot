@@ -11,7 +11,7 @@ from tools import convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from googleapiclient.discovery import build
 from PIL import Image, ImageChops, UnidentifiedImageError
-from ui_components import EmbedView, MessageresponseView
+from ui_components import EmbedView, MessageresponseView, ClearView
 
 
 class Slash(commands.Cog):
@@ -427,10 +427,7 @@ class Slash(commands.Cog):
             await ctx.respond('No channels are currently set up for notifications', ephemeral=True)
             return
 
-        # Remove from database
-        sql.delete(table='youtube', where=f'guild_id = \'{ctx.guild.id}\'')
-
-        await ctx.respond('All channels removed')
+        await ctx.respond('Are you sure you want to clear!', view=ClearView(sql, ctx.author, 'youtube'))
 
     @youtubenotification_clear.error
     async def youtubenotification_clear_error(self, ctx: discord.ApplicationContext,
@@ -749,17 +746,15 @@ class Slash(commands.Cog):
         """
         sql = SQL(os.getenv('sql_db_name'))
 
-        if sql.select(
+        if not sql.select(
                 elements=['warns', 'reason'],
                 table='warns',
                 where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'",
         ):
-            sql.delete(table='warns', where=f"guild_id = '{ctx.guild.id}' AND member_id = '{member.id}'")
-        else:
             await ctx.respond(f'{member.mention} has no warns', ephemeral=True)
             return
 
-        await ctx.respond(f'{member}\'s warns have been cleared')
+        await ctx.respond('Are you sure you want to clear!', view=ClearView(sql, ctx.author, 'warns'))
 
     @warn_clear.error
     async def warn_clear_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
@@ -1028,8 +1023,10 @@ class Slash(commands.Cog):
         :rtype: None
         """
         sql = SQL(os.getenv('sql_db_name'))
-        sql.delete(table='message_responses', where=f"guild_id = '{ctx.guild.id}'")
-        await ctx.respond('All responses cleared')
+        if not sql.select(['*'], 'message_responses', f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('No responses found', ephemeral=True)
+            return
+        await ctx.respond('Are you sure you want to clear!', view=ClearView(sql, ctx.author, 'message_responses'))
 
     @messageresponse_clear.error
     async def messageresponse_clear_error(self, ctx: discord.ApplicationContext,

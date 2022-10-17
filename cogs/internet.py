@@ -575,10 +575,13 @@ class Internet(commands.Cog):
         """
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
-            return
-        await send_error_embed(ctx,
-                               description='An error has occurred while running the github command! The owner has been notified.')
-        await inform_owner(self.bot, error)
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please enter a repository!\n\nProper Usage: `{self.bot.get_command("github").usage}`')
+        else:
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the github command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
     @commands.command(name='imgur', description='Get an image from imgur', usage='imgur <query>')
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -621,10 +624,13 @@ class Internet(commands.Cog):
         """
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'This command is on cooldown for {error.retry_after:.2f} seconds')
-            return
-        await send_error_embed(ctx,
-                               description='An error has occurred while running the imgur command! The owner has been notified.')
-        await inform_owner(self.bot, error)
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Please enter a search term!\n\nProper Usage: `{self.bot.get_command("imgur").usage}`')
+        else:
+            await send_error_embed(ctx,
+                                   description='An error has occurred while running the imgur command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
 
 def setup(bot: commands.Bot):
