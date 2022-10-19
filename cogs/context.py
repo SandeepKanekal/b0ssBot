@@ -6,7 +6,6 @@ import qrcode
 import requests
 import datetime
 from PIL import Image, ImageChops
-from pyzbar.pyzbar import decode
 from discord.ext import commands
 from tools import convert_to_unix_time, inform_owner
 
@@ -94,10 +93,11 @@ class Context(commands.Cog):
         :return: None
         :rtype: None
         """
-        # Inform the user if there is no attachment in the message.
         if not message.attachments:
-            await ctx.respond(content='There are no attachments in the message provided', ephemeral=True)
+            await ctx.respond('No attachment in the message!', ephemeral=True)
             return
+
+        await ctx.defer()
 
         # Create embed
         embed = discord.Embed(
@@ -106,30 +106,20 @@ class Context(commands.Cog):
             colour=0x848585
         ).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
 
-        # Defer the response
-        await ctx.interaction.response.defer()
+        url = 'https://api.qrserver.com/v1/read-qr-code/?fileurl='
 
         for index, attachment in enumerate(message.attachments):
-            # Save the image
-            with open(f'{attachment.filename}_{message.id}', 'wb') as f:
-                f.write(requests.get(attachment.url).content)
-            try:
-                # Decode the image
-                data = decode(Image.open(f'{attachment.filename}_{message.id}').convert('RGB'))
-                for code in data:
-                    embed.add_field(name=f'In Attachment {index + 1}', value=f'```{code.data.decode("utf-8")}```' if code.data else "No data present in the QR Code", inline=False)
-            except Exception as e:
-                # Handle errors
-                embed.add_field(name=f'In Attachment {index + 1}', value=f'```{e}```', inline=False)
-            finally:
-                # Delete the saved image
-                os.remove(f'{attachment.filename}_{message.id}')
+            if qr_data := requests.get(f'{url}{attachment.url}').json()[0]['symbol'][0]['data']:
 
-        # Respond only if there are fields.
-        if embed.fields:
-            await ctx.respond(embed=embed)
+                qr_data = qr_data.split('\nQR-Code:')
+
+                for qrd in qr_data:
+                    embed.add_field(name=f'In attachement {index+1}', value=f'```{qrd}```', inline=False)
+        
+        if not embed.fields:
+            await ctx.respond('No QR codes found', ephemeral=True)
         else:
-            await ctx.respond('No QR codes found')
+            await ctx.respond(embed=embed)
 
     @scan_qr.error
     async def scan_qr_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):

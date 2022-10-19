@@ -98,9 +98,9 @@ class Help(commands.Cog):
                 param_str = ''.join(f'`{param.name}` ' for param in cmd.options)
                 param_str = param_str[:-1]
                 embed.add_field(name='Parameters', value=param_str, inline=False)
-                embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
+                embed.add_field(name='Usage', value=cmd.mention, inline=False)
             elif isinstance(cmd, discord.SlashCommandGroup):
-                embed.add_field(name='Subcommands', value=f'{" ".join(f"`{subcmd.name}`" for subcmd in cmd.walk_commands())}', inline=False)
+                embed.add_field(name='Subcommands', value=f'{" ".join(subcmd.mention for subcmd in cmd.walk_commands())}', inline=False)
                 embed.add_field(name='Usage', value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
             else:
                 embed.add_field(name='Usage', value='This is an application command. Right click on a message/user to get the command', inline=False)

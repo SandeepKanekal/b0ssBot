@@ -1114,10 +1114,10 @@ class HelpView(discord.ui.View):
             param_str = ''.join(f'`{param.name}` ' for param in cmd.options)
             param_str = param_str[:-1]
             embed.add_field(name='Parameters', value=param_str, inline=False)
-            embed.add_field(name='Usage', value='This is a slash command. Type / to get the command', inline=False)
+            embed.add_field(name='Usage', value=cmd.mention, inline=False)
         elif isinstance(cmd, discord.SlashCommandGroup):
             embed.add_field(name='Subcommands',
-                            value=f'{" ".join(f"`{subcmd.name}`" for subcmd in cmd.walk_commands())}', inline=False)
+                            value=f'{" ".join(subcmd.mention for subcmd in cmd.walk_commands())}', inline=False)
             embed.add_field(name='Usage',
                             value=f'This is a Slash Command Group. Type /{cmd.name} to get the subcommands')
         else:
@@ -1171,7 +1171,8 @@ class FeatureView(discord.ui.View):
 
 # noinspection PyUnusedLocal
 class RiddleView(discord.ui.View):
-    def __init__(self, embed: discord.Embed, questions: list[str], answers: list[str], bot: commands.Bot, timeout: float | None = None):
+    def __init__(self, embed: discord.Embed, questions: list[str], answers: list[str], bot: commands.Bot,
+                 timeout: float | None = None):
         super().__init__(timeout=timeout)
         self.embed = embed
         self.questions = questions
@@ -1179,12 +1180,13 @@ class RiddleView(discord.ui.View):
         self.bot = bot
         self.index = 0
         self.winners = {}
-    
-    @discord.ui.button(label='Answer', style=discord.ButtonStyle.green) 
+
+    @discord.ui.button(label='Answer', style=discord.ButtonStyle.green)
     async def answer(self, button: discord.Button, interaction: discord.Interaction):
         modal = discord.ui.Modal(title=f'Riddle {self.index + 1}', timeout=None)
-        modal.add_item(discord.ui.InputText(label='Answer', style=discord.InputTextStyle.long, placeholder='Answer', required=True))
-    
+        modal.add_item(discord.ui.InputText(label='Answer', style=discord.InputTextStyle.long, placeholder='Answer',
+                                            required=True))
+
         async def callback(inter: discord.Interaction):
             if modal.children[0].value.lower() in self.answers[self.index].lower():
                 if self.index != len(self.questions) - 1:
@@ -1204,16 +1206,17 @@ class RiddleView(discord.ui.View):
                     else:
                         winner = winner.mention
                     finally:
-                        await inter.response.edit_message(f'The riddle has been completed! Winner: {winner}', embed=None, view=None)
+                        await inter.response.edit_message(f'The riddle has been completed! Winner: {winner}',
+                                                          embed=None, view=None)
 
                 if inter.user.id in self.winners:
                     self.winners[inter.user.id] += 1
                 else:
                     self.winners[inter.user.id] = 1
-            
+
             else:
                 await inter.response.send_message('Incorrect answer', ephemeral=True)
-        
+
         modal.callback = callback
 
         await interaction.response.send_modal(modal)
@@ -1236,7 +1239,8 @@ class RiddleView(discord.ui.View):
             else:
                 winner = winner.mention
             finally:
-                await interaction.response.edit_message(content=f'The riddle has ended! Winner: {winner}', embed=None, view=None)
+                await interaction.response.edit_message(content=f'The riddle has ended! Winner: {winner}', embed=None,
+                                                        view=None)
                 self.stop()
 
     @discord.ui.button(label='End Riddle', style=discord.ButtonStyle.red)
@@ -1249,7 +1253,8 @@ class RiddleView(discord.ui.View):
         else:
             winner = winner.mention
         finally:
-            await interaction.response.edit_message(content=f'The riddle has ended! Winner: {winner}', embed=None, view=None)
+            await interaction.response.edit_message(content=f'The riddle has ended! Winner: {winner}', embed=None,
+                                                    view=None)
             self.stop()
 
 
@@ -1270,7 +1275,7 @@ class BugView(discord.ui.View):
             ReportModal(self.reporter, 'Reject', 'Add a comment', timeout=None))
 
 
-#noinspection PyUnusedLocal
+# noinspection PyUnusedLocal
 class MessageresponseView(discord.ui.View):
     def __init__(self, responses: list[tuple], embed: discord.Embed, timeout: float | None = None):
         super().__init__(timeout=timeout)
@@ -1278,49 +1283,47 @@ class MessageresponseView(discord.ui.View):
         self.embed = embed
         self.page_index = 0
 
-        self.responses.extend(responses[i * 25 : i * 25 + 24] for i in range(len(responses) // 25 + 1))
-        
+        self.responses.extend(responses[i * 25: i * 25 + 24] for i in range(len(responses) // 25 + 1))
 
     async def edit_embed(self, page_index: int):
         self.page_index = page_index
 
         self.embed.clear_fields()
 
-        self.embed.set_footer(text=f'Page {self.page_index+1} of {len(self.responses)}')
+        self.embed.set_footer(text=f'Page {self.page_index + 1} of {len(self.responses)}')
 
         for response in self.responses[self.page_index]:
             self.embed.add_field(name=f'**Message: {response[0]}**', value=f'Response: {response[1]}', inline=False)
 
-    
     @discord.ui.button(emoji='⏮️', style=discord.ButtonStyle.blurple)
     async def first(self, button: discord.Button, interaction: discord.Interaction):
         await self.edit_embed(0)
 
         await interaction.response.edit_message(embed=self.embed)
-    
+
     @discord.ui.button(emoji='⏪', style=discord.ButtonStyle.green)
     async def previous(self, button: discord.Button, interaction: discord.Interaction):
         await self.edit_embed(self.page_index - 1 if self.page_index != 0 else len(self.responses) - 1)
 
         await interaction.response.edit_message(embed=self.embed)
-    
+
     @discord.ui.button(emoji='⏩', style=discord.ButtonStyle.green)
     async def next_(self, button: discord.Button, interaction: discord.Interaction):
         await self.edit_embed(self.page_index + 1 if self.page_index != len(self.responses) - 1 else 0)
 
         await interaction.response.edit_message(embed=self.embed)
-    
+
     @discord.ui.button(emoji='⏭️', style=discord.ButtonStyle.blurple)
     async def last(self, button: discord.Button, interaction: discord.Interaction):
-        await self.edit_embed(len(self.responses)-1)
+        await self.edit_embed(len(self.responses) - 1)
 
         await interaction.response.edit_message(embed=self.embed)
-    
+
     @discord.ui.button(emoji='❌', style=discord.ButtonStyle.gray)
     async def end(self, button: discord.Button, interaction: discord.Interaction):
         for item in self.children:
             item.disabled = True
-        
+
         await interaction.response.edit_message(view=self)
 
 
@@ -1331,13 +1334,13 @@ class ClearView(discord.ui.View):
         self.sql = sql
         self.author = author
         self.table = table
-    
+
     @discord.ui.button(label='Yes', style=discord.ButtonStyle.red)
     async def yes(self, button: discord.Button, interaction: discord.Interaction):
         if interaction.user.id != self.author.id:
             await interaction.response.send_message(content='This is not for you!', ephemeral=True)
             return
-        
+
         self.sql.delete(
             table=self.table,
             where=f"guild_id = '{self.author.guild.id}'"
@@ -1345,18 +1348,18 @@ class ClearView(discord.ui.View):
 
         for item in self.children:
             item.disabled = True
-        
+
         await interaction.response.edit_message(content='Cleared all responses!', view=self)
         self.stop()
-    
+
     @discord.ui.button(label='No', style=discord.ButtonStyle.green)
     async def no(self, button: discord.Button, interaction: discord.Interaction):
         if interaction.user.id != self.author.id:
             await interaction.response.send_message(content='This is not for you!', ephemeral=True)
             return
-        
+
         for item in self.children:
             item.disabled = True
-        
+
         await interaction.response.edit_message(content='Clear operation cancelled!', view=self)
         self.stop()

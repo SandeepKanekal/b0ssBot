@@ -897,9 +897,10 @@ class Slash(commands.Cog):
     @messageresponse.command(name='update', description='Update an existing chat response')
     @commands.has_permissions(manage_messages=True)
     async def messageresponse_update(self, ctx: discord.ApplicationContext,
-                                  message: Option(str, desription='The message to update the response to',
-                                                  required=True),
-                                  response: Option(str, description='The new response for the message', required=True)):
+                                     message: Option(str, desription='The message to update the response to',
+                                                     required=True),
+                                     response: Option(str, description='The new response for the message',
+                                                      required=True)):
         """
         Adds a chat a response
 
@@ -921,7 +922,7 @@ class Slash(commands.Cog):
         response = response.replace("'", "''")
 
         if not sql.select(elements=['message', 'response'], table='message_responses',
-                        where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
+                          where=f"guild_id = '{ctx.guild.id}' AND message = '{message}'"):
             await ctx.respond(f'A response for `{original_message}` does not exist', ephemeral=True)
             return
 
@@ -932,7 +933,7 @@ class Slash(commands.Cog):
 
     @messageresponse_update.error
     async def messageresponse_update_error(self, ctx: discord.ApplicationContext,
-                                        error: discord.ApplicationCommandInvokeError):
+                                           error: discord.ApplicationCommandInvokeError):
         """
         Error handler for the messageresponse add command
         
@@ -980,7 +981,7 @@ class Slash(commands.Cog):
         for response in responses:
             embed.add_field(name=f'Message: {response[0]}', value=f'Response: {response[1]}', inline=False)
 
-        embed.set_footer(text=f'Page 1 of {len(responses)//25+1}')
+        embed.set_footer(text=f'Page 1 of {len(responses) // 25 + 1}')
 
         view = MessageresponseView(responses, embed) if len(responses) > 25 else None
 
@@ -1751,6 +1752,7 @@ class Slash(commands.Cog):
         embed.add_field(name='Verified role', value=verified_role.mention, inline=True)
         embed.add_field(name='Unverified role', value=unverified_role.mention if unverified_role else 'None',
                         inline=True)
+        embed.set_footer(text=f'Please make sure that my role is above {verified_role.name}! This can be done in Server Settings -> Roles')
 
         # Sending the verify-message and adding the reaction
         msg = await channel.send(embed=discord.Embed(description='Please verify yourself to get access to the server.',

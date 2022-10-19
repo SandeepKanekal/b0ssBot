@@ -315,7 +315,7 @@ class Events(commands.Cog):
         if member.bot and bot_role_id:
             bot_role = discord.utils.get(member.guild.roles, id=int(bot_role_id))
             await member.add_roles(bot_role)
-        else:
+        elif not member.bot and member_role_id:
             member_role = discord.utils.get(member.guild.roles, id=int(member_role_id))
             await member.add_roles(member_role)
 

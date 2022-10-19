@@ -211,7 +211,7 @@ class Util(commands.Cog):
         await ctx.reply(
             embed=discord.Embed(
                 description=f'**Pong!!** Bot latency is {round(self.bot.latency * 1000)}ms',
-                colour=discord.Colour.yellow()
+                colour=0x0c1e4a
             )
         )
 
@@ -428,36 +428,41 @@ class Util(commands.Cog):
                                    description='An error occurred while running the prefix command! The owner has been informed.')
             await inform_owner(self.bot, error)
     
-    @commands.command(name='mentions', description='Get mentions for the last 500 messages', usage='mentions')
+    @commands.command(name='mentions', description='Get mentions for the last 500 messages', usage='mentions <member>')
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def mentions(self, ctx: commands.Context):
+    async def mentions(self, ctx: commands.Context, member: discord.Member | None = None):
         """
         Get mentions for the last 500 messages
 
         :param ctx: The command Context
+        :param member: The member
 
         :type ctx: commands.Context
+        :type member: discord.Member
 
         :return: None
         :rtype: None
         """
-        async with ctx.typing():
-            messages = await ctx.channel.history(limit=500).flatten()
+        member = member or ctx.author
 
-            mentions = list(filter(lambda m: ctx.author.id in m.raw_mentions, messages))
+        async with ctx.typing():
+            # Get messages mentioning member
+            messages = await ctx.channel.history(limit=500).flatten()
+            mentions = list(filter(lambda m: member.id in m.raw_mentions, messages))
 
             if not mentions:
-                await ctx.reply('No messages found mentioning you!')
+                await ctx.reply(f'No messages found mentioning {member}!')
                 return
 
+            # Embed description with the links of the messages and the time of sending
             embed = discord.Embed(
-                title=f'Messages mentioning {ctx.author}',
+                title=f'Messages mentioning {member}',
                 description='\n'.join(f'{idx+1}. [Jump to message]({msg.jump_url}) Sent: <t:{int(msg.created_at.timestamp())}:R>' for idx, msg in enumerate(mentions)),
-                colour=ctx.author.colour,
+                colour=member.colour,
                 timestamp=datetime.datetime.now()
             )
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar)
-            embed.set_footer(text=f'Previous 500 messages mentioning {ctx.author}')
+            embed.set_author(name=member.name, icon_url=member.display_avatar)
+            embed.set_footer(text=f'Previous 500 messages mentioning {member}')
 
             await ctx.send(embed=embed)
     
