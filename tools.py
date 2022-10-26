@@ -164,3 +164,16 @@ async def inform_owner(bot: Bot, error: Exception):
     """
     owner = bot.get_user(800018344702640180)
     await owner.send(f'An unexpected error occurred: {error}')
+
+
+def update_nick_name(nick_name: str) -> str:
+    """
+    Removes '[AFK]' from a nickname
+    
+    :param nick_name: The nickname to remove '[AFK]' from
+    :type nick_name: str
+    
+    :return: The nickname without '[AFK]'
+    :rtype: str
+    """
+    return " ".join(nick_name.split()[1:]) if '[AFK]' in nick_name.split() else nick_name

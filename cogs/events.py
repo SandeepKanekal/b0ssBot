@@ -6,20 +6,8 @@ import discord
 import random
 from sql_tools import SQL
 from discord.ext import commands, tasks
-import youtubesearchpython as youtube
-
-
-def remove(nick_name: str) -> str:
-    """
-    Removes '[AFK]' from a nickname
-    
-    :param nick_name: The nickname to remove '[AFK]' from
-    :type nick_name: str
-    
-    :return: The nickname without '[AFK]'
-    :rtype: str
-    """
-    return " ".join(nick_name.split()[1:]) if '[AFK]' in nick_name.split() else nick_name
+from tools import update_nick_name
+import scrapetube as youtube
 
 
 class Events(commands.Cog):
@@ -88,7 +76,7 @@ class Events(commands.Cog):
                        where=f'member_id = \'{message.author.id}\' and guild_id = \'{message.guild.id}\'')  # Remove the afk
 
             with contextlib.suppress(discord.Forbidden):
-                await message.author.edit(nick=remove(message.author.display_name))  # Remove the AFK tag
+                await message.author.edit(nick=update_nick_name(message.author.display_name))  # Remove the AFK tag
 
             await message.reply(
                 embed=discord.Embed(
@@ -123,7 +111,7 @@ class Events(commands.Cog):
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{message.guild.id}'")
             embed = discord.Embed(
                 description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**',
-                colour=self.bot.user.colour)
+                colour=0x0c1e4a)
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await message.reply(embed=embed)
 
@@ -205,7 +193,7 @@ class Events(commands.Cog):
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{guild.id}'")
             embed = discord.Embed(
                 description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**. You can change my prefix using the slash command: `/prefix`!',
-                colour=self.bot.user.colour)
+                colour=0x0c1e4a)
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await guild.system_channel.send(embed=embed)
 
@@ -363,30 +351,26 @@ class Events(commands.Cog):
                 elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name', 'ping_role'],
                 table='youtube')
 
-            notifiable_channels = [channel for channel in channels if
-                                   channel[1] !=
-                                   youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
-                                       'id']]  # Check if the latest video in the database is the same as the latest video in the playlist
+            for channel in channels:
+                videos = youtube.get_channel(channel[0], limit=20)
+                notifiable_videos = []
+                publish_dates = []
+                
+                for video in videos:
+                    if video['videoId'] == channel[1]:
+                        break
+                    notifiable_videos.append(video['videoId'])
+                    publish_dates.append(video['publishedTimeText']['simpleText'])
 
-            for channel in notifiable_channels:
-                latest_video_id = youtube.Playlist(youtube.playlist_from_channel_id(channel[0])).videos[0][
-                    'id']  # Get the latest video ID
-
-                try:
-                    publish_time = youtube.VideosSearch(latest_video_id, limit=1).result()['result'][0][
-                        'publishedTime']  # Get the time of publication of the latest video
-                except IndexError:
+                if not notifiable_videos:
+                    continue
+                
+                if 'Sekunde' not in publish_dates[0] and 'Sekunden' not in publish_dates[0] and 'Minute' not in publish_dates[0] and 'Minuten' not in publish_dates[0] and 'Stunde' not in publish_dates[0] and 'Stunden' not in publish_dates[0]:
                     continue
 
-                if not publish_time:
-                    continue
-
-                if 'second' not in publish_time and 'seconds' not in publish_time and 'minute' not in publish_time and 'minutes' not in publish_time and 'hour' not in publish_time and 'hours' not in publish_time:
-                    continue
-
-                guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))
-                text_channel = discord.utils.get(guild.text_channels, id=int(channel[3]))
-                ping_role = discord.utils.get(guild.roles, id=int(channel[5])) if channel[5] != 'None' else None
+                guild: discord.Guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))
+                text_channel: discord.TextChannel = discord.utils.get(guild.text_channels, id=int(channel[3]))
+                ping_role: discord.Role | None = discord.utils.get(guild.roles, id=int(channel[5])) if channel[5] != 'None' else None
 
                 webhooks = await text_channel.webhooks()
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
@@ -398,13 +382,15 @@ class Events(commands.Cog):
                 else:
                     ping_string = "everyone"
 
-                await webhook.send(
-                    f'Hey {ping_string}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={latest_video_id}',
-                    username=f'{self.bot.user.name} YouTube Notifier',
-                    avatar_url=self.bot.user.avatar)  # Send the message to the webhook
+                for video_id in list(reversed(notifiable_videos)):
+                    await webhook.send(
+                        f'Hey {ping_string}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={video_id}',
+                        username=f'{self.bot.user.name} YouTube Notifier',
+                        avatar_url=self.bot.user.avatar)  # Send the message to the webhook
 
-                sql.update(table='youtube', column='latest_video_id', value=f"'{latest_video_id}'",
-                           where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
+                sql.update(table='youtube', column='latest_video_id', value=f"'{notifiable_videos[0]}'",
+                            where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
+
         except Exception as e:
             status = f'An error occurred in check_for_videos: {e}'
         else:

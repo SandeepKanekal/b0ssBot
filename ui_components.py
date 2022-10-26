@@ -625,7 +625,7 @@ class TicTacToeView(discord.ui.View):
             await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
 
         await message.delete()
-        await interaction.delete_original_message()
+        await interaction.delete_original_response()
 
 
 # noinspection PyUnusedLocal
@@ -1147,7 +1147,7 @@ class ReportModal(discord.ui.Modal):
 
         if self.type_ == 'Reject':
             await interaction.response.edit_message(content=None)
-            await interaction.delete_original_message()
+            await interaction.delete_original_response()
         else:
             await interaction.response.edit_message(content=None, view=None)
 

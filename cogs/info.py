@@ -186,7 +186,7 @@ class Info(commands.Cog):
 
         embed = discord.Embed(
             description=f'I am {self.bot.user.name}! I was created by Dose#7204. I was coded using the [pycord](https://github.com/Pycord-Development/pycord) library and my code is available [here](https://github.com/SandeepKanekal/b0ssBot). Though I am a multipurpose bot, my best feature is the internet commands. Use the help command to get to know all my commands.',
-            colour=self.bot.user.colour, timestamp=datetime.datetime.now())
+            colour=0x0c1e4a, timestamp=datetime.datetime.now())
 
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
         embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
@@ -224,7 +224,7 @@ class Info(commands.Cog):
             title='Changelog',
             url='https://github.com/SandeepKanekal/b0ssBot/blob/main/CHANGELOG.md',
             description=changelog,
-            colour=self.bot.user.colour,
+            colour=0x0c1e4a,
             timestamp=datetime.datetime.now(),
         ).set_thumbnail(url=self.bot.user.avatar)
         await ctx.send(embed=embed)
@@ -244,7 +244,7 @@ class Info(commands.Cog):
         await ctx.send(
             embed=discord.Embed(
                 description=f'The bot was started on {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}.',
-                colour=self.bot.user.colour
+                colour=0x0c1e4a
             )
         )
 

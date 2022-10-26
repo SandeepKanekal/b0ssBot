@@ -249,7 +249,7 @@ class Slash(commands.Cog):
 
         # Respond to the user
         await ctx.respond(
-            f'NOTE: This command requires **Send Webhooks** to be enabled in {text_channel.mention}',
+            f'NOTE: This command requires **Manage Webhooks** to be enabled in {text_channel.mention}',
             embed=discord.Embed(
                 colour=0xFF0000,
                 description=f'YouTube notifications for the channel **[{channel["items"][0]["snippet"]["title"]}](https://youtube.com/channel/{channel["items"][0]["id"]})** will now be sent to {text_channel.mention}').set_thumbnail(

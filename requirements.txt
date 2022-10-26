@@ -1,4 +1,4 @@
-git+https://github.com/Pycord-Development/pycord
+py-cord
 youtube-dl
 PyNaCl
 asyncpraw
@@ -6,7 +6,6 @@ Flask
 lyrics_extractor
 wikipedia
 google-api-python-client
-youtube-search-python
 psycopg2-binary
 pillow
 qrcode
