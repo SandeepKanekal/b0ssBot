@@ -1060,58 +1060,58 @@ class Moderation(commands.Cog):
         await send_webhook(channel, embed, self.bot)
 
     @commands.Cog.listener()
-    async def on_thread_member_join(self, member: discord.Member) -> None:
+    async def on_thread_member_join(self, member: discord.ThreadMember) -> None:
         """
         Event listener for when a member joins a thread.
 
         :param member: The member that joined the thread
 
-        :type member: discord.Member
+        :type member: discord.ThreadMember
 
         :return: None
         :rtype: None
         """
-        if not modlog_enabled(member.guild.id):  # Check if modlog is enabled
+        if not modlog_enabled(member.thread.guild.id):  # Check if modlog is enabled
             return
 
-        channel = get_mod_channel(member.guild)
+        channel = get_mod_channel(member.thread.guild)
 
         # Make embed
         embed = discord.Embed(
             title=f'Member joined thread in #{member.thread.parent.name}',
-            description=f'{member.mention} has joined {member.thread.mention}',
+            description=f'{discord.utils.get(member.thread.guild.members, id=member.id).mention} has joined {member.thread.mention}',
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=member.guild.name, icon_url=member.guild.icon or discord.Embed.Empty).set_footer(
+        ).set_author(name=member.thread.guild.name, icon_url=member.thread.guild.icon or discord.Embed.Empty).set_footer(
             text=f'ID: {member.thread.id}')
 
         # Send webhook
         await send_webhook(channel, embed, self.bot)
 
     @commands.Cog.listener()
-    async def on_thread_member_remove(self, member: discord.Member) -> None:
+    async def on_thread_member_remove(self, member: discord.ThreadMember) -> None:
         """
         Event listener for when a member leaves a thread.
 
         :param member: The member that left the thread
 
-        :type member: discord.Member
+        :type member: discord.ThreadMember
 
         :return: None
         :rtype: None
         """
-        if not modlog_enabled(member.guild.id):
+        if not modlog_enabled(member.thread.guild.id):
             return
 
-        channel = get_mod_channel(member.guild)
+        channel = get_mod_channel(member.thread.guild)
 
         # Make embed
         embed = discord.Embed(
             title=f'Member left thread in #{member.thread.parent.name}',
-            description=f'{member.mention} has left {member.thread.mention}',
+            description=f'{discord.utils.get(member.thread.guild.members, id=member.id).mention} has left {member.thread.mention}',
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
-        ).set_author(name=member.guild.name, icon_url=member.guild.icon or discord.Embed.Empty).set_footer(
+        ).set_author(name=member.thread.guild.name, icon_url=member.thread.guild.icon or discord.Embed.Empty).set_footer(
             text=f'ID: {member.thread.id}')
 
         # Send webhook

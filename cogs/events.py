@@ -6,7 +6,7 @@ import discord
 import random
 from sql_tools import SQL
 from discord.ext import commands, tasks
-from tools import update_nick_name
+from tools import update_nick_name, translate
 import scrapetube as youtube
 
 
@@ -365,7 +365,7 @@ class Events(commands.Cog):
                 if not notifiable_videos:
                     continue
                 
-                if 'Sekunde' not in publish_dates[0] and 'Sekunden' not in publish_dates[0] and 'Minute' not in publish_dates[0] and 'Minuten' not in publish_dates[0] and 'Stunde' not in publish_dates[0] and 'Stunden' not in publish_dates[0]:
+                if 'second' not in translate(publish_dates[0]).lower() and 'seconds' not in translate(publish_dates[0]).lower() and 'minute' not in translate(publish_dates[0]).lower() and 'minutes' not in translate(publish_dates[0]).lower() and 'hour' not in translate(publish_dates[0]).lower() and 'hours' not in translate(publish_dates[0]).lower():
                     continue
 
                 guild: discord.Guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))

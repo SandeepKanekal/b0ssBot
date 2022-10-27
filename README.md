@@ -12,10 +12,12 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [google-api-python-client](https://pypi.org/project/google-api-python-client/)
 + [psycopg2](https://pypi.org/project/psycopg2/)
 + [pillow](https://pypi.org/project/Pillow/)
-+ [youtube-search-python](https://pypi.org/project/youtube-search-python/)
 + [pyzbar](https://pypi.org/project/pyzbar/)
 + [qrcode](https://pypi.org/project/qrcode/)
 + [imgurpython](https://pypi.org/project/imgurpython/)
++ [wheel](https://pypi.org/project/wheel)
++ [scrapetube](https://pypi.org/project/scrapetube)
++ [googletrans](https://pypi.org/project/googletrans)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics

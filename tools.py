@@ -10,6 +10,7 @@ from discord.ext.commands import Bot
 from asyncpraw.reddit import Submission
 from typing import List, Dict
 from googleapiclient.discovery import build
+from googletrans import Translator
 
 
 # A function to send embeds when there are false calls or errors
@@ -170,10 +171,32 @@ def update_nick_name(nick_name: str) -> str:
     """
     Removes '[AFK]' from a nickname
     
-    :param nick_name: The nickname to remove '[AFK]' from
-    :type nick_name: str
+    Parameters
+    ----------
+    nick_name : str
+        The nickname to remove '[AFK]' from
     
-    :return: The nickname without '[AFK]'
-    :rtype: str
+    Returns
+    -------
+    str
+        Nickname without '[AFK]'
     """
     return " ".join(nick_name.split()[1:]) if '[AFK]' in nick_name.split() else nick_name
+
+
+def translate(text: str) -> str:
+    """
+    Translates the text to english
+
+    Parameters
+    ----------
+    text : str
+        The text to translate
+
+    Returns
+    -------
+    str
+        The translated text
+    """
+    tr = Translator()
+    return tr.translate(text).text

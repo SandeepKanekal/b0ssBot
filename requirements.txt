@@ -12,3 +12,5 @@ qrcode
 imgurpython
 python-dotenv
 wheel
+scrapetube
+googletrans==4.0.0rc1

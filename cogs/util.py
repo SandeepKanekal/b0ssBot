@@ -5,6 +5,7 @@ import contextlib
 import discord
 import datetime
 import os
+import json
 from tools import send_error_embed, convert_to_unix_time, inform_owner
 from sql_tools import SQL
 from discord.ext import commands
@@ -486,6 +487,65 @@ class Util(commands.Cog):
         await send_error_embed(ctx,
                                description='An error has occurred while running the mentions command! The owner has been notified.')
         await inform_owner(self.bot, error)
+    
+    @commands.command(name='embedsource', aliases=['es'], description='Get embed data in a json file', usage='embedsource <message_id>')
+    async def embedsource(self, ctx: commands.Context, message_id: int):
+        """
+        Get embed data in a json file
+
+        :param ctx: The context of the command
+        :param message_id: The message ID to get the embeds from
+
+        :type ctx: commands.Context
+        :type message_id: int
+
+        :return: None
+        :rtype: None
+        """
+        message = self.bot.get_message(message_id)
+        if message is None:
+            await ctx.reply('Message not found!')
+            return
+        
+        if message.guild.id != ctx.guild.id:
+            await ctx.reply('Message not found!')
+            return
+        
+        if not message.embeds:
+            await ctx.reply('No embeds present in the message!')
+            return
+        
+        embed_data = [embed.to_dict() for embed in message.embeds]
+
+        with open(f'embed_data_{message.id}.json', 'w') as f:
+            json.dump(embed_data, f, indent=3)
+        
+        await ctx.reply(file=discord.File(f'embed_data_{message.id}.json', 'embed_data.json'))
+
+        os.remove(f'embed_data_{message.id}.json')
+    
+    @embedsource.error
+    async def embedsource_error(self, ctx: commands.Context, error: commands.CommandError):
+        """
+        Error handler for the embedsource command
+
+        :param ctx: The context of where the command was used
+        :param error: The error that occurred
+
+        :type ctx: commands.Context
+        :type error: commands.CommandError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error, commands.BadArgument):
+            await send_error_embed(ctx, 'Invalid message ID provided!')
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await send_error_embed(ctx,
+                                   description=f'Provide a message ID\n\nProper Usage: `{self.bot.get_command("embedsource").usage}`')
+        else:
+            await send_error_embed(ctx, 'An error has occurred while running the embedsource command! The owner has been notified.')
+            await inform_owner(self.bot, error)
 
 
 def setup(bot: commands.Bot):
