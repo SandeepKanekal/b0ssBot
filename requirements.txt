@@ -2,8 +2,7 @@ py-cord
 youtube-dl
 PyNaCl
 asyncpraw
-Flask
-lyrics_extractor
+lyrics-extractor
 wikipedia
 google-api-python-client
 psycopg2-binary

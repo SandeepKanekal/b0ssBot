@@ -176,7 +176,11 @@ class Context(commands.Cog):
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
         
-        embed.add_field(name='Permissions', value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]), inline=False)
+        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
+
+        embed.add_field(name='Key Permission',
+                        value=', '.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if p[0] in key_permissions and p[1]),
+                        inline=False)
 
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)

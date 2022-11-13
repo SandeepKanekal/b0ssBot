@@ -118,10 +118,13 @@ class Slash(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
+        
+        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
 
-        embed.add_field(name='Permissions',
-                        value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]),
+        embed.add_field(name='Key Permission',
+                        value=', '.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if p[0] in key_permissions and p[1]),
                         inline=False)
+
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
 
@@ -1351,8 +1354,7 @@ class Slash(commands.Cog):
     async def code(self, ctx: discord.ApplicationContext,
                    module: Option(str, description='The module to get the code for', required=True,
                                   choices=['context', 'events', 'fun', 'help', 'info', 'internet', 'misc', 'music',
-                                           'moderation',
-                                           'util', 'owner', 'slash', 'games', 'main', 'keep_alive', 'sql_tools',
+                                           'moderation', 'util', 'owner', 'slash', 'games', 'main', 'sql_tools',
                                            'tools', 'ui_components'])
                    ):
         """
@@ -1418,10 +1420,6 @@ class Slash(commands.Cog):
         rgb_colour = role.colour.to_rgb()  # type: tuple[int, int, int]
         hex_colour = str(role.colour)  # type: str
 
-        # Getting the permissions of the role
-        permissions = [permission[0].replace('_', ' ').title() for permission in role.permissions if
-                       permission[1]]  # type: list[str]
-
         embed = discord.Embed(colour=role.colour, timestamp=datetime.datetime.now())
         embed.set_footer(text=f'ID: {role.id}')
         embed.set_thumbnail(url=role.icon or discord.Embed.Empty)
@@ -1435,7 +1433,10 @@ class Slash(commands.Cog):
         embed.add_field(name='Mentionable', value=str(role.mentionable), inline=True)
         embed.add_field(name='Position', value=str(role.position), inline=True)
         embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
-        embed.add_field(name='Permissions', value=', '.join(permissions) or 'None', inline=False)
+
+        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
+        embed.add_field(name='Key Permissions', value=', '.join(p[0].replace('_', ' ').title() for p in role.permissions if p[0] in key_permissions and p[1]),
+                        inline=False)
 
         await ctx.respond(embed=embed)
 
@@ -1602,7 +1603,7 @@ class Slash(commands.Cog):
         """
         embed = discord.Embed(title='This is the title', description='This is the description')
         await ctx.respond(content='This is how the embed will look!', embed=embed,
-                          view=EmbedView(ctx.author.id, embed, channel, timeout=None))
+                          view=EmbedView(ctx.author, embed, channel, timeout=None))
 
     @embed.error
     async def embed_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
@@ -1926,7 +1927,7 @@ class Slash(commands.Cog):
 
         # Check if serverjoin already exists
         roles = sql.select(['member_role_id', 'bot_role_id'], 'serverjoin', where=f"guild_id = '{ctx.guild.id}'")
-        if roles and not roles[0][0] and not roles[0][1]:
+        if roles and (roles[0][0] or roles[0][1]):
             await ctx.respond('Server join already exists, use the update subcommand instead', ephemeral=True)
             return
 

@@ -905,7 +905,7 @@ class EmbedViewModal(discord.ui.Modal):
 
         elif self.edit_type == 'remove field':
             try:
-                self.embed.remove_field(int(self.children[0].value - 1))
+                self.embed.remove_field(int(self.children[0].value) - 1)
             except ValueError:
                 await interaction.response.send_message('Enter an integer!', ephemeral=True)
                 self.stop()

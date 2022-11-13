@@ -4,6 +4,7 @@ import contextlib
 import os
 import discord
 import random
+import datetime
 from sql_tools import SQL
 from discord.ext import commands, tasks
 from tools import update_nick_name, translate
@@ -38,9 +39,10 @@ class Events(commands.Cog):
         # Change presence
         await self.bot.change_presence(activity=discord.Game(name='The Game Of b0sses'))
 
-        # Start background tasks
-        self.check_for_videos.start()
-        self.clear_ytdl_cache.start()
+        with contextlib.suppress(RuntimeError):
+            # Start background tasks
+            self.check_for_videos.start()
+            self.clear_ytdl_cache.start()
 
         # Clear the data in the music tables
         sql = SQL(os.getenv('sql_db_name'))
@@ -64,6 +66,9 @@ class Events(commands.Cog):
         """
         sql = SQL(os.getenv('sql_db_name'))  # type: SQL
         if message.author.bot:  # Ignore bots
+            return
+
+        if not message.guild:
             return
 
         message.content = message.content.replace("'", "''")  # Replace single quotes with double quotes
@@ -171,7 +176,7 @@ class Events(commands.Cog):
             await ctx.send(response)
 
     @commands.Cog.listener()
-    async def on_guild_join(self, guild) -> None:
+    async def on_guild_join(self, guild: discord.Guild) -> None:
         """
         Bot activity on joining a guild
         
@@ -192,13 +197,13 @@ class Events(commands.Cog):
         if guild.system_channel:  # Send an informative embed to the guild's system channel
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{guild.id}'")
             embed = discord.Embed(
-                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**. You can change my prefix using the slash command: `/prefix`!',
+                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**. You can change my prefix using the slash command: {self.bot.get_application_command("prefix").mention}!',
                 colour=0x0c1e4a)
             embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
             await guild.system_channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_guild_remove(self, guild) -> None:
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
         """
         Bot activity on leaving a guild
 
@@ -396,7 +401,7 @@ class Events(commands.Cog):
         else:
             status += " Function executed without errors!"
         finally:
-            print(status)
+            print(f'{status} @ {datetime.datetime.now() + datetime.timedelta(hours=0) + datetime.timedelta(minutes=0)}')
 
 
 # Setup

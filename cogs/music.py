@@ -1114,12 +1114,12 @@ class Music(commands.Cog):
         :rtype: None
         """
         async with ctx.typing():
-            vc = ctx.guild.voice_client
             lyrics = ''
             title = ''
 
             # If the query is of type None, this means the user wants the lyrics of the current playing track
             if query is None:
+                vc = ctx.guild.voice_client
                 # Basic responses to false calls
                 if vc is None:
                     raise PlayerNotConnectedToVoiceChannel('The player is not connected to a voice channel')

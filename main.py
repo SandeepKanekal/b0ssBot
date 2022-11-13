@@ -1,13 +1,13 @@
 # Copyright (c) 2022 Sandeep Kanekal
 # Main module
 import discord
-import keep_alive
 import os
 from dotenv import load_dotenv
 from discord.ext import commands
 from sql_tools import SQL
 
 
+load_dotenv()
 sql = SQL(os.getenv('sql_db_name'))
 
 
@@ -18,7 +18,6 @@ def get_prefix(bot: commands.Bot, message: discord.Message) -> str:
 
 def main():
     # Pre-run requirements
-    load_dotenv()
     bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents=discord.Intents.all())
     bot.remove_command('help')
 
@@ -27,7 +26,6 @@ def main():
         if filename.endswith('.py'):
             bot.load_extension(f'cogs.{filename[:-3]}')
 
-    keep_alive.keep_alive()  # Keep alive
     bot.run(os.getenv('TOKEN'))  # Starts the bot
 
 

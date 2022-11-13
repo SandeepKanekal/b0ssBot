@@ -3,7 +3,6 @@ A discord bot for fun, moderation, and music! Adding features everyday
 
 # Package requisites
 + [py-cord 2.0+](https://github.com/Pycord-Development/pycord)
-+ [Flask](https://pypi.org/project/Flask/)
 + [FFmpeg](https://www.ffmpeg.org/)
 + [asyncpraw](https://pypi.org/project/asyncpraw/)
 + [PyNaCl](https://pypi.org/project/PyNaCl/)

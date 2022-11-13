@@ -75,10 +75,13 @@ class Info(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
+        
+        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
 
-        embed.add_field(name='Permissions',
-                        value=', '.join([p[0].replace('_', ' ').title() for p in member.guild_permissions if p[1]]),
+        embed.add_field(name='Key Permission',
+                        value=', '.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if p[0] in key_permissions and p[1]),
                         inline=False)
+
         embed.add_field(name='Joined', value=joined_at, inline=True)
         embed.add_field(name='Registered', value=registered_at, inline=True)
 
@@ -104,7 +107,7 @@ class Info(commands.Cog):
             return
         await send_error_embed(ctx,
                                description='An error occurred while running the userinfo command! The owner has been notified.')
-        await inform_owner(ctx, error)
+        await inform_owner(self.bot, error)
 
     # Serverinfo command
     @commands.command(aliases=['si', 'server'], description='Shows the server information', usage='serverinfo')
@@ -289,8 +292,9 @@ class Info(commands.Cog):
         embed.add_field(name='Mentionable', value=str(role.mentionable), inline=True)
         embed.add_field(name='Position', value=str(role.position), inline=True)
         embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
-        embed.add_field(name='Permissions', value=', '.join(
-            [permission[0].replace('_', ' ').title() for permission in role.permissions if permission[1]]) or 'None',
+
+        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
+        embed.add_field(name='Key Permissions', value=', '.join(p[0].replace('_', ' ').title() for p in role.permissions if p[0] in key_permissions and p[1]),
                         inline=False)
 
         await ctx.send(embed=embed)
