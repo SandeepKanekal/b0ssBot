@@ -62,8 +62,8 @@ class Info(commands.Cog):
 
         # Set details
         embed.set_footer(text=f'ID: {member.id}')
-        embed.set_thumbnail(url=member.display_avatar)
-        embed.set_author(name=str(member), icon_url=member.display_avatar)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_author(name=str(member), icon_url=member.display_avatar.url)
         embed.set_image(url=member.banner or discord.Embed.Empty)
 
         # Add fields
@@ -191,8 +191,8 @@ class Info(commands.Cog):
             description=f'I am {self.bot.user.name}! I was created by Dose#7204. I was coded using the [pycord](https://github.com/Pycord-Development/pycord) library and my code is available [here](https://github.com/SandeepKanekal/b0ssBot). Though I am a multipurpose bot, my best feature is the internet commands. Use the help command to get to know all my commands.',
             colour=0x0c1e4a, timestamp=datetime.datetime.now())
 
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar.url)
 
         embed.add_field(name='Bot Username', value=self.bot.user.name, inline=True)
         embed.add_field(name='Bot Owner', value='Dose#7204')
@@ -229,7 +229,7 @@ class Info(commands.Cog):
             description=changelog,
             colour=0x0c1e4a,
             timestamp=datetime.datetime.now(),
-        ).set_thumbnail(url=self.bot.user.avatar)
+        ).set_thumbnail(url=self.bot.user.avatar.url)
         await ctx.send(embed=embed)
 
     @commands.command(name='uptime', description='Shows the bot\'s uptime', usage='uptime')

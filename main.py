@@ -13,7 +13,8 @@ sql = SQL(os.getenv('sql_db_name'))
 
 # noinspection PyShadowingNames,PyUnusedLocal
 def get_prefix(bot: commands.Bot, message: discord.Message) -> str:
-    return sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{message.guild.id}\'')[0][0]
+    if message.guild is not None:
+        return sql.select(elements=['prefix'], table='prefixes', where=f'guild_id = \'{message.guild.id}\'')[0][0]
 
 
 def main():

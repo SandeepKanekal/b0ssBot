@@ -79,7 +79,7 @@ async def send_webhook(channel: discord.TextChannel, embed: discord.Embed, bot: 
     webhook = discord.utils.get(webhooks, name=f'{bot.user.name} Logging')
     if webhook is None:
         webhook = await channel.create_webhook(name=f'{bot.user.name} Logging')
-    await webhook.send(embed=embed, username=f'{bot.user.name} Logging', avatar_url=bot.user.avatar)
+    await webhook.send(embed=embed, username=f'{bot.user.name} Logging', avatar_url=bot.user.avatar.url)
 
 
 class Moderation(commands.Cog):
@@ -120,7 +120,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_author(name=member.name, icon_url=member.display_avatar)
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
         embed.set_footer(text=f'ID: {member.id}')
 
         # Send webhook
@@ -150,7 +150,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.red(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_author(name=member.name, icon_url=member.display_avatar)
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
         embed.set_footer(text=f'ID: {member.id}')
 
         # Send webhook
@@ -185,7 +185,7 @@ class Moderation(commands.Cog):
             timestamp=datetime.datetime.now()
         )
         embed.set_author(name=message.author.name,
-                         icon_url=message.author.avatar or message.author.default_avatar)
+                         icon_url=message.author.avatar.url or message.author.default_avatar)
         if message.attachments:  # If message has attachments
             embed.add_field(name='Attachments',
                             value='\n'.join([attachment.url for attachment in message.attachments]))
@@ -200,7 +200,7 @@ class Moderation(commands.Cog):
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
             await webhook.send(content='Message contained embeds', embeds=message.embeds,
-                               username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+                               username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar.url)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
@@ -237,7 +237,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_author(name=before.author.name, icon_url=after.author.display_avatar)
+        embed.set_author(name=before.author.name, icon_url=after.author.display_avatar.url)
         embed.set_footer(text=f'ID: {before.id}')
 
         # Send webhook
@@ -277,7 +277,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_author(name=user.name, icon_url=user.display_avatar)
+        embed.set_author(name=user.name, icon_url=user.display_avatar.url)
         embed.set_footer(text=f'ID: {user.id}')
 
         # Send webhook
@@ -309,7 +309,7 @@ class Moderation(commands.Cog):
             colour=discord.Colour.green(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_author(name=user.name, icon_url=user.display_avatar)
+        embed.set_author(name=user.name, icon_url=user.display_avatar.url)
         embed.set_footer(text=f'ID: {user.id}')
 
         # Send webhook
@@ -421,7 +421,7 @@ class Moderation(commands.Cog):
         if webhook is None:
             webhook = await mod_channel.create_webhook(name=f'{self.bot.user.name} Logging')
         await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging',
-                           avatar_url=self.bot.user.avatar)
+                           avatar_url=self.bot.user.avatar.url)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
@@ -592,7 +592,7 @@ class Moderation(commands.Cog):
         if webhook is None:
             webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
         await webhook.send(embeds=embeds, username=f'{self.bot.user.name} Logging',
-                           avatar_url=self.bot.user.avatar)
+                           avatar_url=self.bot.user.avatar.url)
 
     @commands.Cog.listener()
     async def on_guild_emojis_update(self, guild: discord.Guild, before: list[discord.Emoji],
@@ -669,7 +669,7 @@ class Moderation(commands.Cog):
         elif before.channel != after.channel:  # noinspection PyUnresolvedReferences
             embed.description = f'{member.mention} has moved from {before.channel.mention} to {after.channel.mention}'
 
-        embed.set_author(name=member.name, icon_url=member.display_avatar)
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
         embed.set_footer(text=f'ID: {member.id}')
 
         if embed.description:
@@ -678,7 +678,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar.url)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
@@ -727,7 +727,7 @@ class Moderation(commands.Cog):
                     timestamp=datetime.datetime.now()
                 )
 
-            embed.set_author(name=after.name, icon_url=after.display_avatar)
+            embed.set_author(name=after.name, icon_url=after.display_avatar.url)
             embed.set_footer(text=f'ID: {before.id}')
 
             # Send webhook
@@ -735,7 +735,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar.url)
 
         if before.nick != after.nick:  # Check if nickname was changed
             # Make embed
@@ -756,7 +756,7 @@ class Moderation(commands.Cog):
             webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging')
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
-            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar)
+            await webhook.send(embed=embed, username=f'{self.bot.user.name} Logging', avatar_url=self.bot.user.avatar.url)
 
     @commands.Cog.listener()
     async def on_user_update(self, before: discord.User, after: discord.User) -> None:
@@ -783,16 +783,16 @@ class Moderation(commands.Cog):
             )
             embeds.append(embed)
 
-        if before.avatar != after.avatar:
+        if before.display_avatar.url != after.display_avatar.url:
             embed = discord.Embed(
                 title='Avatar update',
                 description=f'{before.mention}\'s previous avatar -->',
                 colour=discord.Colour.green(),
                 timestamp=datetime.datetime.now()
             )
-            embed.set_thumbnail(url=before.avatar or before.default_avatar)
-            embed.add_field(name='New Avatar', value=f'[Click here]({after.avatar or after.default_avatar})')
-            embed.set_image(url=after.avatar or after.default_avatar)
+            embed.set_thumbnail(url=before.display_avatar.url)
+            embed.add_field(name='New Avatar', value=f'[Click here]({after.display_avatar.url})')
+            embed.set_image(url=after.display_avatar.url)
             embeds.append(embed)
 
         if before.discriminator != after.discriminator:
@@ -813,7 +813,7 @@ class Moderation(commands.Cog):
             channel = get_mod_channel(guild)
 
             for embed in embeds:
-                embed.set_author(name=after.name, icon_url=after.display_avatar)
+                embed.set_author(name=after.name, icon_url=after.display_avatar.url)
                 embed.set_footer(text=f'ID: {before.id}')
 
             # Send webhook
@@ -822,7 +822,7 @@ class Moderation(commands.Cog):
             if webhook is None:
                 webhook = await channel.create_webhook(name=f'{self.bot.user.name} Logging')
             await webhook.send(embeds=embeds, username=f'{self.bot.user.name} Logging',
-                               avatar_url=self.bot.user.avatar)
+                               avatar_url=self.bot.user.avatar.url)
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]) -> None:

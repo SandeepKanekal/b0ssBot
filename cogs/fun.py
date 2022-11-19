@@ -132,7 +132,7 @@ class Fun(commands.Cog):
         async with ctx.typing():
             member = member or ctx.author
 
-            response = requests.get(str(member.display_avatar))
+            response = requests.get(str(member.display_avatar.url))
 
             # Save the image
             with open(f'avatar_{member.id}.png', 'wb') as f:
@@ -202,7 +202,7 @@ class Fun(commands.Cog):
         :rtype: None
         """
         async with ctx.typing():
-            response = requests.get('https://www.boredapi.com/api/activity/', verify=False).json()
+            response = requests.get('https://www.boredapi.com/api/activity/').json()
 
             embed = discord.Embed(description=f'{response["activity"]}.', timestamp=datetime.datetime.now(),
                                   colour=discord.Colour.random()).set_footer(text=f'Type: {response["type"].upper()}')

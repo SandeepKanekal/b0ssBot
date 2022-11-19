@@ -173,8 +173,8 @@ class Util(commands.Cog):
         # Create embed
         embed = discord.Embed(title='AFK', description=f'{member.mention} has gone AFK', colour=member.colour,
                               timestamp=datetime.datetime.now())
-        embed.set_thumbnail(url=member.display_avatar)
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
         embed.add_field(name='AFK note', value=reason.replace("''", "'"))
 
         await ctx.send(embed=embed)
@@ -338,15 +338,15 @@ class Util(commands.Cog):
 
         # Get the message and respond appropriately
         try:
-            message = await ctx.fetch_message(message_id)
+            message = await ctx.fetch_message(int(message_id))
         except discord.NotFound:
             await send_error_embed(ctx, description='Message not found')
         else:
             embed = discord.Embed(colour=message.author.colour, timestamp=datetime.datetime.now())
-            embed.set_author(name=message.author, icon_url=message.author.display_avatar, url=message.jump_url)
+            embed.set_author(name=message.author, icon_url=message.author.display_avatar.url, url=message.jump_url)
             embed.add_field(name=message.content or "Message does not contain content",
                             value=f'\n[Jump to message]({message.jump_url})')
-            embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+            embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar.url)
             await ctx.send(embed=embed)
 
             if message.embeds:
@@ -462,7 +462,7 @@ class Util(commands.Cog):
                 colour=member.colour,
                 timestamp=datetime.datetime.now()
             )
-            embed.set_author(name=member.name, icon_url=member.display_avatar)
+            embed.set_author(name=member.name, icon_url=member.display_avatar.url)
             embed.set_footer(text=f'Previous 500 messages mentioning {member}')
 
             await ctx.send(embed=embed)
@@ -502,8 +502,9 @@ class Util(commands.Cog):
         :return: None
         :rtype: None
         """
-        message = self.bot.get_message(message_id)
-        if message is None:
+        try:
+            message = await ctx.fetch_message(message_id)
+        except discord.NotFound:
             await ctx.reply('Message not found!')
             return
         

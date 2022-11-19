@@ -5,6 +5,7 @@ import os
 import qrcode
 import requests
 import datetime
+import json
 from PIL import Image, ImageChops
 from discord.ext import commands
 from tools import convert_to_unix_time, inform_owner
@@ -57,7 +58,7 @@ class Context(commands.Cog):
         img.save(f'QR_{message.id}.png')
 
         # Send the image
-        await ctx.respond(content=f'Message: {message.jump_url}', file=discord.File(f'QR_{message.id}.png', 'QR.png'))
+        await ctx.respond(content=f'[Jump to message]({message.jump_url})', file=discord.File(f'QR_{message.id}.png', 'QR.png'))
 
         # Delete the saved image
         os.remove(f'QR_{message.id}.png')
@@ -104,7 +105,7 @@ class Context(commands.Cog):
             title='QR Scan results', 
             description=f'[Jump to message]({message.jump_url})', 
             colour=0x848585
-        ).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar)
+        ).set_footer(text='QR Scanner', icon_url=self.bot.user.avatar.url)
 
         url = 'https://api.qrserver.com/v1/read-qr-code/?fileurl='
 
@@ -162,9 +163,9 @@ class Context(commands.Cog):
 
         # Creating the embed
         embed = discord.Embed(colour=member.colour, timestamp=datetime.datetime.now())
-        embed.set_author(name=str(member), icon_url=member.display_avatar)
+        embed.set_author(name=str(member), icon_url=member.display_avatar.url)
         embed.set_footer(text=f'ID: {member.id}')
-        embed.set_thumbnail(url=member.display_avatar)
+        embed.set_thumbnail(url=member.display_avatar.url)
 
         # Adding the fields
         embed.add_field(name='Display Name', value=member.mention, inline=True)
@@ -232,7 +233,7 @@ class Context(commands.Cog):
             # Add the file to the list
             files.append(discord.File(f'{index}_{message.id}_inverted.png', filename='invert.png'))
 
-        await ctx.respond(f'Message: {message.jump_url}{content}', files=files)
+        await ctx.respond(f'[Jump to message]({message.jump_url}){content}', files=files)
 
         files = None  # Raises PermissionError if not set to None before deletion of files.
 
@@ -256,6 +257,53 @@ class Context(commands.Cog):
         :rtype: None
         """
         await ctx.respond('There was an error inverting the attachments! The owner has been informed', ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    @commands.message_command(name='Embed source')
+    async def embed_source(self, ctx: discord.ApplicationContext, message: discord.Message):
+        """
+        Gets the source for all the embeds in a message
+
+        :param ctx: The context of the command
+        :param message: The message to get the embeds from
+
+        :type ctx: discord.ApplicationContext
+        :type message: discord.Message
+
+        :return: None
+        :rtype: None
+        """
+        if not message.embeds:
+            await ctx.respond('No embeds present in the message!', ephemeral=True)
+            return
+        
+        embed_data = [embed.to_dict() for embed in message.embeds]
+
+        with open(f'embed_data_{message.id}.json', 'w') as f:
+            json.dump(embed_data, f, indent=3)
+        
+        await ctx.respond(
+            content=f'[Jump to message]({message.jump_url})', 
+            file=discord.File(f'embed_data_{message.id}.json', 'embed_data.json')
+        )
+
+        os.remove(f'embed_data_{message.id}.json')
+    
+    @embed_source.error
+    async def embed_source_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the embed_source command
+
+        :param ctx: The context of where the message was sent
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond('There was an error getting the embed source! The owner has been informed', ephemeral=True)
         await inform_owner(self.bot, error)
 
 

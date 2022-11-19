@@ -111,10 +111,10 @@ class Games(commands.Cog):
         """
 
         msg = await ctx.send('**Rolling**')
-        await msg.edit('**Rolling.**')
-        await msg.edit('**Rolling..**')
-        await msg.edit('**Rolling...**')
-        await msg.edit(f'**You rolled a {random.randint(1, 6)}! :game_die:**',
+        await msg.edit(content='**Rolling.**')
+        await msg.edit(content='**Rolling..**')
+        await msg.edit(content='**Rolling...**')
+        await msg.edit(content=f'**You rolled a {random.randint(1, 6)}! :game_die:**',
                        view=ui.RollView(ctx=ctx, message_id=msg.id, timeout=None))
 
     # Coinflip command
@@ -132,10 +132,10 @@ class Games(commands.Cog):
         :rtype: None
         """
         msg = await ctx.send('**Flipping**')
-        await msg.edit('**Flipping.**')
-        await msg.edit('**Flipping..**')
-        await msg.edit('**Flipping...**')
-        await msg.edit(f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**',
+        await msg.edit(content='**Flipping.**')
+        await msg.edit(content='**Flipping..**')
+        await msg.edit(content='**Flipping...**')
+        await msg.edit(content=f'**You flipped a {random.choice(["Heads", "Tails"])}! :coin:**',
                        view=ui.FlipView(ctx=ctx, message_id=msg.id, timeout=None))
 
     @commands.command(name='truth', description='Get a truth question', usage='truth <rating>')
@@ -170,7 +170,7 @@ class Games(commands.Cog):
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
-        embed.set_author(name='Truth', icon_url=self.bot.user.avatar)
+        embed.set_author(name='Truth', icon_url=self.bot.user.avatar.url)
 
         await ctx.send(embed=embed, view=ui.TruthOrDareView(ctx=ctx, timeout=None))
 
@@ -228,7 +228,7 @@ class Games(commands.Cog):
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
-        embed.set_author(name='Dare', icon_url=self.bot.user.avatar)
+        embed.set_author(name='Dare', icon_url=self.bot.user.avatar.url)
         await ctx.send(embed=embed, view=ui.TruthOrDareView(ctx=ctx, timeout=None))
 
     @dare.error
@@ -290,7 +290,7 @@ class Games(commands.Cog):
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
-        embed.set_author(name='Truth or Dare', icon_url=self.bot.user.avatar)
+        embed.set_author(name='Truth or Dare', icon_url=self.bot.user.avatar.url)
         await ctx.send(embed=embed, view=ui.TruthOrDareView(ctx=ctx, timeout=None))
 
     @truthordare.error
@@ -349,7 +349,7 @@ class Games(commands.Cog):
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
-        embed.set_author(name='Would You Rather', icon_url=self.bot.user.avatar)
+        embed.set_author(name='Would You Rather', icon_url=self.bot.user.avatar.url)
         await ctx.send(embed=embed, view=ui.TruthOrDareView(ctx=ctx, timeout=None))
 
     @wouldyourather.error
@@ -407,7 +407,7 @@ class Games(commands.Cog):
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
-        embed.set_author(name='Never Have I Ever', icon_url=self.bot.user.avatar)
+        embed.set_author(name='Never Have I Ever', icon_url=self.bot.user.avatar.url)
         await ctx.send(embed=embed, view=ui.TruthOrDareView(ctx=ctx, timeout=None))
 
     @neverhaveiever.error
@@ -464,7 +464,7 @@ class Games(commands.Cog):
 
         embed = discord.Embed(title=f'{data["question"]}', colour=discord.Colour.random())
         embed.set_footer(text=f'Type: {data["type"]} | Rating: {data["rating"].upper()} | ID: {data["id"]}')
-        embed.set_author(name='Paranoia', icon_url=self.bot.user.avatar)
+        embed.set_author(name='Paranoia', icon_url=self.bot.user.avatar.url)
         await ctx.send(embed=embed, view=ui.TruthOrDareView(ctx=ctx, timeout=None))
 
     @paranoia.error
@@ -515,12 +515,10 @@ class Games(commands.Cog):
         start_time = time.time()
         end_time = start_time + 60
 
-        def check(m):
-            return m.author.id == ctx.author.id and m.channel == ctx.channel
-
         while True:
             try:
-                guess = await self.bot.wait_for('message', check=check, timeout=60)  # type: discord.Message
+                guess = await self.bot.wait_for('message', check=lambda m: m.author.id == ctx.author.id and m.channel.id == ctx.channel.id,
+                                                timeout=60)  # type: discord.Message
             except asyncio.TimeoutError:
                 await ctx.send('You took too long to guess the number!')
                 break

@@ -78,7 +78,8 @@ class Events(commands.Cog):
                       where=f'member_id = \'{message.author.id}\' AND guild_id = \'{message.guild.id}\''):
             # Check if the user is afk
             sql.delete(table='afks',
-                       where=f'member_id = \'{message.author.id}\' and guild_id = \'{message.guild.id}\'')  # Remove the afk
+                       where=f'member_id = \'{message.author.id}\' and guild_id = \'{message.guild.id}\'')  # Remove
+            # the afk
 
             with contextlib.suppress(discord.Forbidden):
                 await message.author.edit(nick=update_nick_name(message.author.display_name))  # Remove the AFK tag
@@ -107,7 +108,7 @@ class Events(commands.Cog):
                             embed=discord.Embed(
                                 description=f'{message.author.mention}, {member.mention} is AFK!\nAFK note: {afk_user[0][2]}',
                                 colour=discord.Colour.red()
-                            ).set_thumbnail(url=member.display_avatar)
+                            ).set_thumbnail(url=member.display_avatar.url)
                         )  # Reply to the user
 
         # Ping reply
@@ -117,7 +118,7 @@ class Events(commands.Cog):
             embed = discord.Embed(
                 description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**',
                 colour=0x0c1e4a)
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
             await message.reply(embed=embed)
 
         # Messageresponse
@@ -145,7 +146,7 @@ class Events(commands.Cog):
                 if webhook is None:
                     webhook = await message.channel.create_webhook(name='Markdown webhook')
                 await webhook.send(message.content.replace("''", "'"), username=message.author.display_name,
-                                   avatar_url=message.author.avatar)  # Send the message to the webhook
+                                   avatar_url=message.author.avatar.url)  # Send the message to the webhook
                 await message.delete()  # Delete original message
 
     @commands.Cog.listener()
@@ -160,19 +161,19 @@ class Events(commands.Cog):
         :return: None
         :rtype: None
         """
-        sql = SQL(os.getenv('sql_db_name'))  # type: SQL
-        prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
-
-        response = random.choice(
-            [
-                f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.',
-                f'Hello there {ctx.author.mention}! You can suggest a feature to the owner! Use {prefix}feature <feature> to suggest a feature.'
-            ]
-        )
 
         # Inform the user about other commands.
         if random.choice([True, False, False, False, False, False, False, False, False,
                           False]) and ctx.command != self.bot.get_command('clear'):
+            sql = SQL(os.getenv('sql_db_name'))  # type: SQL
+            prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{ctx.guild.id}'")[0][0]
+
+            response = random.choice(
+                [
+                    f'Hello there {ctx.author.mention}! You can check all the commands of the bot using the help command. Type {prefix}help to get the response.',
+                    f'Hello there {ctx.author.mention}! You can suggest a feature to the owner! Use {prefix}feature <feature> to suggest a feature.'
+                ]
+            )
             await ctx.send(response)
 
     @commands.Cog.listener()
@@ -197,9 +198,9 @@ class Events(commands.Cog):
         if guild.system_channel:  # Send an informative embed to the guild's system channel
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{guild.id}'")
             embed = discord.Embed(
-                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**. You can change my prefix using the slash command: {self.bot.get_application_command("prefix").mention}!',
+                description=f'Hi! I am **{self.bot.user.name}**! I was coded by **Dose#7204**. My prefix is **{command_prefix[0][0]}**. You can change my prefix using the slash command: {self.bot.get_application_command("prefix", type=discord.SlashCommand).mention}!',
                 colour=0x0c1e4a)
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
             await guild.system_channel.send(embed=embed)
 
     @commands.Cog.listener()
@@ -360,7 +361,7 @@ class Events(commands.Cog):
                 videos = youtube.get_channel(channel[0], limit=20)
                 notifiable_videos = []
                 publish_dates = []
-                
+
                 for video in videos:
                     if video['videoId'] == channel[1]:
                         break
@@ -369,13 +370,18 @@ class Events(commands.Cog):
 
                 if not notifiable_videos:
                     continue
-                
-                if 'second' not in translate(publish_dates[0]).lower() and 'seconds' not in translate(publish_dates[0]).lower() and 'minute' not in translate(publish_dates[0]).lower() and 'minutes' not in translate(publish_dates[0]).lower() and 'hour' not in translate(publish_dates[0]).lower() and 'hours' not in translate(publish_dates[0]).lower():
+
+                if 'second' not in translate(publish_dates[0]).lower() and 'seconds' not in translate(
+                        publish_dates[0]).lower() and 'minute' not in translate(
+                        publish_dates[0]).lower() and 'minutes' not in translate(
+                        publish_dates[0]).lower() and 'hour' not in translate(
+                        publish_dates[0]).lower() and 'hours' not in translate(publish_dates[0]).lower():
                     continue
 
                 guild: discord.Guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))
                 text_channel: discord.TextChannel = discord.utils.get(guild.text_channels, id=int(channel[3]))
-                ping_role: discord.Role | None = discord.utils.get(guild.roles, id=int(channel[5])) if channel[5] != 'None' else None
+                ping_role: discord.Role | None = discord.utils.get(guild.roles, id=int(channel[5])) if channel[
+                                                                                                           5] != 'None' else None
 
                 webhooks = await text_channel.webhooks()
                 webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
@@ -391,10 +397,10 @@ class Events(commands.Cog):
                     await webhook.send(
                         f'Hey {ping_string}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={video_id}',
                         username=f'{self.bot.user.name} YouTube Notifier',
-                        avatar_url=self.bot.user.avatar)  # Send the message to the webhook
+                        avatar_url=self.bot.user.avatar.url)  # Send the message to the webhook
 
                 sql.update(table='youtube', column='latest_video_id', value=f"'{notifiable_videos[0]}'",
-                            where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
+                           where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
 
         except Exception as e:
             status = f'An error occurred in check_for_videos: {e}'

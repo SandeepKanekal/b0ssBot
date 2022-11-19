@@ -187,6 +187,7 @@ class Music(commands.Cog):
                 'thumbnail': info['thumbnail'],
                 'duration': info['duration']}  # Return required details
 
+    # noinspection PyTypeChecker
     async def _send_embed_after_track(self, ctx: commands.Context):
         """
         Sends an embed after the track has finished playing
@@ -248,7 +249,7 @@ class Music(commands.Cog):
         embed = discord.Embed(colour=discord.Colour.blurple())
 
         embed.set_thumbnail(url=song['thumbnail'])
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
         embed.set_footer(
             text=f'Duration: {format_time(song["duration"])}, 📽️: {song["view_count"]}, 👍: {song["like_count"]}'
         )
@@ -562,7 +563,7 @@ class Music(commands.Cog):
 
         # Create embed
         embed = discord.Embed(title='Music Queue', colour=discord.Colour.dark_teal(), timestamp=datetime.datetime.now())
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
 
         # Playlist
         if track := self.sql.select(elements=['title', 'url'], table='playlist', where=f"guild_id = '{ctx.guild.id}'"):
@@ -878,7 +879,7 @@ class Music(commands.Cog):
 
         embed = discord.Embed(description='Disconnected', colour=discord.Colour.green())
         await ctx.send(embed=embed)
-        await vc.disconnect()  # Disconnecting the player
+        await vc.disconnect(force=True)  # Disconnecting the player
 
         with contextlib.suppress(KeyError):
             # Delete all the keys storing the guild's information
@@ -993,7 +994,7 @@ class Music(commands.Cog):
         embed.add_field(name='Progress:', value=progress_string, inline=False)
         embed.set_footer(
             text=f'Duration: {video["contentDetails"]["duration"].strip("PT")}, 🎥: {video["statistics"]["viewCount"]}, 👍: {video["statistics"]["likeCount"] if "likeCount" in video["statistics"].keys() else "Could not fetch likes"}')
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
         await ctx.send(embed=embed)
 
     @nowplaying.error
@@ -1137,7 +1138,7 @@ class Music(commands.Cog):
                 # Response embed
                 embed = discord.Embed(title=title, description=lyrics, colour=discord.Colour.blue(),
                                       timestamp=datetime.datetime.now())
-                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar)
+                embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
                 embed.set_footer(text=f'Powered by genius.com and google custom search engine\nQuery: {query}')
 
                 await ctx.send(embed=embed)

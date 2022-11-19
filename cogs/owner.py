@@ -282,7 +282,7 @@ class Owner(commands.Cog):
         :return: None
         :rtype: None
         """
-        await ctx.reply(len(self.bot.voice_clients))
+        await ctx.reply(str(len(self.bot.voice_clients)))
 
     @vc.error
     async def vc_error(self, ctx: commands.Context, e: commands.CommandError):

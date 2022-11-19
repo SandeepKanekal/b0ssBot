@@ -82,9 +82,9 @@ class Misc(commands.Cog):
         member = member or ctx.author  # type: discord.Member
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=member.name, icon_url=member.display_avatar)
-        embed.set_image(url=member.display_avatar)
-        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar})')
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
+        embed.set_image(url=member.display_avatar.url)
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar.url})')
         await ctx.reply(embed=embed)
 
     @avatar.error
@@ -132,7 +132,7 @@ class Misc(commands.Cog):
         embed.set_image(url=ctx.guild.icon)
         embed.add_field(name='Download this image', value=f'[Click Here]({ctx.guild.icon})')
         embed.set_footer(text=f'Requested by {ctx.author}',
-                         icon_url=str(ctx.author.avatar) if ctx.author.avatar else str(ctx.author.default_avatar))
+                         icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
 
     # Megaspam command
@@ -213,8 +213,8 @@ class Misc(commands.Cog):
             colour=discord.Colour.blurple(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar)
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar.url)
 
         # Send suggestion to owner
         await self.bot.get_user(800018344702640180).send(embed=embed, view=FeatureView(ctx.author, timeout=None))
@@ -289,8 +289,8 @@ class Misc(commands.Cog):
                     colour=discord.Colour.blurple(),
                     timestamp=datetime.datetime.now()
                 )
-                embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar)
-                embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar)
+                embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.display_avatar.url)
 
                 # Send bug to owner
                 await self.bot.get_user(800018344702640180).send(embed=embed, view=BugView(ctx.author, timeout=None))

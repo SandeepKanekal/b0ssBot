@@ -110,6 +110,7 @@ class YouTubeSearchView(discord.ui.View):
             await interaction.response.send_message(
                 f'https://youtube.com/watch?v={self.items.get("video_ids")[self.index]}')
 
+    # noinspection PyTypeChecker
     @discord.ui.button(label='Play Audio in VC', style=discord.ButtonStyle.green)
     async def play(self, button: discord.Button, interaction: discord.Interaction):
         checks = MusicChecks(interaction.user, self.ctx.guild.voice_client)
@@ -1085,7 +1086,7 @@ class HelpView(discord.ui.View):
             colour=discord.Colour.blurple(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
+        embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar.url)
 
         embed.add_field(name='Aliases', value=f"`{', '.join(cmd.aliases)}`",
                         inline=False) if cmd.aliases else embed.add_field(name='Aliases', value='`None`', inline=False)
@@ -1108,7 +1109,7 @@ class HelpView(discord.ui.View):
             colour=discord.Colour.blurple(),
             timestamp=datetime.datetime.now()
         )
-        embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
+        embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar.url)
 
         if isinstance(cmd, discord.SlashCommand):
             param_str = ''.join(f'`{param.name}` ' for param in cmd.options)
@@ -1349,7 +1350,7 @@ class ClearView(discord.ui.View):
         for item in self.children:
             item.disabled = True
 
-        await interaction.response.edit_message(content='Cleared all responses!', view=self)
+        await interaction.response.edit_message(content='Cleared all data!', view=self)
         self.stop()
 
     @discord.ui.button(label='No', style=discord.ButtonStyle.green)

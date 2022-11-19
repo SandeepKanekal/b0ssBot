@@ -44,6 +44,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+        
         if len(new_prefix) > 2:
             await ctx.respond('Prefix must be 2 characters or less')
             return
@@ -106,8 +108,8 @@ class Slash(commands.Cog):
 
         # Set details
         embed.set_footer(text=f'ID: {member.id}')
-        embed.set_thumbnail(url=member.display_avatar)
-        embed.set_author(name=str(member), icon_url=member.display_avatar)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_author(name=str(member), icon_url=member.display_avatar.url)
 
         # Add fields
         embed.add_field(name='Display Name', value=member.mention, inline=True)
@@ -167,9 +169,9 @@ class Slash(commands.Cog):
         member = member or ctx.author  # type: discord.Member
         # Response embed
         embed = discord.Embed(colour=member.colour)
-        embed.set_author(name=member.name, icon_url=member.display_avatar)
-        embed.set_image(url=member.display_avatar)
-        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar})')
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
+        embed.set_image(url=member.display_avatar.url)
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar.url})')
         await ctx.respond(embed=embed)
 
     @avatar.error
@@ -299,6 +301,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
         youtube = build('youtube', 'v3', developerKey=os.getenv('youtube_api_key'))
 
@@ -366,6 +370,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
         channels = sql.select(elements=['channel_name', 'channel_id', 'text_channel_id'], table='youtube',
                               where=f'guild_id = \'{ctx.guild.id}\'')
@@ -423,6 +429,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check if there are any channels set up
@@ -482,6 +490,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+        
         sql = SQL(os.getenv('sql_db_name'))
 
         # Get the channel ID
@@ -563,6 +573,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+        
         sql = SQL(os.getenv('sql_db_name'))
 
         if member.id == ctx.author.id:
@@ -589,7 +601,7 @@ class Slash(commands.Cog):
         embed = discord.Embed(
             description=f'{member} has been warned for {reason}',
             colour=discord.Colour.red()
-        ).set_author(name=member.name, icon_url=str(member.avatar) if member.avatar else str(member.default_avatar))
+        ).set_author(name=member.name, icon_url=str(member.avatar.url) if member.avatar.url else str(member.default_avatar))
         await ctx.respond(embed=embed)
 
     @warn_add.error
@@ -630,6 +642,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         if warns := sql.select(
@@ -692,6 +706,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         if warns := sql.select(
@@ -703,7 +719,7 @@ class Slash(commands.Cog):
                 title=f'{member} has {warns[0][0]} {("warn" if warns[0][0] == 1 else "warns")}',
                 description=f'Reason for latest warn: **{warns[0][1][warns[0][0] - 1]}**',
                 colour=discord.Colour.red()
-            ).set_author(name=member.name, icon_url=member.avatar or discord.Embed.Empty)
+            ).set_author(name=member.name, icon_url=member.avatar.url or discord.Embed.Empty)
 
             await ctx.respond(embed=embed)
         else:
@@ -747,6 +763,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         if not sql.select(
@@ -803,6 +821,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
@@ -860,6 +880,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
@@ -918,6 +940,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
@@ -969,6 +993,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         if not sql.select(elements=['message', 'response'], table='message_responses',
@@ -1026,6 +1052,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
         if not sql.select(['*'], 'message_responses', f"guild_id = '{ctx.guild.id}'"):
             await ctx.respond('No responses found', ephemeral=True)
@@ -1478,7 +1506,7 @@ class Slash(commands.Cog):
         await ctx.interaction.response.defer()
 
         member = member or ctx.author  # type: discord.Member
-        request_url = member.display_avatar  # type: str
+        request_url = member.display_avatar.url  # type: str
 
         # Saving the image
         response = requests.get(request_url)  # type: requests.Response
@@ -1802,6 +1830,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check if verification does not exist
@@ -1857,6 +1887,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check iff verification does not exist
@@ -1923,6 +1955,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin already exists
@@ -1975,6 +2009,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin even exists
@@ -2030,6 +2066,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin even exists
@@ -2081,6 +2119,8 @@ class Slash(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Check if serverjoin even exists
@@ -2153,7 +2193,7 @@ class Slash(commands.Cog):
 
         embed = discord.Embed(colour=member.colour)
         embed.set_image(url=url)
-        embed.set_author(name=member.name, icon_url=member.display_avatar)
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
         embed.add_field(name='Download this image', value=f'[Click Here]({url})')
         await ctx.respond(embed=embed)
 

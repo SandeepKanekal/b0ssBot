@@ -51,7 +51,7 @@ class Help(commands.Cog):
                 description=f'Shows the list of all commands\nUse `{prefix}help <command>` to get more information about a command', 
                 colour=discord.Colour.blurple(),
                 timestamp=datetime.datetime.now()
-            ).set_footer(text='Help Page', icon_url=self.bot.user.avatar)
+            ).set_footer(text='Help Page', icon_url=self.bot.user.avatar.url)
 
             # Add fields
             for cog in sorted(self.bot.cogs):
@@ -85,7 +85,7 @@ class Help(commands.Cog):
                 colour=discord.Colour.blurple(),
                 timestamp=datetime.datetime.now()
             )
-            embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar)
+            embed.set_footer(text=f'Help for {cmd}', icon_url=self.bot.user.avatar.url)
 
             # Add fields
             if isinstance(cmd, commands.Command):
