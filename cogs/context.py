@@ -58,7 +58,10 @@ class Context(commands.Cog):
         img.save(f'QR_{message.id}.png')
 
         # Send the image
-        await ctx.respond(content=f'[Jump to message]({message.jump_url})', file=discord.File(f'QR_{message.id}.png', 'QR.png'))
+        await ctx.respond(
+            content=f'[Jump to message]({message.jump_url})',
+            file=discord.File(f'QR_{message.id}.png', 'QR.png')
+        )
 
         # Delete the saved image
         os.remove(f'QR_{message.id}.png')
@@ -166,7 +169,6 @@ class Context(commands.Cog):
         embed.set_author(name=str(member), icon_url=member.display_avatar.url)
         embed.set_footer(text=f'ID: {member.id}')
         embed.set_thumbnail(url=member.display_avatar.url)
-
         # Adding the fields
         embed.add_field(name='Display Name', value=member.mention, inline=True)
         embed.add_field(name='Top Role', value=member.top_role.mention, inline=True)
@@ -238,9 +240,9 @@ class Context(commands.Cog):
         files = None  # Raises PermissionError if not set to None before deletion of files.
 
         # Delete the saved images
-        for index in range(len(message.attachments)):
-            os.remove(f'{index}_{message.id}.png')
-            os.remove(f'{index}_{message.id}_inverted.png')
+        for message_id, idx in enumerate(message.attachments):
+            os.remove(f'{idx}_{message_id}.png')
+            os.remove(f'{idx}_{message_id}_inverted.png')
     
     @invert_attachments.error
     async def invert_attachments_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
@@ -304,6 +306,47 @@ class Context(commands.Cog):
         :rtype: None
         """
         await ctx.respond('There was an error getting the embed source! The owner has been informed', ephemeral=True)
+        await inform_owner(self.bot, error)
+
+    @commands.user_command(name='Get avatar', description='Get the avatar of the user')
+    async def get_avatar(self, ctx: discord.ApplicationContext, member: discord.Member):
+        """
+        Get the assets of the user
+
+        :param ctx: The context of the command
+        :param member: The member to get the avatar of
+
+        :type ctx: discord.ApplicationContext
+        :type member: discord.Member
+
+        :return: None
+        :rtype: None
+        """
+        # Response embed
+        embed = discord.Embed(colour=member.colour)
+        embed.set_author(name=member.name, icon_url=member.display_avatar.url)
+        embed.set_image(url=member.display_avatar.url)
+        embed.add_field(name='Download this image', value=f'[Click Here]({member.display_avatar.url})')
+        await ctx.respond(embed=embed)
+
+    @get_avatar.error
+    async def get_avatar_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the get_avatar command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.respond(
+            'An error has occurred while running the avatar command! The owner has been notified.',
+            ephemeral=True
+        )
         await inform_owner(self.bot, error)
 
 

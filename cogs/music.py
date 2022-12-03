@@ -305,7 +305,7 @@ class Music(commands.Cog):
             self.sql.update('loop', 'title', f"'{playlist_track[index][1]}'", f"guild_id = '{ctx.guild.id}'")
             self.sql.update('loop', 'url', f"'{playlist_track[index][2]}'", f"guild_id = '{ctx.guild.id}'")
 
-    def play_next(self, ctx: commands.Context):
+    def play_next(self, ctx: commands.Context):  # sourcery skip: extract-method
         """
         The play_next function is used when the player is already playing, this function is invoked when the player is done playing one of the tracks in the queue.
         

@@ -852,9 +852,7 @@ class EmbedViewModal(discord.ui.Modal):
         self.edit_type = edit_type
 
         for item_data in input_data:
-            self.add_item(discord.ui.InputText(label=item_data['label'], style=item_data['style'],
-                                               placeholder=item_data['placeholder'],
-                                               required=item_data['required']))
+            self.add_item(discord.ui.InputText(**item_data))
 
     async def callback(self, interaction: discord.Interaction):
         # sourcery skip: low-code-quality

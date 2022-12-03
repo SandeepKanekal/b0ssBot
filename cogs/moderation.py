@@ -41,7 +41,7 @@ def modlog_enabled(guild_id: int) -> bool:
     :rtype: bool
     """
     sql = SQL(os.getenv('sql_db_name'))
-    return sql.select(elements=['mode'], table='modlogs', where=f"guild_id='{guild_id}'")[0][0]
+    return bool(sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id='{guild_id}'"))
 
 
 def get_mod_channel(guild: discord.Guild) -> discord.TextChannel:
@@ -1920,88 +1920,6 @@ class Moderation(commands.Cog):
         """
         if isinstance(error, commands.MissingPermissions):
             await send_embed(ctx, description='You do not have permission to unlock channels')
-            return
-
-    # Modlogs command
-    @commands.command(aliases=['modlog', 'ml'],
-                      description='Sets the modlog channel\nMention channel for setting or updating the channel\nDon\'t mention channel to disable modlogs',
-                      usage='modlogs <channel>')
-    @commands.has_permissions(manage_guild=True)
-    async def modlogs(self, ctx: commands.Context, channel: discord.TextChannel = None):
-        """
-        Sets the modlogs channel
-        
-        :param ctx: The context of where the command was used
-        :param channel: The channel to be set as the modlogs channel
-        
-        :type ctx: commands.Context
-        :type channel: discord.TextChannel
-        
-        :return: None
-        :rtype: None
-        """
-        sql = SQL(os.getenv('sql_db_name'))
-
-        # Check if channel is provided
-        try:
-            mod_channel = discord.utils.get(ctx.guild.text_channels, id=int(
-                sql.select(elements=['channel_id'], table='modlogs', where=f"guild_id = '{ctx.guild.id}'")[0][0]))
-        except ValueError:
-            mod_channel = None
-
-        # Inform user that no channel is provided
-        if channel is None and not int(
-                sql.select(elements=['mode'], table='modlogs', where=f"guild_id = '{ctx.guild.id}'")[0][0]):
-            await send_embed(ctx, description='Please mention the channel to set the modlogs to')
-            return
-
-        # Disable modlogs
-        if channel is None:
-            await send_embed(ctx, description='Modlogs have been disabled for this server')
-            sql.update(table='modlogs', column='mode', value=0, where=f"guild_id = '{ctx.guild.id}'")
-            sql.update(table='modlogs', column='channel_id', value="'None'", where=f"guild_id = '{ctx.guild.id}'")
-
-            # Delete webhook
-            if mod_channel:
-                webhooks = await mod_channel.webhooks()
-                if webhook := discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging'):
-                    await webhook.delete(reason='Modlogs disabled')
-            return
-
-        # Set modlogs
-        sql.update(table='modlogs', column='channel_id', value=channel.id, where=f"guild_id = '{ctx.guild.id}'")
-        sql.update(table='modlogs', column='mode', value=1, where=f"guild_id = '{ctx.guild.id}'")
-        await ctx.send(f'NOTE: Modlogs requires the **Send Webhooks** to be enabled in {channel.mention}')
-        await send_embed(ctx, description=f'Modlogs channel has been set to {channel.mention}')
-
-        if mod_channel and channel:  # Delete previous webhook
-            webhooks = await mod_channel.webhooks()
-            if webhook := discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging'):
-                await webhook.delete(reason='Modlogs channel updated')
-
-    # Modlogs error response
-    @modlogs.error
-    async def modlogs_error(self, ctx: commands.Context, error: commands.CommandError):
-        """
-        Error handler for the modlogs command
-        
-        :param ctx: The context of where the command was used
-        :param error: The error that occurred
-        
-        :type ctx: commands.Context
-        :type error: commands.CommandError
-        
-        :return: None
-        :rtype: None
-        """
-        if isinstance(error, commands.MissingPermissions):
-            await send_embed(ctx, description='You do not have permission to manage server settings')
-            return
-        if isinstance(error, commands.BadArgument):
-            await send_embed(ctx, description='Please mention a channel')
-            return
-        if isinstance(error, commands.MissingRequiredArgument):
-            await send_embed(ctx, description='Please mention a channel')
             return
 
     @commands.command(name='deafen', description='Deafen a member', usage='deafen <member>')

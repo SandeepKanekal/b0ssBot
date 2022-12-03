@@ -31,7 +31,6 @@ Stores custom prefixes for guilds
 Stores if the guild has enabled modlogs, and the channel if enabled
 + SN: Serial number (Not Null, Primary Key)
 + guild_id: Guild ID (Not Null, VARCHAR(19))
-+ mode: Mode of the modlogs (Not Null, int)
 + channel_id: Channel ID of the modlog channel (Not Null, VARCHAR(19))
 
 # warns

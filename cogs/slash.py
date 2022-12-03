@@ -45,7 +45,7 @@ class Slash(commands.Cog):
         :rtype: None
         """
         await ctx.interaction.response.defer()
-        
+
         if len(new_prefix) > 2:
             await ctx.respond('Prefix must be 2 characters or less')
             return
@@ -120,11 +120,14 @@ class Slash(commands.Cog):
             embed.add_field(name=f'Roles[{len(member.roles) - 1}]', value=role_string, inline=False)
         else:
             embed.add_field(name='Roles[1]', value=member.top_role.mention, inline=False)
-        
-        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
+
+        key_permissions = (
+        'administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks',
+        'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
 
         embed.add_field(name='Key Permission',
-                        value=', '.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if p[0] in key_permissions and p[1]),
+                        value=', '.join(p[0].replace('_', ' ').title() for p in member.guild_permissions if
+                                        p[0] in key_permissions and p[1]),
                         inline=False)
 
         embed.add_field(name='Joined', value=joined_at, inline=True)
@@ -491,7 +494,7 @@ class Slash(commands.Cog):
         :rtype: None
         """
         await ctx.interaction.response.defer()
-        
+
         sql = SQL(os.getenv('sql_db_name'))
 
         # Get the channel ID
@@ -574,7 +577,11 @@ class Slash(commands.Cog):
         :rtype: None
         """
         await ctx.interaction.response.defer()
-        
+
+        if len(reason) > 2000:
+            await ctx.respond('Reason cannot exceed 2000 characters')
+            return
+
         sql = SQL(os.getenv('sql_db_name'))
 
         if member.id == ctx.author.id:
@@ -601,7 +608,8 @@ class Slash(commands.Cog):
         embed = discord.Embed(
             description=f'{member} has been warned for {reason}',
             colour=discord.Colour.red()
-        ).set_author(name=member.name, icon_url=str(member.avatar.url) if member.avatar.url else str(member.default_avatar))
+        ).set_author(name=member.name,
+                     icon_url=str(member.avatar.url) if member.avatar.url else str(member.default_avatar))
         await ctx.respond(embed=embed)
 
     @warn_add.error
@@ -823,6 +831,10 @@ class Slash(commands.Cog):
         """
         await ctx.interaction.response.defer()
 
+        if len(message) > 2000 or len(response) > 2000:
+            await ctx.respond('The length of the message or response cannot exceed 2000')
+            return
+
         sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
@@ -942,6 +954,10 @@ class Slash(commands.Cog):
         """
         await ctx.interaction.response.defer()
 
+        if len(response) > 2000:
+            await ctx.respond('Length of response cannot exceed 2000')
+            return
+
         sql = SQL(os.getenv('sql_db_name'))
         original_message = message
 
@@ -1001,8 +1017,6 @@ class Slash(commands.Cog):
                           where=f"guild_id = '{ctx.guild.id}'"):
             await ctx.respond('No responses found', ephemeral=True)
             return
-
-        await ctx.interaction.response.defer()
 
         embed = discord.Embed(title=f'Message Responses for the server {ctx.guild.name}', colour=discord.Colour.green())
         responses = sql.select(elements=['message', 'response'], table='message_responses',
@@ -1462,8 +1476,11 @@ class Slash(commands.Cog):
         embed.add_field(name='Position', value=str(role.position), inline=True)
         embed.add_field(name='Hoisted', value=str(role.hoist), inline=True)
 
-        key_permissions = ('administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks', 'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
-        embed.add_field(name='Key Permissions', value=', '.join(p[0].replace('_', ' ').title() for p in role.permissions if p[0] in key_permissions and p[1]),
+        key_permissions = (
+        'administrator', 'manage_server', 'manage_roles', 'manage_channels', 'manage_messages', 'manage_webhooks',
+        'manage_nicknames', 'manage_emojis', 'kick_members', 'ban_members', 'mention_everyone')
+        embed.add_field(name='Key Permissions', value=', '.join(
+            p[0].replace('_', ' ').title() for p in role.permissions if p[0] in key_permissions and p[1]),
                         inline=False)
 
         await ctx.respond(embed=embed)
@@ -1781,7 +1798,8 @@ class Slash(commands.Cog):
         embed.add_field(name='Verified role', value=verified_role.mention, inline=True)
         embed.add_field(name='Unverified role', value=unverified_role.mention if unverified_role else 'None',
                         inline=True)
-        embed.set_footer(text=f'Please make sure that my role is above {verified_role.name}! This can be done in Server Settings -> Roles')
+        embed.set_footer(
+            text=f'Please make sure that my role is above {verified_role.name}! This can be done in Server Settings -> Roles')
 
         # Sending the verify-message and adding the reaction
         msg = await channel.send(embed=discord.Embed(description='Please verify yourself to get access to the server.',
@@ -2260,6 +2278,167 @@ class Slash(commands.Cog):
         await ctx.respond('An error has occurred while running the banner command! The owner has been notified.',
                           ephemeral=True)
         await inform_owner(self.bot, error)
+    
+    modlogs = SlashCommandGroup('modlogs', 'Configure modlogs for the guild')
+
+    @modlogs.command(name='enable', description='Enable modlogs for the guild')
+    @commands.has_permissions(manage_guild=True)
+    async def modlogs_enable(self, ctx: discord.ApplicationContext, channel: Option(discord.TextChannel, description='Channel to set modlogs to', required=True)):
+        """
+        Enables modlogs for the guild
+
+        :param ctx: The context of the command
+        :param channel: The channel to set modlogs to
+
+        :type ctx: discord.ApplicationContext
+        :type channel: discord.TextChannel
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.defer()
+
+        sql = SQL(os.getenv('sql_db_name'))
+
+        if sql.select(['*'], 'modlogs', f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Modlogs have already been enabled. Use the update mode instead.', ephemeral=True)
+            return
+        
+        sql.insert('modlogs', ['guild_id', 'channel_id'], [f"'{ctx.guild.id}'", f"'{channel.id}'"])
+
+        embed = discord.Embed(description=f'Modlog channel has been set to {channel.mention}', colour=discord.Colour.green())
+
+        await ctx.respond(f'NOTE: Modlogs requires the **Send Webhooks** to be enabled in {channel.mention}', embed=embed)
+    
+    @modlogs_enable.error
+    async def modlogs_enable_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the modlogs_enable command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond(str(error), ephemeral=True)
+            return
+        await ctx.respond('An error has occurred while running the modlogs command! The owner has been notified.',
+                          ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    @modlogs.command(name='disable', description='Disable modlogs for the guild')
+    @commands.has_permissions(manage_guild=True)
+    async def modlogs_disable(self, ctx: discord.ApplicationContext):
+        """
+        Disables modlogs for the guild
+
+        :param ctx: The context of the command
+
+        :type ctx: discord.ApplicationContext
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.defer()
+
+        sql = SQL(os.getenv('sql_db_name'))
+
+        if not sql.select(['*'], 'modlogs', f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Modlogs have not been enabled!', ephemeral=True)
+            return
+        
+        mod_channel: discord.TextChannel = self.bot.get_channel(int(sql.select(['channel_id'], 'modlogs', f"guild_id = '{ctx.guild.id}'")[0][0]))
+
+        # Delete webhook
+        webhooks = await mod_channel.webhooks()
+        if webhook := discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging'):
+            await webhook.delete(reason='Modlogs disabled')
+        
+        sql.delete('modlogs', f"guild_id = '{ctx.guild.id}'")
+
+        await ctx.respond(embed=discord.Embed(description='Modlogs have been disabled for the guild', colour=discord.Colour.red()))
+    
+    @modlogs_disable.error
+    async def modlogs_disable_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the modlogs_disable command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond(str(error), ephemeral=True)
+            return
+        await ctx.respond('An error has occurred while running the modlogs command! The owner has been notified.',
+                          ephemeral=True)
+        await inform_owner(self.bot, error)
+    
+    @modlogs.command(name='update', description='Update the modlogs channel')
+    @commands.has_permissions(manage_guild=True)
+    async def modlogs_update(self, ctx: discord.ApplicationContext, channel: Option(discord.TextChannel, description='Channel to update modlogs to', required=True)):
+        """
+        Updates the modlogs channel
+
+        :param ctx: The context of the command
+        :param channel: The channel to set modlogs to
+
+        :type ctx: discord.ApplicationContext
+        :type channel: discord.TextChannel
+
+        :return: None
+        :rtype: None
+        """
+        await ctx.defer()
+
+        sql = SQL(os.getenv('sql_db_name'))
+
+        if not sql.select(['*'], 'modlogs', f"guild_id = '{ctx.guild.id}'"):
+            await ctx.respond('Modlogs have not been enabled!', ephemeral=True)
+            return
+        
+        mod_channel: discord.TextChannel = self.bot.get_channel(int(sql.select(['channel_id'], 'modlogs', f"guild_id = '{ctx.guild.id}'")[0][0]))
+
+        # Delete webhook
+        webhooks = await mod_channel.webhooks()
+        if webhook := discord.utils.get(webhooks, name=f'{self.bot.user.name} Logging'):
+            await webhook.delete(reason='Modlogs channel updated')
+        
+        sql.update('modlogs', 'channel_id', f"'{channel.id}'", f"guild_id = '{ctx.guild.id}'")
+
+        await ctx.respond(embed=discord.Embed(description=f'Updated modlogs channel to {channel.mention}', colour=discord.Colour.green()))
+    
+    @modlogs_update.error
+    async def modlogs_update_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
+        """
+        Error handler for the modlogs_update command
+
+        :param ctx: The context of the command
+        :param error: The error that occurred
+
+        :type ctx: discord.ApplicationContext
+        :type error: discord.ApplicationCommandInvokeError
+
+        :return: None
+        :rtype: None
+        """
+        if isinstance(error.original, commands.MissingPermissions):
+            await ctx.respond(str(error), ephemeral=True)
+            return
+        await ctx.respond('An error has occurred while running the modlogs command! The owner has been notified.',
+                          ephemeral=True)
+        await inform_owner(self.bot, error)
+
 
 
 def setup(bot: commands.Bot):

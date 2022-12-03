@@ -39,7 +39,7 @@ Currently, there are 12 tables:
 + afks (columns: SN, member, member_id, guild_id, reason)
 + snipes (columns: SN, author_id, message, channel_id, time, 'guild_id', 'attachments')
 + prefixes (columns: SN, guild_id, prefix)
-+ modlogs (columns: SN, guild_id, mode, channel_id)
++ modlogs (columns: SN, guild_id, channel_id)
 + warns (columns: SN, guild_id, member_id, reason, warns)
 + queue (columns: SN, guild_id, source, title, url)
 + loop (columns: SN, guild_id, source, title, url)

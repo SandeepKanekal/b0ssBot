@@ -2,6 +2,7 @@ py-cord
 youtube-dl
 PyNaCl
 asyncpraw
+requests
 lyrics-extractor
 wikipedia
 google-api-python-client

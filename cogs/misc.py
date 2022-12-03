@@ -176,6 +176,8 @@ class Misc(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await send_error_embed(ctx,
                                    description=f'You are on cooldown. Try again in {error.retry_after:.2f} seconds')
+        elif isinstance(error, commands.MissingPermissions):
+            await send_error_embed(ctx, description=str(error))
         elif isinstance(error, commands.MissingRequiredArgument):
             await send_error_embed(ctx,
                                    description=f'Please specify a message to spam\n\nProper Usage: `{self.bot.get_command("megaspam").usage}`')

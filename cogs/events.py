@@ -341,7 +341,7 @@ class Events(commands.Cog):
         os.system('youtube-dl --rm-cache-dir')  # Clearing cache to prevent 403 errors
 
     @tasks.loop(minutes=5)
-    async def check_for_videos(self) -> None:
+    async def check_for_videos(self) -> None:  # sourcery skip: low-code-quality
         """
         Check for new videos every few minutes
 
@@ -350,8 +350,13 @@ class Events(commands.Cog):
         """
         status: str = ''
         try:
-            sql = SQL(os.getenv('sql_db_name'))  # type: SQL
+            sql = SQL(os.getenv('sql_db_name'))
             status += 'Checking for videos...'
+
+            await self.bot.change_presence(
+                status=discord.Status.dnd, 
+                activity=discord.Activity(name='for YouTube video uploads', type=discord.ActivityType.watching)
+            )
 
             channels = sql.select(
                 elements=['channel_id', 'latest_video_id', 'guild_id', 'text_channel_id', 'channel_name', 'ping_role'],
@@ -408,6 +413,7 @@ class Events(commands.Cog):
             status += " Function executed without errors!"
         finally:
             print(f'{status} @ {datetime.datetime.now() + datetime.timedelta(hours=0) + datetime.timedelta(minutes=0)}')
+            await self.bot.change_presence(status=discord.Status.online, activity=discord.Game(name='The Game of b0sses'))
 
 
 # Setup
