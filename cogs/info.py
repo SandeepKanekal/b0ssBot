@@ -18,16 +18,6 @@ class Info(commands.Cog):
         :rtype: None
         """
         self.bot = bot  # type: commands.Bot
-        self.uptime = None
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        """
-        Event listener for when the bot is ready
-
-        :return: None
-        :rtype: None
-        """
         self.uptime = datetime.datetime.now()  # Sets the uptime to now
 
     # Userinfo command
@@ -246,7 +236,7 @@ class Info(commands.Cog):
         """
         await ctx.send(
             embed=discord.Embed(
-                description=f'The bot was started on {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")}.',
+                description=f'The bot was started on {convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "F")} ({convert_to_unix_time(self.uptime.strftime("%Y-%m-%d %H:%M:%S:%f"), "R")}).',
                 colour=0x0c1e4a
             )
         )

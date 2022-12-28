@@ -329,7 +329,7 @@ class Internet(commands.Cog):
 
             except AttributeError:
                 # Could not get a post
-                await send_error_embed(ctx, description='Could not retrieve a post from **r/{subreddit}**')
+                await send_error_embed(ctx, description=f'Could not retrieve a post from **r/{subreddit}**')
 
             except asyncprawcore.exceptions.AsyncPrawcoreException as e:
                 await send_error_embed(ctx, description=str(e))

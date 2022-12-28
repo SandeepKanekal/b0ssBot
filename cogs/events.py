@@ -192,8 +192,6 @@ class Events(commands.Cog):
 
         # Add the guild to the database
         sql.insert(table='prefixes', columns=['guild_id', 'prefix'], values=[f'\'{guild.id}\'', '\'-\''])
-        sql.insert(table='modlogs', columns=['guild_id', 'mode', 'channel_id'],
-                   values=[f"'{guild.id}'", '\'0\'', '\'None\''])
 
         if guild.system_channel:  # Send an informative embed to the guild's system channel
             command_prefix = sql.select(elements=['prefix'], table='prefixes', where=f"guild_id = '{guild.id}'")
