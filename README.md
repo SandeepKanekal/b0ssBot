@@ -17,6 +17,7 @@ A discord bot for fun, moderation, and music! Adding features everyday
 + [wheel](https://pypi.org/project/wheel)
 + [scrapetube](https://pypi.org/project/scrapetube)
 + [googletrans](https://pypi.org/project/googletrans)
++ [yt_dlp](https://pypi.org/project/yt-dlp)
 
 # API requisites
 + [JSON API Key](https://developers.google.com/custom-search/v1/overview) Required for searching lyrics

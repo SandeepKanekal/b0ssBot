@@ -1,5 +1,5 @@
 py-cord
-youtube-dl
+yt-dlp
 PyNaCl
 asyncpraw
 requests

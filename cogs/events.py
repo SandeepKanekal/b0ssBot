@@ -42,7 +42,6 @@ class Events(commands.Cog):
         with contextlib.suppress(RuntimeError):
             # Start background tasks
             self.check_for_videos.start()
-            self.clear_ytdl_cache.start()
 
         # Clear the data in the music tables
         sql = SQL(os.getenv('sql_db_name'))
@@ -328,16 +327,6 @@ class Events(commands.Cog):
         sql.delete(table='snipes', where=f'channel_id = \'{channel.id}\'')
         sql.delete(table='modlogs', where=f'channel_id = \'{channel.id}\'')
 
-    @tasks.loop(minutes=60)
-    async def clear_ytdl_cache(self):
-        """
-        Clears the YTDL cache
-        
-        :return: None
-        :rtype: None
-        """
-        os.system('youtube-dl --rm-cache-dir')  # Clearing cache to prevent 403 errors
-
     @tasks.loop(minutes=5)
     async def check_for_videos(self) -> None:  # sourcery skip: low-code-quality
         """
@@ -369,27 +358,29 @@ class Events(commands.Cog):
                     if video['videoId'] == channel[1]:
                         break
                     notifiable_videos.append(video['videoId'])
-                    publish_dates.append(video['publishedTimeText']['simpleText'])
+                    with contextlib.suppress(KeyError):
+                        publish_dates.append(video['publishedTimeText']['simpleText'])
 
                 if not notifiable_videos:
                     continue
-
-                if 'second' not in translate(publish_dates[0]).lower() and 'seconds' not in translate(
-                        publish_dates[0]).lower() and 'minute' not in translate(
-                        publish_dates[0]).lower() and 'minutes' not in translate(
-                        publish_dates[0]).lower() and 'hour' not in translate(
-                        publish_dates[0]).lower() and 'hours' not in translate(publish_dates[0]).lower():
-                    continue
+                           
+                with contextlib.suppress((TypeError, IndexError)):
+                    if 'second' not in translate(publish_dates[0]).lower() and 'seconds' not in translate(
+                            publish_dates[0]).lower() and 'minute' not in translate(
+                            publish_dates[0]).lower() and 'minutes' not in translate(
+                            publish_dates[0]).lower() and 'hour' not in translate(
+                            publish_dates[0]).lower() and 'hours' not in translate(publish_dates[0]).lower():
+                        continue
 
                 guild: discord.Guild = discord.utils.get(self.bot.guilds, id=int(channel[2]))
                 text_channel: discord.TextChannel = discord.utils.get(guild.text_channels, id=int(channel[3]))
                 ping_role: discord.Role | None = discord.utils.get(guild.roles, id=int(channel[5])) if channel[
-                                                                                                           5] != 'None' else None
+                                                                                                        5] != 'None' else None
 
-                webhooks = await text_channel.webhooks()
-                webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
-                if webhook is None:
-                    webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
+                # webhooks = await text_channel.webhooks()
+                # webhook = discord.utils.get(webhooks, name=f'{self.bot.user.name} YouTube Notifier')
+                # if webhook is None:
+                #     webhook = await text_channel.create_webhook(name=f'{self.bot.user.name} YouTube Notifier')
 
                 if isinstance(ping_role, discord.Role):
                     ping_string = "@everyone" if 'everyone' in ping_role.name else ping_role.mention
@@ -397,13 +388,11 @@ class Events(commands.Cog):
                     ping_string = "everyone"
 
                 for video_id in list(reversed(notifiable_videos)):
-                    await webhook.send(
-                        f'Hey {ping_string}! New video uploaded by **[{channel[4]}](https://youtube.com/channel/{channel[0]})**!\nhttps://youtube.com/watch?v={video_id}',
-                        username=f'{self.bot.user.name} YouTube Notifier',
-                        avatar_url=self.bot.user.avatar.url)  # Send the message to the webhook
+                    await text_channel.send(
+                        f'Hey {ping_string}! New video uploaded by **{channel[4]}**!\nhttps://youtube.com/watch?v={video_id}')
 
                 sql.update(table='youtube', column='latest_video_id', value=f"'{notifiable_videos[0]}'",
-                           where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
+                        where=f'channel_id = \'{channel[0]}\' AND guild_id = \'{guild.id}\'')  # Update the latest video id
 
         except Exception as e:
             status = f'An error occurred in check_for_videos: {e}'

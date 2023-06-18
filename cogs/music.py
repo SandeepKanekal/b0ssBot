@@ -12,7 +12,7 @@ from sql_tools import SQL
 from discord.ext import commands
 from discord.ext.commands import CommandError
 from tools import send_error_embed, get_video_stats, format_time, inform_owner
-from youtube_dl import YoutubeDL
+from yt_dlp import YoutubeDL
 from ui_components import MusicView
 from discord.commands import Option, SlashCommandGroup
 
@@ -180,7 +180,7 @@ class Music(commands.Cog):
             except Exception as e:
                 return e
 
-        return {'source': info['formats'][0]['url'], 'title': info['title'],
+        return {'source': info['formats'][3]['url'], 'title': info['title'],
                 'url': info['webpage_url'], 'channel_title': info['channel'], 'channel_id': info['channel_id'],
                 'view_count': info['view_count'],
                 'like_count': info['like_count'] if 'like_count' in info else 'Could not fetch likes',
