@@ -220,6 +220,7 @@ class Owner(commands.Cog):
         :return: None
         :rtype: None
         """
+        await ctx.interaction.response.defer()
         if mode == 'single':
             try:
                 await eval(code.strip('await')) if 'await' in code else eval(code)

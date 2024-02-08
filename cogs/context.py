@@ -240,9 +240,9 @@ class Context(commands.Cog):
         files = None  # Raises PermissionError if not set to None before deletion of files.
 
         # Delete the saved images
-        for message_id, idx in enumerate(message.attachments):
-            os.remove(f'{idx}_{message_id}.png')
-            os.remove(f'{idx}_{message_id}_inverted.png')
+        for idx in range(len(message.attachments)):
+            os.remove(f'{idx}_{message.id}.png')
+            os.remove(f'{idx}_{message.id}_inverted.png')
     
     @invert_attachments.error
     async def invert_attachments_error(self, ctx: discord.ApplicationContext, error: discord.ApplicationCommandInvokeError):
